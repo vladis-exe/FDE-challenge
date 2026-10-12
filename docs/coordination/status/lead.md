@@ -11,7 +11,7 @@ L2 continuous review loop, waiting on the next lane commit.
 | L1 | uv project (Python 3.12), all deps from BOARD.md installed, ruff + pytest config in pyproject.toml, skeleton dirs (`screening/`, `tests/engine/`, `config/`, `apps/`, `templates/`, `static/`, `tests/app/`, `evals/`, `tests/evals/`, `docs/sample-conversations/`) with `__init__.py`, `.env.example`, `.gitignore` | `uv run ruff check .` passes; `uv sync` installs clean | e4c9ab9 |
 | L2 (E1, A1) | Reviewed both commits; fixed the pytest/ruff config both of you hit independently (see Announcements). Ticked E1, A1 in BOARD.md. Approved all 8 of engine's open spec questions (see Review notes) and logged it as D13. | `uv run pytest tests/engine -q` (29 pass incl. your E3 WIP); `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app -q` (10 pass) | 5944914 |
 | L2 (E3) | Reviewed `AnthropicClient`/`FakeLLM`. Approved the cache-token contract request: CONTRACTS §3 `LLMUsage` bumped to v2 with `cache_read_tokens`/`cache_write_tokens` (default 0). Ticked E3 in BOARD.md. Logged D14. | `uv run pytest tests/engine -q` (29 pass) | b9a8d62 |
-| L2 (E2, E4, V1) | Reviewed validators, the Extraction schema/prompt, and the 20 eval scenarios. Ticked E2, E4, V1 in BOARD.md. | `uv run pytest tests/engine tests/evals -q` | (pending) |
+| L2 (E2, E4, V1) | Reviewed validators, the Extraction schema/prompt, and the 20 eval scenarios. Ticked E2, E4, V1 in BOARD.md. | `uv run pytest tests/engine tests/evals -q` (109 pass) | 67ae027 |
 
 ## Blocked
 None

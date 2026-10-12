@@ -120,15 +120,14 @@ class AnthropicClient:
 
 def _usage(model: str, response: Any, started: float) -> LLMUsage:
     usage = response.usage
-    # input_tokens counts only uncached input; add the cached parts so totals are honest.
-    input_tokens = (
-        usage.input_tokens
-        + (usage.cache_creation_input_tokens or 0)
-        + (usage.cache_read_input_tokens or 0)
-    )
+    cache_read = usage.cache_read_input_tokens or 0
+    cache_write = usage.cache_creation_input_tokens or 0
+    # The API's input_tokens counts only uncached input; the contract wants the total.
     return LLMUsage(
         model=model,
-        input_tokens=input_tokens,
+        input_tokens=usage.input_tokens + cache_read + cache_write,
         output_tokens=usage.output_tokens,
+        cache_read_tokens=cache_read,
+        cache_write_tokens=cache_write,
         latency_ms=round((time.monotonic() - started) * 1000),
     )

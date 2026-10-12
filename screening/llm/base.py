@@ -15,8 +15,10 @@ M = TypeVar("M", bound=BaseModel)
 
 class LLMUsage(BaseModel):
     model: str
-    input_tokens: int
+    input_tokens: int  # total input, cached parts included
     output_tokens: int
+    cache_read_tokens: int = 0  # billed ~0.1x (CONTRACTS v2)
+    cache_write_tokens: int = 0  # billed ~1.25x
     latency_ms: int
 
 

@@ -89,6 +89,8 @@ def test_structured_returns_validated_value_and_usage():
     assert result.usage.model == "fast-model"
     assert result.usage.input_tokens == 100 + 900 + 50  # uncached + cache read + cache write
     assert result.usage.output_tokens == 20
+    assert result.usage.cache_read_tokens == 900
+    assert result.usage.cache_write_tokens == 50
     assert messages.requests[0]["output_format"] is Answer
 
 

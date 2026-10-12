@@ -3,24 +3,23 @@
 Last updated: 2026-10-12
 
 ## Current task
-E2 validators (next). E1 and E3 done.
+E4 Understand (extraction schema + prompt), next. E1, E3, E2 done.
 
 ## Done
 | Task | What changed | How to verify | Commit |
 | --- | --- | --- | --- |
-| E1 | `screening/schemas.py` (verbatim from CONTRACTS §1). `screening/config/`: `load_config(path=None)` → `ScreeningConfig`, plus `screening.yaml`, `service_areas.yaml` (6 ES and 5 MX cities with aliases and neighborhoods), `faq.yaml` (6 entries, es+en, `placeholder: true` on client terms) | `uv run python -m pytest tests/engine -p no:django` (15 pass); `uv run ruff check screening tests/engine` | 56b5071 |
-| E3 | `screening/llm/`: `LLMClient` protocol and types (CONTRACTS §3), `AnthropicClient` (`messages.parse` structured output, effort `low` + thinking headroom, cached system block, SDK retries=3 / timeout 30 s, one extra try on an invalid record, refusal/max_tokens/API errors → `LLMError`), `FakeLLM` (scripts by purpose: list or callable; exceptions raised; `.calls` recorded) | `uv run python -m pytest tests/engine -p no:django` (29 pass). Live smoke on Haiku 5.5: structured 2.4 s, text 0.9 s | 3fe8f62 |
+| E1 | `screening/schemas.py` (verbatim from CONTRACTS §1). `screening/config/`: `load_config(path=None)` → `ScreeningConfig`, plus `screening.yaml`, `service_areas.yaml` (6 ES and 5 MX cities with aliases and neighborhoods), `faq.yaml` (6 entries, es+en, `placeholder: true` on client terms) | `uv run pytest tests/engine` (15 pass); `uv run ruff check screening tests/engine` | 56b5071 |
+| E3 | `screening/llm/`: `LLMClient` protocol and types (CONTRACTS §3), `AnthropicClient` (`messages.parse` structured output, effort `low` + thinking headroom, cached system block, SDK retries=3 / timeout 30 s, one extra try on an invalid record, refusal/max_tokens/API errors → `LLMError`), `FakeLLM` (scripts by purpose: list or callable; exceptions raised; `.calls` recorded) | `uv run pytest tests/engine` (29 pass). Live smoke on Haiku 5.5: structured 2.4 s, text 0.9 s | 3fe8f62 |
+| E3 v2 | `LLMUsage.cache_read_tokens` / `cache_write_tokens` filled (CONTRACTS v2); `input_tokens` stays the total | `uv run pytest tests/engine` | 04f205b |
+| E2 | `screening/validators/`: `Verdict` (accept / reask / flag), `match_city` (exact n-grams over names/aliases/neighborhoods, then fuzzy: ≥90 match, ≥80 options, max 3), license (yes/no accepted; expired/in_progress/foreign flagged; vague re-asked), name (one soft surname re-ask), availability/schedule (dedupe, canonical order, flexible alone), experience (months→years, platform aliases, 0–40), start date (asap=today, no past, ≤183 days, vague re-asked), `local_date(received_at, tz)` | `uv run pytest tests/engine` (90 pass) | d5d7ad0 |
 
 ## Blocked
 None
 
 ## Requests (to other lanes or the lead)
-- **Lead, pytest config in `pyproject.toml`:**
-  1. `DJANGO_SETTINGS_MODULE` is global, so `pytest tests/engine` imports `config.settings` and fails (needs `DJANGO_SECRET_KEY`). BOARD L1 says to scope it to `tests/app`. Suggested fix: drop it from `[tool.pytest.ini_options]` and set it in `tests/app/conftest.py` (or a `tests/app/pytest.ini`). Until then I run `-p no:django`.
-  2. Add `pythonpath = ["."]`; plain `uv run pytest` can't import `screening`. Until then I use `uv run python -m pytest`.
-- **Lead, ruff:** UP046 flags `class FieldValue(BaseModel, Generic[T])`, which is the contract's own syntax. I kept the contract syntax with `# noqa: UP046`. If you'd rather use `class FieldValue[T](BaseModel)` (it works with pydantic 2.14), update CONTRACTS §1 and I'll switch.
+None (pytest config and UP046 resolved by the lead in 5944914)
 
-## Open spec questions (needed by E5; each has a proposed default)
+## Spec questions: answered (approved as proposed, D13). E5 builds against these
 1. **Consent declined:** which status? The spec says "close, nothing stored". *Proposal:* `opted_out`, empty profile, one close message.
 2. **Out-of-area waitlist:** is the "waitlist offer" a sentence in the close ("we'll message you if we open in your city"), or a question whose yes/no we record? The schema has no field for it. *Proposal:* a sentence in the close; nothing recorded beyond the disqualify reason.
 3. **Off-topic, abuse and injection strikes:** do all three share `offtopic_strikes`, with one redirect before close + `needs_review` (reasons `offtopic` / `abuse`)? *Proposal:* yes, shared counter, per the edge-case table.
@@ -31,13 +30,14 @@ None
 8. **License:** a vague answer ("bueno…") gets a yes/no re-ask. An explicit unclear case (expired, in progress, foreign) is flagged at once and screening continues. *Proposal:* as stated.
 
 ## Contract change requests
-- **CONTRACTS §3 `LLMUsage`: add `cache_read_tokens: int = 0` and `cache_write_tokens: int = 0`.** Cached input is billed at about 0.1× and cache writes at 1.25×, so the cost per conversation (A6, V3) is wrong without them. Until this lands, `input_tokens` = uncached + cache read + cache write (honest totals, but cost is overestimated). The change is backward-compatible thanks to the defaults.
+None (cache-token request done as CONTRACTS v2, D14)
 
 ## Notes for other lanes
 - E1 is in (56b5071): `from screening.schemas import ...` and `from screening.config import load_config`.
 - `ScreeningConfig.timezone_for("ES"|"MX")` gives the IANA zone.
 - After `DEMO_TIME_SCALE`, `reminder_schedule` and `abandon_after` are already scaled timedeltas, and `config.time_scale` holds the factor. Quiet hours are not scaled (wall-clock rule).
 - LLM: `from screening.llm import AnthropicClient, FakeLLM, LLMError`. `FakeLLM({"extract": [...], "compose": lambda system, messages: "..."})`. Engine purposes: `extract`, `compose`, `summary`.
+- Validators: `from screening.validators import match_city, validate_*`. Evals can reuse `match_city` to score city answers.
 - FAQ answers flagged `placeholder: true` are client terms to replace before launch.
 
 ## Prep notes (engine-internal)

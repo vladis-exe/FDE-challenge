@@ -1,0 +1,55 @@
+# Where Grupo Sazón hires drivers. SAMPLE DATA: the client supplies the real list.
+# The city matcher maps a city's name, any alias or any neighborhood to its key.
+# Matching ignores case and accents, so list each spelling once.
+
+ES:
+  timezone: Europe/Madrid
+  cities:
+    - key: madrid
+      name: Madrid
+      aliases: [mad]
+      neighborhoods: [Malasaña, Chamberí, Lavapiés, Salamanca, Retiro, Vallecas, Carabanchel, Chamartín, Tetuán, Usera, Moncloa, Arganzuela, Latina]
+    - key: barcelona
+      name: Barcelona
+      aliases: [bcn, barna]
+      neighborhoods: [Gràcia, Eixample, Sants, Poblenou, Raval, Born, Barceloneta, Sant Andreu, Sant Martí, Horta, Les Corts, Sarrià, Nou Barris]
+    - key: valencia
+      name: Valencia
+      aliases: [vlc, València]
+      neighborhoods: [Ruzafa, Russafa, El Carmen, Benimaclet, Cabanyal, Campanar, Patraix]
+    - key: sevilla
+      name: Sevilla
+      aliases: [Seville, svq]
+      neighborhoods: [Triana, Nervión, Macarena, Los Remedios, Alameda, Bellavista]
+    - key: malaga
+      name: Málaga
+      aliases: [agp]
+      neighborhoods: [El Palo, Teatinos, Huelin, Pedregalejo, La Trinidad, Soho]
+    - key: bilbao
+      name: Bilbao
+      aliases: [Bilbo, bio]
+      neighborhoods: [Deusto, Indautxu, Abando, Santutxu, Casco Viejo, Rekalde]
+
+MX:
+  timezone: America/Mexico_City
+  cities:
+    - key: cdmx
+      name: Ciudad de México
+      aliases: [CDMX, DF, Distrito Federal, Mexico City, Ciudad de Mexico, Chilangolandia]
+      neighborhoods: [Coyoacán, Roma, Roma Norte, Condesa, Polanco, Iztapalapa, Tlalpan, Narvarte, Del Valle, Santa Fe, Azcapotzalco, Gustavo A. Madero, Xochimilco, Benito Juárez, Cuauhtémoc]
+    - key: guadalajara
+      name: Guadalajara
+      aliases: [GDL, Guanatos]
+      neighborhoods: [Zapopan, Tlaquepaque, Chapalita, Providencia, Tonalá, Americana]
+    - key: monterrey
+      name: Monterrey
+      aliases: [MTY, Monterey]
+      neighborhoods: [San Pedro Garza García, San Nicolás de los Garza, Guadalupe, Apodaca, Cumbres, Mitras]
+    - key: puebla
+      name: Puebla
+      aliases: [Puebla de Zaragoza, pue]
+      neighborhoods: [Cholula, Angelópolis, La Paz, Huexotitla]
+    - key: queretaro
+      name: Querétaro
+      aliases: [qro, Santiago de Querétaro]
+      neighborhoods: [Juriquilla, El Marqués, Corregidora, Centro Sur]

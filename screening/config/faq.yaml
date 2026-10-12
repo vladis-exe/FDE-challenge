@@ -1,0 +1,58 @@
+# Approved answers to job questions. Alex answers ONLY from this file; anything
+# else gets "a recruiter will confirm". PLACEHOLDER VALUES: every answer marked
+# `placeholder: true` must be replaced with the client's real terms before launch.
+
+entries:
+  - id: pay
+    placeholder: true
+    questions:
+      es: ["¿Cuánto se paga?", "¿Cuál es el sueldo?", "¿cuanto pagan la hora?"]
+      en: ["How much does it pay?", "What's the hourly rate?"]
+    answer:
+      es: "El pago depende de la ciudad y las horas; el reclutador te dará la cifra exacta en la entrevista."
+      en: "Pay depends on the city and your hours; the recruiter will give you the exact figure at the interview."
+
+  - id: contract
+    placeholder: true
+    questions:
+      es: ["¿Qué tipo de contrato es?", "¿Es por contrato o freelance?", "¿estaría dado de alta?"]
+      en: ["What kind of contract is it?", "Is it employed or freelance?"]
+    answer:
+      es: "El tipo de contrato depende de la ciudad; el reclutador te lo confirmará en la entrevista."
+      en: "The contract type depends on the city; the recruiter will confirm it at the interview."
+
+  - id: hours
+    placeholder: true
+    questions:
+      es: ["¿Qué horarios hay?", "¿Cuántas horas a la semana?", "¿se puede trabajar solo fines de semana?"]
+      en: ["What are the hours?", "How many hours a week?", "Can I work weekends only?"]
+    answer:
+      es: "Hay turnos de mañana, tarde y noche, a jornada completa, parcial o solo fines de semana."
+      en: "There are morning, afternoon and evening shifts, full-time, part-time or weekends only."
+
+  - id: vehicle
+    placeholder: true
+    questions:
+      es: ["¿Necesito coche propio?", "¿Tengo que tener carro?", "¿Ponen ustedes el vehículo?"]
+      en: ["Do I need my own car?", "Do you provide the vehicle?"]
+    answer:
+      es: "Lo que sí necesitas es permiso de conducir en vigor; el reclutador te confirmará lo del vehículo."
+      en: "What you do need is a valid driver's license; the recruiter will confirm the vehicle details."
+
+  - id: process
+    placeholder: false
+    questions:
+      es: ["¿Qué pasa después?", "¿Cuándo me contestan?", "¿Hay entrevista?"]
+      en: ["What happens next?", "When will I hear back?", "Is there an interview?"]
+    answer:
+      es: "Cuando terminemos, un reclutador revisa tus respuestas y te escribe para concertar una entrevista."
+      en: "Once we finish, a recruiter reviews your answers and messages you to set up an interview."
+
+  - id: ai
+    placeholder: false
+    questions:
+      es: ["¿Eres un robot?", "¿Hablo con una persona?", "¿eres una IA?"]
+      en: ["Are you a bot?", "Am I talking to a real person?"]
+    answer:
+      es: "Soy Alex, un asistente virtual con IA; un reclutador de verdad revisará tus respuestas."
+      en: "I'm Alex, an AI virtual assistant; a real recruiter will review your answers."

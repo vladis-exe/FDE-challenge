@@ -1,0 +1,24 @@
+# Process settings for the screening agent.
+# Durations use s / m / h / d. DEMO_TIME_SCALE (env) divides the reminder and
+# abandonment timings for demos; quiet hours always use real local time.
+
+# Reminders, counted from the candidate's last message. All three fit inside
+# WhatsApp's 24 h customer-service window, so no template message is needed.
+reminder_schedule: [15m, 2h, 20h]
+abandon_after: 24h
+
+# Nothing is sent in this window (candidate-local time); due reminders wait.
+quiet_hours:
+  start: "21:00"
+  end: "09:00"
+
+max_attempts_per_field: 2  # re-asks per field before it is flagged for review
+max_offtopic_strikes: 1  # polite redirects before closing and flagging
+start_date_max_days: 183  # about 6 months
+transcript_tail_size: 12  # recent lines given to the LLM as context
+
+message_limits:
+  max_chars: 300
+  max_sentences: 2
+  max_questions: 1
+  max_emojis: 1

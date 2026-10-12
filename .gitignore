@@ -1,1 +1,11 @@
 .idea/
+__pycache__/
+*.pyc
+.venv/
+db.sqlite3
+.env
+staticfiles/
+evals/runs/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/

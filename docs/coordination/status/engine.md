@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-E7 timers, in progress. **CP1 engine side done** (E1, E3, E2, E4, E6a, E5, E9).
+E8 summary and final record, in progress. CP1 engine side done; E7 done.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -17,6 +17,7 @@ E7 timers, in progress. **CP1 engine side done** (E1, E3, E2, E4, E6a, E5, E9).
 | E2 fix | City names shared by two cities ("San Pedro": Monterrey and Guadalajara metros) are ambiguous; the longest match wins ("San Pedro Garza García" → Monterrey). Found via eval scenario 12 | `uv run pytest tests/engine` | 27b27c8 |
 | E5 | `screening/policy.py`: the transition table (docstring, committed first in 4717b17) and `decide(state, extraction, message, config)`, which is pure and LLM-free. `screening/engine.py`: `EngineContext`, `new_conversation` (+34 → ES, +52 → MX hint), `start` (fixed opening), `handle_message` (opt-out silence and media first with no LLM; then extract → decide → render; any `LLMError` → holding reply + `llm_error`). Review reasons: `license_unclear`, `unresolved:<field>`, `human_requested`, `offtopic`, `abuse` (match the V1 scenarios) | `uv run pytest tests/engine` (160 pass; 46 in `test_engine.py`, at least one per table row) | c8052a5 |
 | E9 | `screening/cli.py`: `uv run python -m screening.cli [--lang es\|en] [--country ES\|MX] [--fake] [--script file]`. Prints Alex's replies, the state diff and the events (`llm_call` with tokens, cache and latency). `--fake` = keyword stub, no API key needed. Colors only on a TTY | `uv run pytest tests/engine` (162 pass). **CP1 live check:** `uv run python -m screening.cli --country MX --script tests/engine/scripts/demo_mx.txt` → qualified after 11 turns (ambiguous "san pedro" → options, FAQ pay answer, "el lunes que viene" → 2026-10-19, schedule correction at the read-back); ~2–3 s per turn, prompts cached | 32c6bab |
+| E7 | `screening/timers.py` + `engine.handle_tick`: fixed reminders (kind `reminder`) at 15 min / 2 h / 20 h of silence (counted from the candidate's last message, or from the opening if they never replied); a reminder due in quiet hours waits until 09:00 candidate-local (`reminder_deferred` + `reminder_sent`, one message even if several came due); `abandoned` at 24 h with no message, stage kept. `DEMO_TIME_SCALE` honored via config. New: `engine.next_due_at(state, config=)` | `uv run pytest tests/engine` (173 pass; `test_timers.py` includes the eval scenario 16 timeline) | 7dcc63a |
 
 ## Blocked
 None
@@ -35,7 +36,8 @@ None (pytest config and UP046 resolved by the lead in 5944914)
 8. **License:** a vague answer ("bueno…") gets a yes/no re-ask. An explicit unclear case (expired, in progress, foreign) is flagged at once and screening continues. *Proposal:* as stated.
 
 ## Contract change requests
-None (cache-token request done as CONTRACTS v2, D14)
+- **Support app's `next_due_at` proposal; it's implemented.** `screening.engine.next_due_at(state, *, config) -> datetime | None` exists (7dcc63a). It includes quiet hours: a reminder due at 22:30 returns 09:00 local. So the worker needs no 1-minute retry loop, and `reminder_deferred` is logged once rather than every minute all night. Please add it to CONTRACTS §2; the app can then drop its own computation.
+- (Done: cache-token request, CONTRACTS v2, D14.)
 
 ## Notes for other lanes
 - **App (A2): the real engine is ready to replace the stub.** `from screening import engine`, `engine.EngineContext(config=load_config(), llm=AnthropicClient())`, same signatures as CONTRACTS §2. Until E7, `handle_tick` returns `changed=False`. Until E8, `state.summary` stays `None` when a conversation ends.

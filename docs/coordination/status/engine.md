@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-E8 summary and final record, in progress. CP1 engine side done; E7 done.
+E6b compose polish, in progress (last engine task). E1–E5, E6a, E7, E8, E9 done.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -18,6 +18,7 @@ E8 summary and final record, in progress. CP1 engine side done; E7 done.
 | E5 | `screening/policy.py`: the transition table (docstring, committed first in 4717b17) and `decide(state, extraction, message, config)`, which is pure and LLM-free. `screening/engine.py`: `EngineContext`, `new_conversation` (+34 → ES, +52 → MX hint), `start` (fixed opening), `handle_message` (opt-out silence and media first with no LLM; then extract → decide → render; any `LLMError` → holding reply + `llm_error`). Review reasons: `license_unclear`, `unresolved:<field>`, `human_requested`, `offtopic`, `abuse` (match the V1 scenarios) | `uv run pytest tests/engine` (160 pass; 46 in `test_engine.py`, at least one per table row) | c8052a5 |
 | E9 | `screening/cli.py`: `uv run python -m screening.cli [--lang es\|en] [--country ES\|MX] [--fake] [--script file]`. Prints Alex's replies, the state diff and the events (`llm_call` with tokens, cache and latency). `--fake` = keyword stub, no API key needed. Colors only on a TTY | `uv run pytest tests/engine` (162 pass). **CP1 live check:** `uv run python -m screening.cli --country MX --script tests/engine/scripts/demo_mx.txt` → qualified after 11 turns (ambiguous "san pedro" → options, FAQ pay answer, "el lunes que viene" → 2026-10-19, schedule correction at the read-back); ~2–3 s per turn, prompts cached | 32c6bab |
 | E7 | `screening/timers.py` + `engine.handle_tick`: fixed reminders (kind `reminder`) at 15 min / 2 h / 20 h of silence (counted from the candidate's last message, or from the opening if they never replied); a reminder due in quiet hours waits until 09:00 candidate-local (`reminder_deferred` + `reminder_sent`, one message even if several came due); `abandoned` at 24 h with no message, stage kept. `DEMO_TIME_SCALE` honored via config. New: `engine.next_due_at(state, config=)` | `uv run pytest tests/engine` (173 pass; `test_timers.py` includes the eval scenario 16 timeline) | 7dcc63a |
+| E8 | `screening/record.py`: `final_record(state)` (contract JSON; only accepted values; flags as `{field, note}`). `screening/summary.py` + `prompts/summary.md`: Spanish recruiter note on the smart tier, written when the status leaves in_progress or abandoned (close or abandonment); a failure → `summary=None` + `llm_error`, and the close is still sent. Opt-outs get a fixed summary and no LLM call. The CLI prints the final record | `uv run pytest tests/engine` (180 pass). Live: the demo script's summary on Sonnet 5.5 is accurate (mentions the correction and the unanswered pay figure), 2.5 s | 62db461 |
 
 ## Blocked
 None
@@ -40,13 +41,14 @@ None (pytest config and UP046 resolved by the lead in 5944914)
 - (Done: cache-token request, CONTRACTS v2, D14.)
 
 ## Notes for other lanes
-- **App (A2): the real engine is ready to replace the stub.** `from screening import engine`, `engine.EngineContext(config=load_config(), llm=AnthropicClient())`, same signatures as CONTRACTS §2. Until E7, `handle_tick` returns `changed=False`. Until E8, `state.summary` stays `None` when a conversation ends.
+- **App (A2): the real engine is ready to replace the stub.** `from screening import engine`, `engine.EngineContext(config=load_config(), llm=AnthropicClient())`, same signatures as CONTRACTS §2. `handle_tick` and summaries are live (E7, E8). `from screening.record import final_record` for `Conversation.final_record`. For `next_tick_at`, use `engine.next_due_at(state, config=...)` (see Contract change requests).
 - **Lead, please confirm a contract reading:** on an LLM failure, CONTRACTS §2 says "state unchanged except `transcript_tail`". I also update the bookkeeping fields `last_inbound_at`, `reminders_sent = 0` and `last_outbound_at` (the holding reply was sent), because reminders are timed from the candidate's last message. Profile, stage, status, attempts and strikes are untouched.
 - E1 is in (56b5071): `from screening.schemas import ...` and `from screening.config import load_config`.
 - `ScreeningConfig.timezone_for("ES"|"MX")` gives the IANA zone.
 - After `DEMO_TIME_SCALE`, `reminder_schedule` and `abandon_after` are already scaled timedeltas, and `config.time_scale` holds the factor. Quiet hours are not scaled (wall-clock rule).
 - LLM: `from screening.llm import AnthropicClient, FakeLLM, LLMError`. `FakeLLM({"extract": [...], "compose": lambda system, messages: "..."})`. Engine purposes: `extract`, `compose`, `summary`.
 - Validators: `from screening.validators import match_city, validate_*`. Evals can reuse `match_city` to score city answers.
+- **Evals:** `screening.record.final_record(state)` is the record to score against `expected`. For silence scenarios, call `engine.next_due_at(state, config=)` to know when to tick.
 - Evals: the first extract call after a schema change can take ~30 s (one-off). Don't count it in latency stats, or warm up first.
 - Fixed messages: `screening/prompts/messages.yaml` is the reviewable list of every word-for-word message (opening, closes, etc.); V5/presentation can quote it.
 - FAQ answers flagged `placeholder: true` are client terms to replace before launch.

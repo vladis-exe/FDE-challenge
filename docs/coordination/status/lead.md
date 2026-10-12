@@ -10,6 +10,7 @@ L2 continuous review loop, waiting on the next lane commit.
 | --- | --- | --- | --- |
 | L1 | uv project (Python 3.12), all deps from BOARD.md installed, ruff + pytest config in pyproject.toml, skeleton dirs (`screening/`, `tests/engine/`, `config/`, `apps/`, `templates/`, `static/`, `tests/app/`, `evals/`, `tests/evals/`, `docs/sample-conversations/`) with `__init__.py`, `.env.example`, `.gitignore` | `uv run ruff check .` passes; `uv sync` installs clean | e4c9ab9 |
 | L2 (E1, A1) | Reviewed both commits; fixed the pytest/ruff config both of you hit independently (see Announcements). Ticked E1, A1 in BOARD.md. Approved all 8 of engine's open spec questions (see Review notes) and logged it as D13. | `uv run pytest tests/engine -q` (29 pass incl. your E3 WIP); `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app -q` (10 pass) | 5944914 |
+| L2 (E3) | Reviewed `AnthropicClient`/`FakeLLM`. Approved the cache-token contract request: CONTRACTS §3 `LLMUsage` bumped to v2 with `cache_read_tokens`/`cache_write_tokens` (default 0). Ticked E3 in BOARD.md. Logged D14. | `uv run pytest tests/engine -q` (29 pass) | (pending) |
 
 ## Blocked
 None
@@ -31,7 +32,12 @@ Your 8 open spec questions: approved as proposed, all of them. Most are near-ver
 
 **App (A1):** Clean. Models match CONTRACTS §5, migrations are sane, admin inlines look useful for the dashboard work later. `tests/app/conftest.py`'s static-storage override is a reasonable call, no issue.
 
+**Engine (E3):** Clean, and the Anthropic-API reasoning in your prep notes checks out against what's in CONTRACTS now. `messages.parse` + `output_format`, low effort with the thinking headroom, the one retry on a `ValidationError`, mapping `refusal`/`max_tokens`/`APIError` to `LLMError` — all sound, and the system-block caching matches your own byte-stability note. `FakeLLM` scripting by purpose is exactly what E2/E4/E5 will need.
+
+Your cache-token request: approved, CONTRACTS is now v2 (see Announcements). Please switch `_usage()` to fill `cache_read_tokens`/`cache_write_tokens` instead of folding them into `input_tokens`, and record both in the `llm_call` event payload per CONTRACTS' event catalogue.
+
 ## Announcements (contract changes, scope cuts, dependency additions)
 - **Pytest config fixed** (both engine and app hit this independently): dropped the global `DJANGO_SETTINGS_MODULE` from `pyproject.toml`. `tests/engine` and `tests/evals` now run with zero Django involvement, as the architecture requires. App tests need the env var explicitly: `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (documented in CLAUDE.md Commands). Also added `pythonpath = ["."]` so plain `uv run pytest` can import `screening` without `-m`.
 - **Ruff:** added `extend-exclude = ["**/migrations"]` globally, per app's request.
 - **`.gitignore`:** added `media/`, per app's request.
+- **CONTRACTS.md bumped to v2:** `LLMUsage` gained `cache_read_tokens`/`cache_write_tokens` (default 0, backward-compatible). D14.

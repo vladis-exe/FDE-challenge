@@ -51,7 +51,7 @@ Order: E1 → E3 → E2 → E4 → E6a → E5 → E9 (CP1) → E7 → E8 → E6b
 - [x] **E1 Schemas and config.** Do this first and commit early; it unblocks every lane.
   - `schemas.py` exactly as in CONTRACTS §1.
   - The `ScreeningConfig` loader, plus `service_areas.yaml`, `faq.yaml` and `screening.yaml` with sample data.
-- [ ] **E3 LLM layer:**
+- [x] **E3 LLM layer:**
   - `LLMClient` protocol, `AnthropicClient` and `FakeLLM`.
   - Check the current Anthropic docs for structured outputs or forced tool use, and for prompt caching, before writing it.
   - Timeouts, retries and usage capture.

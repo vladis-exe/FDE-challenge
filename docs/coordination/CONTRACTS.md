@@ -2,7 +2,7 @@
 
 Owned by the lead. Lanes code against this file. To change it, add a request under "Contract change requests" in your status file; the lead updates this file and logs the change in `DECISIONS.md`.
 
-Version: 1
+Version: 2
 
 ## 1. Engine schemas (`screening/schemas.py`, engine lane, task E1)
 
@@ -168,8 +168,10 @@ M = TypeVar("M", bound=BaseModel)
 
 class LLMUsage(BaseModel):
     model: str
-    input_tokens: int
+    input_tokens: int          # total input, cached parts included
     output_tokens: int
+    cache_read_tokens: int = 0     # billed ~0.1x; v2, defaults keep old callers valid
+    cache_write_tokens: int = 0    # billed ~1.25x
     latency_ms: int
 
 class LLMResult(BaseModel, Generic[T]):

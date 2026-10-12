@@ -40,3 +40,6 @@ Fast tier for extract/compose and smart tier for summaries by default. V4 decide
 
 ## D13 [lead] Eight spec gaps resolved for E5, engine's proposed defaults all approved
 The engine lane listed 8 behaviors the spec implies but doesn't spell out (consent decline, out-of-area waitlist wording, shared offtopic/abuse/injection strike counter, human handoff timing, resuming after `abandoned`, messages after a final outcome, no-surname handling, vague vs. explicit-unclear license). Each proposal is a direct, literal reading of `process-design.md`'s own text (e.g. the name rule is quoted almost verbatim), so none needed a contract change or a call from Vlad. Full list and reasoning: `status/engine.md` "Open spec questions", 2026-10-12. If any of these turns out wrong in practice, it's a status-file note and a small E5 patch, not a contract change.
+
+## D14 [lead] CONTRACTS v2: split cache tokens out of LLMUsage
+`cache_read_tokens` and `cache_write_tokens` added, both defaulting to 0, so existing callers don't break. Cached input is billed at roughly 0.1x and cache writes at 1.25x; folding everything into `input_tokens` (the v1 workaround) overstates cost in A6's analytics and V3/V4's cost-per-conversation numbers, which is exactly the evidence the LLM write-up leans on.

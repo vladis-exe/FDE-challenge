@@ -1,0 +1,64 @@
+# Fixed messages: sent word for word, never written by the LLM.
+# Purpose: these carry legal or outcome meaning (AI disclosure, privacy link,
+# disqualification wording, the read-back of stored answers), so they must be
+# exact, reviewable and identical every time.
+#
+# Keys: "es" and "en"; a country key ("es_ES", "es_MX") overrides "es" where the
+# vocabulary differs. Placeholders:
+#   {name}     ", Laura" when the first name is known, otherwise empty
+#   {summary}  the read-back of stored answers, built by code
+#   {city}     the city the candidate named
+#   {privacy_url}
+
+opening:
+  es: "¡Hola! Soy Alex, el asistente virtual (IA) de Grupo Sazón 👋 Son 7 preguntas rápidas sobre el puesto de repartidor, unos 3 minutos. Tus datos solo se usan para esta candidatura: {privacy_url}. ¿Empezamos?"
+  en: "Hi! I'm Alex, Grupo Sazón's virtual assistant (AI) 👋 It's 7 quick questions about the delivery driver job, about 3 minutes. Your details are only used for this application: {privacy_url}. Shall we start?"
+
+readback:
+  es: "¡Gracias{name}! Repasemos: {summary}. ¿Está todo bien?"
+  en: "Thanks{name}! Quick check: {summary}. Is everything right?"
+
+# Qualified and needs review get the same close, so nothing implies a rejection.
+close_completed:
+  es: "¡Listo{name}! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!"
+  en: "All done{name}! A Grupo Sazón recruiter will message you in the next few days to set up an interview. Thanks for your time!"
+
+close_no_license:
+  es_ES: "Gracias{name}. Para este puesto es imprescindible tener carnet de conducir, así que ahora no podemos seguir con tu candidatura; si lo consigues, ¡nos encantará saber de ti!"
+  es_MX: "Gracias{name}. Para este puesto es indispensable tener licencia de manejo, así que ahora no podemos seguir con tu solicitud; si la consigues, ¡nos encantará saber de ti!"
+  en: "Thanks{name}. This role requires a driver's license, so we can't continue with your application right now; if you get one, we'd love to hear from you!"
+
+close_out_of_area:
+  es: "Gracias{name}. De momento no contratamos repartidores en {city}; si abrimos en tu zona, te avisaremos por aquí."
+  en: "Thanks{name}. We're not hiring drivers in {city} yet; if we open in your area, we'll let you know here."
+
+close_opt_out:
+  es: "Entendido, no te escribiré más. ¡Mucha suerte!"
+  en: "Understood, I won't message you again. Best of luck!"
+
+close_consent_declined:
+  es: "Sin problema, no guardaremos tus datos. ¡Mucha suerte!"
+  en: "No problem, we won't keep your details. Best of luck!"
+
+close_human_requested:
+  es: "Claro, le paso tu conversación a un reclutador de Grupo Sazón, que te escribirá pronto."
+  en: "Sure, I'm passing your conversation to a Grupo Sazón recruiter, who will message you soon."
+
+# After the second off-topic, abusive or injected message.
+close_flagged:
+  es: "Voy a pasar tu candidatura a un reclutador de Grupo Sazón para que la revise. ¡Gracias!"
+  en: "I'm passing your application to a Grupo Sazón recruiter to review. Thank you!"
+
+# Any message after the screening has ended (except after an opt-out: silence).
+after_close:
+  es: "Gracias por escribir. Un reclutador de Grupo Sazón revisará tu candidatura y te contactará."
+  en: "Thanks for your message. A Grupo Sazón recruiter will review your application and get in touch."
+
+# The LLM could not be reached after retries; state is unchanged, so repeating works.
+holding:
+  es: "Perdona, he tenido un problema técnico. ¿Me lo puedes repetir?"
+  en: "Sorry, I had a technical problem. Could you say that again?"
+
+media:
+  es: "Perdona, todavía no puedo escuchar audios ni ver imágenes. ¿Me lo escribes en un mensaje?"
+  en: "Sorry, I can't listen to audio or view images yet. Could you type it in a message?"

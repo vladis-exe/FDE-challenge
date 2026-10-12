@@ -12,6 +12,9 @@ quiet_hours:
   start: "21:00"
   end: "09:00"
 
+# Linked from the opening message. PLACEHOLDER until the client supplies it.
+privacy_url: https://gruposazon.example/privacidad
+
 max_attempts_per_field: 2  # re-asks per field before it is flagged for review
 max_offtopic_strikes: 1  # polite redirects before closing and flagging
 start_date_max_days: 183  # about 6 months

@@ -70,6 +70,7 @@ class ScreeningConfig(BaseModel):
     reminder_schedule: list[Duration]  # measured from the candidate's last message
     abandon_after: Duration
     quiet_hours: QuietHours
+    privacy_url: str
     max_attempts_per_field: int = 2
     max_offtopic_strikes: int = 1
     start_date_max_days: int = 183

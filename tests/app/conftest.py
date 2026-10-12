@@ -1,5 +1,8 @@
 import pytest
 
+from apps.messaging import channels, services
+from tests.app.fakes import FakeChannel, FakeEngine
+
 
 @pytest.fixture(autouse=True)
 def plain_static_storage(settings):
@@ -8,3 +11,18 @@ def plain_static_storage(settings):
         **settings.STORAGES,
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }
+
+
+@pytest.fixture
+def engine(monkeypatch) -> FakeEngine:
+    fake = FakeEngine()
+    monkeypatch.setattr(services, "engine", fake)
+    monkeypatch.setattr(services, "final_record", lambda state: {"status": state.status})
+    return fake
+
+
+@pytest.fixture
+def channel(monkeypatch) -> FakeChannel:
+    fake = FakeChannel()
+    monkeypatch.setattr(channels, "channel_for", lambda conversation: fake)
+    return fake

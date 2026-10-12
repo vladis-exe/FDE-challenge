@@ -73,6 +73,15 @@ DATABASES = {
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=600
     )
 }
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    # The worker holds a transaction across an engine turn. IMMEDIATE takes the write lock up
+    # front, so a concurrent web insert waits (timeout) instead of failing; WAL keeps reads
+    # (chat polling) unblocked meanwhile.
+    DATABASES["default"]["OPTIONS"] = {
+        "transaction_mode": "IMMEDIATE",
+        "timeout": 20,
+        "init_command": "PRAGMA journal_mode=WAL;",
+    }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_PASSWORD_VALIDATORS = [

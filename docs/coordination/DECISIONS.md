@@ -43,3 +43,12 @@ The engine lane listed 8 behaviors the spec implies but doesn't spell out (conse
 
 ## D14 [lead] CONTRACTS v2: split cache tokens out of LLMUsage
 `cache_read_tokens` and `cache_write_tokens` added, both defaulting to 0, so existing callers don't break. Cached input is billed at roughly 0.1x and cache writes at 1.25x; folding everything into `input_tokens` (the v1 workaround) overstates cost in A6's analytics and V3/V4's cost-per-conversation numbers, which is exactly the evidence the LLM write-up leans on.
+
+## D15 [app] The worker holds the conversation row lock for the whole engine turn
+A turn is one transaction: `select_for_update(skip_locked=True)` claims the conversation, the engine runs, then state, outbound messages and events are written, and only after commit is anything sent. The lock *is* the per-conversation ordering guarantee, with no lease columns or queue. The trade-off is a DB transaction open across an LLM call (1–3 s), which is fine at 1,000 applications/week. At 10K/week we'd claim with a lease and run the LLM outside the transaction.
+
+## D16 [app] SQLite runs IMMEDIATE transactions with WAL
+With SQLite's default deferred transactions, a worker turn that reads, waits on the LLM, then writes fails with "database is locked" if the web view inserted a message meanwhile, and that is exactly the burst case. IMMEDIATE + a 20 s busy timeout makes the web insert wait for the turn instead (measured: 1.3 s during a 2 s turn), and WAL keeps chat polling unblocked. Postgres in Docker/deploy needs neither.
+
+## D17 [app] An engine or persist error consumes the message
+If a turn raises, the message is marked processed and a `worker_error` event is recorded, instead of being retried. A deterministic bug would otherwise wedge that conversation (and burn LLM calls) forever. The cost is that the candidate gets no reply to that one message; the event makes it visible on the dashboard.

@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-E5 policy and state machine, in progress (transition table first). E1, E3, E2, E4, E6a done.
+E9 CLI, in progress (last task before CP1). E1, E3, E2, E4, E6a, E5 done.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -14,6 +14,8 @@ E5 policy and state machine, in progress (transition table first). E1, E3, E2, E
 | E2 | `screening/validators/`: `Verdict` (accept / reask / flag), `match_city` (exact n-grams over names/aliases/neighborhoods, then fuzzy: ≥90 match, ≥80 options, max 3), license (yes/no accepted; expired/in_progress/foreign flagged; vague re-asked), name (one soft surname re-ask), availability/schedule (dedupe, canonical order, flexible alone), experience (months→years, platform aliases, 0–40), start date (asap=today, no past, ≤183 days, vague re-asked), `local_date(received_at, tz)` | `uv run pytest tests/engine` (90 pass) | d5d7ad0 |
 | E4 | `screening/understand.py`: `Extraction` (intent, language, consent, confirmation, question, faq_id, typed raw fields) and `extract(state, message, llm=, config=)`. `screening/prompts/extract.md` (rules plus 6 few-shot examples: multi-field, Mexican vocabulary, emoji with expired license, code-switch with FAQ, correction at confirm, injection). `screening/locale.py` (candidate country/timezone) | `uv run pytest tests/engine` (98 pass). Live probe on Haiku 5.5: 8/8 correct; cache read 5,068 of ~5,200 input tokens; ~1.3 s per call (the first call after a schema change took 34 s) | d5c0e5c |
 | E6a | `screening/prompts/compose.md` (Alex persona, hard message rules, how to ask each field). `screening/compose.py` (`ReplyPlan`/`Ask` decided by code → `compose_reply`, fast tier). `screening/prompts/messages.yaml` + `screening/messages.py`: fixed texts (opening with AI disclosure and privacy link, read-back, closes, holding, media, after-close) in es/en with ES/MX vocabulary, and a deterministic read-back summary. `privacy_url` added to `screening.yaml` | `uv run pytest tests/engine` (114 pass). Live probe on Haiku 5.5: 14/18 replies meet every hard rule; the 4 misses are 3 sentences or text after the question → E6b guard | 07114b7 |
+| E2 fix | City names shared by two cities ("San Pedro": Monterrey and Guadalajara metros) are ambiguous; the longest match wins ("San Pedro Garza García" → Monterrey). Found via eval scenario 12 | `uv run pytest tests/engine` | 27b27c8 |
+| E5 | `screening/policy.py`: the transition table (docstring, committed first in 4717b17) and `decide(state, extraction, message, config)`, which is pure and LLM-free. `screening/engine.py`: `EngineContext`, `new_conversation` (+34 → ES, +52 → MX hint), `start` (fixed opening), `handle_message` (opt-out silence and media first with no LLM; then extract → decide → render; any `LLMError` → holding reply + `llm_error`). Review reasons: `license_unclear`, `unresolved:<field>`, `human_requested`, `offtopic`, `abuse` (match the V1 scenarios) | `uv run pytest tests/engine` (160 pass; 46 in `test_engine.py`, at least one per table row) | c8052a5 |
 
 ## Blocked
 None
@@ -35,6 +37,8 @@ None (pytest config and UP046 resolved by the lead in 5944914)
 None (cache-token request done as CONTRACTS v2, D14)
 
 ## Notes for other lanes
+- **App (A2): the real engine is ready to replace the stub.** `from screening import engine`, `engine.EngineContext(config=load_config(), llm=AnthropicClient())`, same signatures as CONTRACTS §2. Until E7, `handle_tick` returns `changed=False`. Until E8, `state.summary` stays `None` when a conversation ends.
+- **Lead, please confirm a contract reading:** on an LLM failure, CONTRACTS §2 says "state unchanged except `transcript_tail`". I also update the bookkeeping fields `last_inbound_at`, `reminders_sent = 0` and `last_outbound_at` (the holding reply was sent), because reminders are timed from the candidate's last message. Profile, stage, status, attempts and strikes are untouched.
 - E1 is in (56b5071): `from screening.schemas import ...` and `from screening.config import load_config`.
 - `ScreeningConfig.timezone_for("ES"|"MX")` gives the IANA zone.
 - After `DEMO_TIME_SCALE`, `reminder_schedule` and `abandon_after` are already scaled timedeltas, and `config.time_scale` holds the factor. Quiet hours are not scaled (wall-clock rule).

@@ -52,3 +52,18 @@ With SQLite's default deferred transactions, a worker turn that reads, waits on 
 
 ## D17 [app] An engine or persist error consumes the message
 If a turn raises, the message is marked processed and a `worker_error` event is recorded, instead of being retried. A deterministic bug would otherwise wedge that conversation (and burn LLM calls) forever. The cost is that the candidate gets no reply to that one message; the event makes it visible on the dashboard.
+
+## D18 [engine] Fixed text where words carry legal or outcome meaning; the LLM writes the rest
+The opening (AI disclosure, privacy link), the read-back of stored answers, every close, the holding reply and the reminders come word for word from `screening/prompts/messages.yaml`. Mid-conversation replies are LLM-written from a plan that code builds. A disqualification can never be worded wrongly, and the read-back can never misstate a value. The cost: those messages are less adaptive, which is acceptable for a dozen fixed moments.
+
+## D19 [engine] The LLM resolves start dates; code validates them
+The extractor gets the candidate's local date and weekday and returns an ISO date (or asap/vague). Code then checks: asap means today, no past dates, at most 183 days ahead. The model handles "el lunes que viene" and "after my exams on the 20th" better than dateparser, and the rule still runs in code. Trade-off: one more thing the extraction prompt must get right, covered by the few-shot examples and evals.
+
+## D20 [engine] Thinking stays on at low effort, with output headroom
+Current Haiku and Sonnet think by default, and turning thinking off is model-specific (`disabled` vs `between_tools`), which would break V4's model swaps. We keep it on, ask for low effort and add 2,048 tokens of headroom to `max_tokens`. Measured: about 1.3 s per extract and 1 s per compose on Haiku 5.5, with the static system prompts cached (about 5,000 of 5,200 input tokens read from cache).
+
+## D21 [engine] The reply guard checks the message rules in code: regenerate once, then trim
+Every composed reply is checked for ≤300 characters, ≤2 sentences, exactly one question at the end, ≤1 emoji and plain text. If it fails, it's regenerated once with the broken rules quoted back; if it still fails, it's trimmed deterministically. Live probe: 4 of 18 first drafts broke a rule, 0 of 18 final replies did. Cost: an occasional second fast-tier call, about 1 s.
+
+## D22 [engine] next_due_at includes quiet hours
+The engine tells the worker when the next tick is due, already moved to 09:00 local if a reminder falls in quiet hours. The worker doesn't poll every minute overnight, `reminder_deferred` is logged once, and the timing logic lives in one place. If several reminders came due overnight, only one message is sent.

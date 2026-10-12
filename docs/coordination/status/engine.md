@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-E6b compose polish, in progress (last engine task). E1–E5, E6a, E7, E8, E9 done.
+**All engine tasks done** (E1–E9, E6b). Open for: review findings, eval-driven prompt fixes (V3/V4), contract follow-ups.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -19,6 +19,7 @@ E6b compose polish, in progress (last engine task). E1–E5, E6a, E7, E8, E9 don
 | E9 | `screening/cli.py`: `uv run python -m screening.cli [--lang es\|en] [--country ES\|MX] [--fake] [--script file]`. Prints Alex's replies, the state diff and the events (`llm_call` with tokens, cache and latency). `--fake` = keyword stub, no API key needed. Colors only on a TTY | `uv run pytest tests/engine` (162 pass). **CP1 live check:** `uv run python -m screening.cli --country MX --script tests/engine/scripts/demo_mx.txt` → qualified after 11 turns (ambiguous "san pedro" → options, FAQ pay answer, "el lunes que viene" → 2026-10-19, schedule correction at the read-back); ~2–3 s per turn, prompts cached | 32c6bab |
 | E7 | `screening/timers.py` + `engine.handle_tick`: fixed reminders (kind `reminder`) at 15 min / 2 h / 20 h of silence (counted from the candidate's last message, or from the opening if they never replied); a reminder due in quiet hours waits until 09:00 candidate-local (`reminder_deferred` + `reminder_sent`, one message even if several came due); `abandoned` at 24 h with no message, stage kept. `DEMO_TIME_SCALE` honored via config. New: `engine.next_due_at(state, config=)` | `uv run pytest tests/engine` (173 pass; `test_timers.py` includes the eval scenario 16 timeline) | 7dcc63a |
 | E8 | `screening/record.py`: `final_record(state)` (contract JSON; only accepted values; flags as `{field, note}`). `screening/summary.py` + `prompts/summary.md`: Spanish recruiter note on the smart tier, written when the status leaves in_progress or abandoned (close or abandonment); a failure → `summary=None` + `llm_error`, and the close is still sent. Opt-outs get a fixed summary and no LLM call. The CLI prints the final record | `uv run pytest tests/engine` (180 pass). Live: the demo script's summary on Sonnet 5.5 is accurate (mentions the correction and the unanswered pay figure), 2.5 s | 62db461 |
+| E6b | `screening/guard.py`: `check_reply` / `trim_reply` for the message rules. `compose_reply` drafts, regenerates once with the broken rules quoted back, then trims; the retry's `llm_call` event carries `retry_for` and `trimmed`. Prompt tuning from live runs: name in at most 1 message in 3, varied openers, no judging answers (not even positively), availability options inside the question | `uv run pytest tests/engine` (201 pass). Live probe: first drafts broke a rule in 4 of 18 → 0 of 18 after the guard. Two demo runs: natural tone, no retries needed | a4cbb86 |
 
 ## Blocked
 None
@@ -48,6 +49,7 @@ None (pytest config and UP046 resolved by the lead in 5944914)
 - After `DEMO_TIME_SCALE`, `reminder_schedule` and `abandon_after` are already scaled timedeltas, and `config.time_scale` holds the factor. Quiet hours are not scaled (wall-clock rule).
 - LLM: `from screening.llm import AnthropicClient, FakeLLM, LLMError`. `FakeLLM({"extract": [...], "compose": lambda system, messages: "..."})`. Engine purposes: `extract`, `compose`, `summary`.
 - Validators: `from screening.validators import match_city, validate_*`. Evals can reuse `match_city` to score city answers.
+- **Evals (V3):** a composed reply that needed the guard shows up as a second `llm_call` with purpose `compose` and `data.retry_for` (plus `data.trimmed`), useful for a message-rule compliance score.
 - **Evals:** `screening.record.final_record(state)` is the record to score against `expected`. For silence scenarios, call `engine.next_due_at(state, config=)` to know when to tick.
 - Evals: the first extract call after a schema change can take ~30 s (one-off). Don't count it in latency stats, or warm up first.
 - Fixed messages: `screening/prompts/messages.yaml` is the reviewable list of every word-for-word message (opening, closes, etc.); V5/presentation can quote it.

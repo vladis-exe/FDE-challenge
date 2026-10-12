@@ -27,6 +27,7 @@ AskField = Literal[
     "experience",
     "start_date",
     "confirm",
+    "correction",
 ]
 
 VOCABULARY = {

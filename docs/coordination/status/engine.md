@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-E4 Understand (extraction schema + prompt), next. E1, E3, E2 done.
+E6a Compose (basic), in progress. E1, E3, E2, E4 done.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -12,6 +12,7 @@ E4 Understand (extraction schema + prompt), next. E1, E3, E2 done.
 | E3 | `screening/llm/`: `LLMClient` protocol and types (CONTRACTS §3), `AnthropicClient` (`messages.parse` structured output, effort `low` + thinking headroom, cached system block, SDK retries=3 / timeout 30 s, one extra try on an invalid record, refusal/max_tokens/API errors → `LLMError`), `FakeLLM` (scripts by purpose: list or callable; exceptions raised; `.calls` recorded) | `uv run pytest tests/engine` (29 pass). Live smoke on Haiku 5.5: structured 2.4 s, text 0.9 s | 3fe8f62 |
 | E3 v2 | `LLMUsage.cache_read_tokens` / `cache_write_tokens` filled (CONTRACTS v2); `input_tokens` stays the total | `uv run pytest tests/engine` | 04f205b |
 | E2 | `screening/validators/`: `Verdict` (accept / reask / flag), `match_city` (exact n-grams over names/aliases/neighborhoods, then fuzzy: ≥90 match, ≥80 options, max 3), license (yes/no accepted; expired/in_progress/foreign flagged; vague re-asked), name (one soft surname re-ask), availability/schedule (dedupe, canonical order, flexible alone), experience (months→years, platform aliases, 0–40), start date (asap=today, no past, ≤183 days, vague re-asked), `local_date(received_at, tz)` | `uv run pytest tests/engine` (90 pass) | d5d7ad0 |
+| E4 | `screening/understand.py`: `Extraction` (intent, language, consent, confirmation, question, faq_id, typed raw fields) and `extract(state, message, llm=, config=)`. `screening/prompts/extract.md` (rules plus 6 few-shot examples: multi-field, Mexican vocabulary, emoji with expired license, code-switch with FAQ, correction at confirm, injection). `screening/locale.py` (candidate country/timezone) | `uv run pytest tests/engine` (98 pass). Live probe on Haiku 5.5: 8/8 correct; cache read 5,068 of ~5,200 input tokens; ~1.3 s per call (the first call after a schema change took 34 s) | d5c0e5c |
 
 ## Blocked
 None
@@ -38,6 +39,7 @@ None (cache-token request done as CONTRACTS v2, D14)
 - After `DEMO_TIME_SCALE`, `reminder_schedule` and `abandon_after` are already scaled timedeltas, and `config.time_scale` holds the factor. Quiet hours are not scaled (wall-clock rule).
 - LLM: `from screening.llm import AnthropicClient, FakeLLM, LLMError`. `FakeLLM({"extract": [...], "compose": lambda system, messages: "..."})`. Engine purposes: `extract`, `compose`, `summary`.
 - Validators: `from screening.validators import match_city, validate_*`. Evals can reuse `match_city` to score city answers.
+- Evals: the first extract call after a schema change can take ~30 s (one-off). Don't count it in latency stats, or warm up first.
 - FAQ answers flagged `placeholder: true` are client terms to replace before launch.
 
 ## Prep notes (engine-internal)

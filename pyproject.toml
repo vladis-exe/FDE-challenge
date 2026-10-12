@@ -31,10 +31,14 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["**/migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings"
+# No global DJANGO_SETTINGS_MODULE: engine and evals tests must run with no Django at all.
+# App tests set it themselves (see CLAUDE.md commands) since pytest-django needs it at
+# configure time, before any conftest.py would get a chance to.
+pythonpath = ["."]
 python_files = ["tests.py", "test_*.py", "*_tests.py"]

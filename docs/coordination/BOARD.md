@@ -48,7 +48,7 @@ Owned by the lead; only the lead ticks boxes. Lanes report progress in `status/<
 
 ## Engine (E): `screening/`
 Order: E1 → E3 → E2 → E4 → E6a → E5 → E9 (CP1) → E7 → E8 → E6b.
-- [ ] **E1 Schemas and config.** Do this first and commit early; it unblocks every lane.
+- [x] **E1 Schemas and config.** Do this first and commit early; it unblocks every lane.
   - `schemas.py` exactly as in CONTRACTS §1.
   - The `ScreeningConfig` loader, plus `service_areas.yaml`, `faq.yaml` and `screening.yaml` with sample data.
 - [ ] **E3 LLM layer:**
@@ -82,7 +82,7 @@ Order: E1 → E3 → E2 → E4 → E6a → E5 → E9 (CP1) → E7 → E8 → E6b
 
 ## App (A): Django
 Order: A1 → A2 (stub engine) → A3 (CP1) → A4 → A5 → A9 (CP2) → A6 → A7 → A8.
-- [ ] **A1 Project setup.**
+- [x] **A1 Project setup.**
   - Django project `config/`: settings from env, `dj-database-url` (Postgres, or SQLite fallback), TZ=UTC, whitenoise.
   - Apps `apps/candidates`, `apps/messaging`, `apps/dashboard`.
   - Models from CONTRACTS §5, migrations and admin.

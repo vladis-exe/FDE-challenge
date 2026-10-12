@@ -37,3 +37,6 @@ No LangChain, LangGraph or CrewAI. The orchestration is small, explicit and full
 
 ## D12 [lead] LLM: Claude behind a thin client; final model choice by evals
 Fast tier for extract/compose and smart tier for summaries by default. V4 decides the final configuration on accuracy, latency and cost per screening.
+
+## D13 [lead] Eight spec gaps resolved for E5, engine's proposed defaults all approved
+The engine lane listed 8 behaviors the spec implies but doesn't spell out (consent decline, out-of-area waitlist wording, shared offtopic/abuse/injection strike counter, human handoff timing, resuming after `abandoned`, messages after a final outcome, no-surname handling, vague vs. explicit-unclear license). Each proposal is a direct, literal reading of `process-design.md`'s own text (e.g. the name rule is quoted almost verbatim), so none needed a contract change or a call from Vlad. Full list and reasoning: `status/engine.md` "Open spec questions", 2026-10-12. If any of these turns out wrong in practice, it's a status-file note and a small E5 patch, not a contract change.

@@ -55,7 +55,7 @@ All sessions run in parallel in the same working tree and talk only through `doc
 
 ## Commands
 - Only the lead edits `pyproject.toml` and `uv.lock`. Need a package? Request it in your status file.
-- Tests: `uv run pytest tests/<lane>`. Lint and format only your own paths: `uv run ruff check <paths>` and `uv run ruff format <paths>`.
+- Tests: `uv run pytest tests/engine` and `uv run pytest tests/evals` run with no Django at all. App tests need settings: `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (or `cp .env.example .env` once, which `config/settings.py` also needs for `DJANGO_SECRET_KEY`/`DEBUG`). Lint and format only your own paths: `uv run ruff check <paths>` and `uv run ruff format <paths>`.
 - Dev server (app lane): `uv run python manage.py runserver 8000`.
 - Worker (app lane): `uv run python manage.py run_worker`.
 - Engine CLI: `uv run python -m screening.cli`.

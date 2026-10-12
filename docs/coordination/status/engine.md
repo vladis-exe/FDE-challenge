@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-E9 CLI, in progress (last task before CP1). E1, E3, E2, E4, E6a, E5 done.
+E7 timers, in progress. **CP1 engine side done** (E1, E3, E2, E4, E6a, E5, E9).
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -16,6 +16,7 @@ E9 CLI, in progress (last task before CP1). E1, E3, E2, E4, E6a, E5 done.
 | E6a | `screening/prompts/compose.md` (Alex persona, hard message rules, how to ask each field). `screening/compose.py` (`ReplyPlan`/`Ask` decided by code → `compose_reply`, fast tier). `screening/prompts/messages.yaml` + `screening/messages.py`: fixed texts (opening with AI disclosure and privacy link, read-back, closes, holding, media, after-close) in es/en with ES/MX vocabulary, and a deterministic read-back summary. `privacy_url` added to `screening.yaml` | `uv run pytest tests/engine` (114 pass). Live probe on Haiku 5.5: 14/18 replies meet every hard rule; the 4 misses are 3 sentences or text after the question → E6b guard | 07114b7 |
 | E2 fix | City names shared by two cities ("San Pedro": Monterrey and Guadalajara metros) are ambiguous; the longest match wins ("San Pedro Garza García" → Monterrey). Found via eval scenario 12 | `uv run pytest tests/engine` | 27b27c8 |
 | E5 | `screening/policy.py`: the transition table (docstring, committed first in 4717b17) and `decide(state, extraction, message, config)`, which is pure and LLM-free. `screening/engine.py`: `EngineContext`, `new_conversation` (+34 → ES, +52 → MX hint), `start` (fixed opening), `handle_message` (opt-out silence and media first with no LLM; then extract → decide → render; any `LLMError` → holding reply + `llm_error`). Review reasons: `license_unclear`, `unresolved:<field>`, `human_requested`, `offtopic`, `abuse` (match the V1 scenarios) | `uv run pytest tests/engine` (160 pass; 46 in `test_engine.py`, at least one per table row) | c8052a5 |
+| E9 | `screening/cli.py`: `uv run python -m screening.cli [--lang es\|en] [--country ES\|MX] [--fake] [--script file]`. Prints Alex's replies, the state diff and the events (`llm_call` with tokens, cache and latency). `--fake` = keyword stub, no API key needed. Colors only on a TTY | `uv run pytest tests/engine` (162 pass). **CP1 live check:** `uv run python -m screening.cli --country MX --script tests/engine/scripts/demo_mx.txt` → qualified after 11 turns (ambiguous "san pedro" → options, FAQ pay answer, "el lunes que viene" → 2026-10-19, schedule correction at the read-back); ~2–3 s per turn, prompts cached | 32c6bab |
 
 ## Blocked
 None

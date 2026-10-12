@@ -1,0 +1,13 @@
+# Live CLI demo (MX): ambiguous city, FAQ mid-flow, correction at the read-back.
+# uv run python -m screening.cli --country MX --script tests/engine/scripts/demo_mx.txt
+va, sale
+me llamo Diego Cantú
+sí tengo licencia vigente 👍
+en san pedro
+monterrey
+medio tiempo, y oye cuánto pagan?
+en las mañanas
+un año con didi food
+el lunes que viene
+ah no, perdón, en las tardes mejor
+sí todo bien

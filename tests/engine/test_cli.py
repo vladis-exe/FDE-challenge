@@ -25,6 +25,7 @@ def test_fake_script_runs_a_full_screening(tmp_path, capsys):
     assert "Repasemos: Laura Pérez" in output  # the read-back
     assert "Final status: qualified" in output
     assert "profile.location.value.city: None -> 'barcelona'" in output  # state diff
+    assert '"summary": "[fake summary]"' in output  # the final record
 
 
 def test_fake_script_stops_at_a_knockout(tmp_path, capsys):

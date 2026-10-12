@@ -41,9 +41,13 @@ def echo_plan(system: str, messages: list[dict[str, str]]) -> str:
     return f"PLAN[{plan}]?"
 
 
+def fake_summary(system: str, messages: list[dict[str, str]]) -> str:
+    return "Resumen para el reclutador."
+
+
 class Convo:
     def __init__(self, phone: str = "+34600000001", language: str = "es") -> None:
-        self.llm = FakeLLM({"extract": [], "compose": echo_plan})
+        self.llm = FakeLLM({"extract": [], "compose": echo_plan, "summary": fake_summary})
         self.ctx = EngineContext(config=CONFIG, llm=self.llm)
         state = new_conversation("c1", Channel.SIM, phone=phone, language=language, now=T0)
         self.opening = start(state, now=T0, ctx=self.ctx)
@@ -604,3 +608,45 @@ def test_llm_failure_sends_holding_reply_and_keeps_state(failing):
     assert after.status is before.status
     assert after.transcript_tail[-2].role == "candidate"
     assert after.transcript_tail[-1].role == "agent"
+
+
+# Summary (E8)
+
+
+def test_summary_is_written_when_the_screening_ends():
+    convo = Convo()
+    convo.to_confirm()
+    assert convo.state.summary is None
+    result = convo.send(ext(confirmation="confirm"))
+    assert convo.state.summary == "Resumen para el reclutador."
+    summary_call = convo.llm.calls_for("summary")[0]
+    assert summary_call.tier == "smart"
+    assert '"status": "qualified"' in summary_call.messages[0]["content"]
+    assert [e.data["purpose"] for e in result.events if e.type == "llm_call"][-1] == "summary"
+
+
+def test_failed_summary_still_sends_the_close():
+    convo = Convo()
+    convo.llm.scripts["summary"] = [LLMError("down")]
+    convo.through_license()
+    result = convo.send(ext(intent="human_request"))
+    assert result.outbound[0].kind == "close"
+    assert convo.state.status is Status.NEEDS_REVIEW
+    assert convo.state.summary is None
+    assert "llm_error" in event_types(result)
+
+
+def test_opt_out_summary_never_goes_to_the_llm():
+    convo = Convo()
+    convo.send(ext(consent="no"))
+    assert convo.state.summary == "Opted out at stage done."
+    assert convo.llm.calls_for("summary") == []
+
+
+def test_no_summary_while_in_progress_or_after_close():
+    convo = Convo()
+    convo.through_license()
+    assert convo.llm.calls_for("summary") == []
+    convo.send(ext(license="no"))  # closes: one summary
+    convo.send(ext(intent="smalltalk"))  # after close: no new summary
+    assert len(convo.llm.calls_for("summary")) == 1

@@ -15,7 +15,7 @@ MEXICO = ZoneInfo("America/Mexico_City")
 @pytest.fixture
 def ctx(monkeypatch):
     monkeypatch.delenv("DEMO_TIME_SCALE", raising=False)
-    return EngineContext(config=load_config(), llm=FakeLLM())
+    return EngineContext(config=load_config(), llm=FakeLLM({"summary": ["Abandonada."]}))
 
 
 def silent_since(ctx, at: datetime, phone="+34600000000", replied=True) -> ConversationState:
@@ -138,7 +138,7 @@ def test_finished_conversations_never_tick(ctx):
 
 def test_demo_time_scale_compresses_the_schedule(monkeypatch):
     monkeypatch.setenv("DEMO_TIME_SCALE", "60")
-    ctx = EngineContext(config=load_config(), llm=FakeLLM())
+    ctx = EngineContext(config=load_config(), llm=FakeLLM({"summary": ["Abandonada."]}))
     state = silent_since(ctx, local(14, 12))
     assert next_due_at(state, config=ctx.config) == local(14, 12) + timedelta(seconds=15)
     _, state = tick(state, ctx, local(14, 12) + timedelta(seconds=15))

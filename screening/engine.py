@@ -27,8 +27,10 @@ from screening.schemas import (
     TranscriptLine,
     TurnResult,
 )
+from screening.summary import summarize
 from screening.understand import extract
 
+OPEN = {Status.IN_PROGRESS, Status.ABANDONED}  # a screening that can still continue
 PHONE_COUNTRIES: dict[str, Literal["ES", "MX"]] = {"+34": "ES", "+52": "MX"}
 
 
@@ -110,7 +112,10 @@ def handle_message(
         events.append(Event(type="llm_error", at=now, data={"error": str(error)}))
         return _reply(base, [_fixed(FixedReply("holding"), base, ctx)], events, now, ctx)
 
-    return _reply(decision.state, outbound, events, now, ctx)
+    result = _reply(decision.state, outbound, events, now, ctx)
+    if state.status in OPEN and result.state.status not in OPEN:
+        _write_summary(result, now, ctx)
+    return result
 
 
 def handle_tick(state: ConversationState, *, now: datetime, ctx: EngineContext) -> TurnResult:
@@ -133,7 +138,9 @@ def handle_tick(state: ConversationState, *, now: datetime, ctx: EngineContext) 
             data={"from": "in_progress", "to": "abandoned", "stage": state.stage.value},
         )
         state.status = Status.ABANDONED  # the stage stays, for drop-off analytics
-        return TurnResult(state=state, events=[event])
+        result = TurnResult(state=state, events=[event])
+        _write_summary(result, now, ctx)
+        return result
 
     timezone = ZoneInfo(candidate_timezone(state, config))
     originally_due = started + config.reminder_schedule[state.reminders_sent]
@@ -163,6 +170,23 @@ def _fixed(reply: FixedReply, state: ConversationState, ctx: EngineContext) -> O
     else:
         text = messages.for_state(reply.key, state, **reply.values)
     return OutboundMessage(text=text, kind=reply.kind)
+
+
+def _write_summary(result: TurnResult, now: datetime, ctx: EngineContext) -> None:
+    """Set the recruiter note once the screening has ended. Never blocks the close."""
+    state = result.state
+    if state.status is Status.OPTED_OUT:
+        # Consent was refused or withdrawn: the conversation goes to no other model.
+        state.summary = f"Opted out at stage {state.stage.value}."
+        return
+    try:
+        summary = summarize(state, llm=ctx.llm)
+    except LLMError as error:
+        state.summary = None
+        result.events.append(Event(type="llm_error", at=now, data={"error": str(error)}))
+        return
+    state.summary = summary.value
+    result.events.append(_llm_call("summary", summary, now))
 
 
 def _reply(

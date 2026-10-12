@@ -9,6 +9,7 @@ without an API key; it only understands direct answers to the current question.
 """
 
 import argparse
+import json
 import re
 import sys
 from collections.abc import Iterator
@@ -21,6 +22,7 @@ from dotenv import load_dotenv
 from screening import engine
 from screening.config import load_config
 from screening.llm import AnthropicClient, FakeLLM, LLMClient
+from screening.record import final_record
 from screening.schemas import Channel, ConversationState, InboundMessage, Status, TurnResult
 
 DIM, BOLD, CYAN = "2", "1", "1;36"
@@ -73,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     if state.review_reasons:
         print(f" (review: {', '.join(state.review_reasons)})", end="")
     print()
+    if state.status not in (Status.IN_PROGRESS, Status.ABANDONED):
+        print(style("Final record:", BOLD))
+        print(json.dumps(final_record(state), ensure_ascii=False, indent=2))
     return 0
 
 
@@ -157,7 +162,13 @@ SCHEDULE_WORDS = {
 
 
 def fake_llm() -> FakeLLM:
-    return FakeLLM({"extract": fake_extract, "compose": fake_compose})
+    return FakeLLM(
+        {
+            "extract": fake_extract,
+            "compose": fake_compose,
+            "summary": lambda system, messages: "[fake summary]",
+        }
+    )
 
 
 def fake_extract(system: str, messages: list[dict[str, str]]) -> dict[str, Any]:

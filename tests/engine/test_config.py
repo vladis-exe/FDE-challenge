@@ -39,15 +39,11 @@ def test_service_areas_cover_both_countries():
     assert mx_keys == {"cdmx", "guadalajara", "monterrey", "puebla", "queretaro"}
 
 
-def test_no_name_alias_or_neighborhood_points_to_two_cities():
-    """An ambiguous config entry would make the city matcher's answer depend on order."""
+def test_city_keys_are_unique_across_countries():
+    """Location.city stores only the key, so a key must identify one city."""
     config = load_config()
-    owner: dict[str, str] = {}
-    for area in config.service_areas.values():
-        for city in area.cities:
-            for term in [city.key, city.name, *city.aliases, *city.neighborhoods]:
-                term = term.casefold()
-                assert owner.setdefault(term, city.key) == city.key, term
+    keys = [city.key for area in config.service_areas.values() for city in area.cities]
+    assert len(keys) == len(set(keys))
 
 
 def test_every_faq_entry_has_both_languages():

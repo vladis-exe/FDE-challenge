@@ -60,6 +60,18 @@ def test_two_different_cities_named_is_ambiguous(config):
     assert {option.city for option in result.options} == {"madrid", "barcelona"}
 
 
+def test_name_shared_by_two_cities_is_ambiguous(config):
+    result = match_city("en san pedro", config)
+    assert result.kind == "ambiguous"
+    assert {option.city for option in result.options} == {"monterrey", "guadalajara"}
+
+
+def test_longer_match_beats_the_shared_name_inside_it(config):
+    result = match_city("San Pedro Garza García, Monterrey", config)
+    assert result.kind == "matched"
+    assert result.location.city == "monterrey"
+
+
 def test_weak_fuzzy_match_offers_options_instead_of_guessing(config):
     result = match_city("Bilbaino", config)
     assert result.kind == "ambiguous"

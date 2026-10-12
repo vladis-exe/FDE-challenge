@@ -1,6 +1,7 @@
 # Where Grupo Sazón hires drivers. SAMPLE DATA: the client supplies the real list.
 # The city matcher maps a city's name, any alias or any neighborhood to its key.
-# Matching ignores case and accents, so list each spelling once.
+# Matching ignores case and accents, so list each spelling once. A name shared by
+# two cities ("San Pedro") is listed under both and makes the matcher ask which.
 
 ES:
   timezone: Europe/Madrid
@@ -40,11 +41,11 @@ MX:
     - key: guadalajara
       name: Guadalajara
       aliases: [GDL, Guanatos]
-      neighborhoods: [Zapopan, Tlaquepaque, Chapalita, Providencia, Tonalá, Americana]
+      neighborhoods: [Zapopan, Tlaquepaque, San Pedro Tlaquepaque, San Pedro, Chapalita, Providencia, Tonalá, Americana]
     - key: monterrey
       name: Monterrey
       aliases: [MTY, Monterey]
-      neighborhoods: [San Pedro Garza García, San Nicolás de los Garza, Guadalupe, Apodaca, Cumbres, Mitras]
+      neighborhoods: [San Pedro Garza García, San Pedro, San Nicolás de los Garza, Guadalupe, Apodaca, Cumbres, Mitras]
     - key: puebla
       name: Puebla
       aliases: [Puebla de Zaragoza, pue]

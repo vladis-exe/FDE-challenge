@@ -1,7 +1,9 @@
 """Map what the candidate wrote to a configured city.
 
 Exact matching runs first, on every run of 1-5 words in the text, against city
-names, aliases and neighborhoods (so "vivo en Gràcia" finds Barcelona). Only if
+names, aliases and neighborhoods (so "vivo en Gràcia" finds Barcelona). A longer
+match beats a shorter one inside it ("San Pedro Garza García" is Monterrey, while
+a bare "San Pedro" belongs to two cities and is ambiguous). Only if
 nothing matches exactly do we try fuzzy matching, for typos like "Barcelna".
 A strong single fuzzy hit counts as a match; anything weaker becomes a short list
 of options for the candidate to choose from, because guessing a city wrong could
@@ -41,7 +43,9 @@ def match_city(text: str, config: ScreeningConfig) -> CityMatch:
         for start in range(len(words) - size + 1)
     ]
 
-    exact = list(dict.fromkeys(index[gram] for gram in grams if gram in index))
+    matched = [gram for gram in grams if gram in index]
+    longest = [gram for gram in matched if not any(_inside(gram, other) for other in matched)]
+    exact = list(dict.fromkeys(key for gram in longest for key in index[gram]))
     if len(exact) == 1:
         return CityMatch("matched", location=locations[exact[0]])
     if exact:
@@ -51,9 +55,10 @@ def match_city(text: str, config: ScreeningConfig) -> CityMatch:
     for gram in grams:
         if len(gram) < FUZZY_MIN_LENGTH:
             continue
-        for term, key in index.items():
+        for term, keys in index.items():
             if len(term) >= FUZZY_MIN_LENGTH:
-                scores[key] = max(fuzz.ratio(gram, term), scores.get(key, 0))
+                for key in keys:
+                    scores[key] = max(fuzz.ratio(gram, term), scores.get(key, 0))
     ranked = sorted(scores, key=scores.__getitem__, reverse=True)
     strong = [key for key in ranked if scores[key] >= FUZZY_MATCH]
     if len(strong) == 1:
@@ -64,17 +69,26 @@ def match_city(text: str, config: ScreeningConfig) -> CityMatch:
     return CityMatch("not_served", city_text=text.strip())
 
 
-def _index(config: ScreeningConfig) -> tuple[dict[str, str], dict[str, Location]]:
-    """Normalized name, alias and neighborhood -> city key; city key -> Location.
+def _inside(gram: str, other: str) -> bool:
+    """True when `gram` is a shorter run of words within `other`."""
+    return gram != other and f" {gram} " in f" {other} "
+
+
+def _index(config: ScreeningConfig) -> tuple[dict[str, list[str]], dict[str, Location]]:
+    """Normalized name, alias and neighborhood -> city keys; city key -> Location.
+
+    A term may belong to several cities (two metros can share a neighborhood name).
 
     Rebuilt per call: it is about 150 entries, and keeping it pure avoids a cache
     that would go stale if config changed.
     """
-    index: dict[str, str] = {}
+    index: dict[str, list[str]] = {}
     locations: dict[str, Location] = {}
     for country, area in config.service_areas.items():
         for city in area.cities:
             locations[city.key] = Location(country=country, city=city.key)
             for term in [city.key, city.name, *city.aliases, *city.neighborhoods]:
-                index[normalize(term)] = city.key
+                keys = index.setdefault(normalize(term), [])
+                if city.key not in keys:
+                    keys.append(city.key)
     return index, locations

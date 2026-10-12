@@ -36,9 +36,13 @@ def ext(intent: str = "answer", language: str = "es", **values) -> dict:
     return {"intent": intent, "language": language, "fields": fields, **top}
 
 
-def echo_plan(system: str, messages: list[dict[str, str]]) -> str:
-    plan = messages[-1]["content"].split("<write>\n")[1].split("\n</write>")[0]
-    return f"PLAN[{plan}]?"
+def plan_of(messages: list[dict[str, str]]) -> str:
+    return messages[0]["content"].split("<write>\n")[1].split("\n</write>")[0]
+
+
+def fake_compose(system: str, messages: list[dict[str, str]]) -> str:
+    """A reply that passes the message rules; tests read the plan from the request."""
+    return "Vale. ¿Seguimos?" if "Ask for:" in plan_of(messages) else "Vale."
 
 
 def fake_summary(system: str, messages: list[dict[str, str]]) -> str:
@@ -47,7 +51,7 @@ def fake_summary(system: str, messages: list[dict[str, str]]) -> str:
 
 class Convo:
     def __init__(self, phone: str = "+34600000001", language: str = "es") -> None:
-        self.llm = FakeLLM({"extract": [], "compose": echo_plan, "summary": fake_summary})
+        self.llm = FakeLLM({"extract": [], "compose": fake_compose, "summary": fake_summary})
         self.ctx = EngineContext(config=CONFIG, llm=self.llm)
         state = new_conversation("c1", Channel.SIM, phone=phone, language=language, now=T0)
         self.opening = start(state, now=T0, ctx=self.ctx)
@@ -65,8 +69,16 @@ class Convo:
             received_at=at or T0 + timedelta(minutes=self.count),
             media=media,
         )
+        calls_before = len(self.llm.calls)
         result = handle_message(self.state, message, ctx=self.ctx)
         self.state = result.state
+        # What Alex said this turn: fixed texts as sent, composed replies as their plans.
+        plans = [
+            plan_of(call.messages)
+            for call in self.llm.calls[calls_before:]
+            if call.purpose == "compose"
+        ]
+        self.said = " | ".join([message.text for message in result.outbound] + plans)
         return result
 
     def through_license(self) -> None:
@@ -81,10 +93,6 @@ class Convo:
         self.send(ext(schedule=["evening"]))
         self.send(ext(has_experience=True, experience=[{"platform": "Glovo", "months": 18}]))
         return self.send(ext(start_date={"kind": "date", "resolved": "2026-10-19"}))
-
-
-def text_of(result: TurnResult) -> str:
-    return " | ".join(message.text for message in result.outbound)
 
 
 def event_types(result: TurnResult) -> list[str]:
@@ -128,7 +136,7 @@ def test_consent_yes_moves_to_name():
     assert convo.state.consent_at is not None
     assert convo.state.stage is Stage.NAME
     assert "consent_given" in event_types(result)
-    assert "Ask for: full_name." in text_of(result)
+    assert "Ask for: full_name." in convo.said
 
 
 def test_consent_declined_closes_and_stores_nothing():
@@ -138,14 +146,14 @@ def test_consent_declined_closes_and_stores_nothing():
     assert convo.state.stage is Stage.DONE
     assert convo.state.consent_at is None
     assert result.outbound[0].kind == "close"
-    assert "no guardaremos tus datos" in text_of(result)
+    assert "no guardaremos tus datos" in convo.said
 
 
 def test_unclear_consent_asks_again():
     convo = Convo()
-    result = convo.send(ext(intent="smalltalk"), text="hola")
+    convo.send(ext(intent="smalltalk"), text="hola")
     assert convo.state.stage is Stage.CONSENT
-    assert "Ask for: consent." in text_of(result)
+    assert "Ask for: consent." in convo.said
 
 
 def test_answers_right_away_count_as_consent_and_skip_ahead():
@@ -157,7 +165,7 @@ def test_answers_right_away_count_as_consent_and_skip_ahead():
     assert profile.has_driver_license.value is True
     assert profile.location.value == Location(country="ES", city="barcelona")
     assert convo.state.stage is Stage.AVAILABILITY
-    assert "Ask for: availability." in text_of(result)
+    assert "Ask for: availability." in convo.said
     assert event_types(result).count("field_accepted") == 3
 
 
@@ -191,8 +199,8 @@ def test_happy_path_ends_qualified():
 def test_acknowledges_what_was_just_recorded():
     convo = Convo()
     convo.send(ext(consent="yes"))
-    result = convo.send(ext(full_name="Laura Pérez"))
-    assert "acknowledge what they just told you: name: Laura Pérez" in text_of(result)
+    convo.send(ext(full_name="Laura Pérez"))
+    assert "acknowledge what they just told you: name: Laura Pérez" in convo.said
 
 
 def test_no_experience_is_accepted():
@@ -213,8 +221,8 @@ def test_no_experience_is_accepted():
 def test_first_name_only_gets_one_surname_reask_then_combines():
     convo = Convo()
     convo.send(ext(consent="yes"))
-    result = convo.send(ext(full_name="Laura"))
-    assert "Ask for: surname." in text_of(result)
+    convo.send(ext(full_name="Laura"))
+    assert "Ask for: surname." in convo.said
     assert convo.state.stage is Stage.NAME
 
     convo.send(ext(full_name="Pérez"))
@@ -277,8 +285,8 @@ def test_vague_license_is_reasked_twice_then_flagged():
     convo = Convo()
     convo.send(ext(consent="yes"))
     convo.send(ext(full_name="Ana Ruiz"))
-    first = convo.send(ext(license="vague"))
-    assert "didn't work (not a clear yes or no)" in text_of(first)
+    convo.send(ext(license="vague"))
+    assert "didn't work (not a clear yes or no)" in convo.said
     convo.send(ext(license="vague"))
     assert convo.state.profile.has_driver_license.attempts == 2
     assert convo.state.stage is Stage.LICENSE
@@ -296,10 +304,10 @@ def test_vague_license_is_reasked_twice_then_flagged():
 def test_unserved_city_asks_for_confirmation_then_disqualifies():
     convo = Convo()
     convo.through_license()
-    asked = convo.send(ext(city_text="Zaragoza"))
+    convo.send(ext(city_text="Zaragoza"))
     assert convo.state.pending_confirmation == {"type": "out_of_area", "city_text": "Zaragoza"}
-    assert "Ask for: out_of_area." in text_of(asked)
-    assert "where we are not hiring: Zaragoza" in text_of(asked)
+    assert "Ask for: out_of_area." in convo.said
+    assert "where we are not hiring: Zaragoza" in convo.said
     assert convo.state.status is Status.IN_PROGRESS
 
     result = convo.send(ext(confirmation="confirm"), text="sí, en Zaragoza")
@@ -331,18 +339,18 @@ def test_denying_the_unserved_city_asks_for_the_city_again():
     convo = Convo()
     convo.through_license()
     convo.send(ext(city_text="Zaragoza"))
-    result = convo.send(ext(confirmation="deny"))
+    convo.send(ext(confirmation="deny"))
     assert convo.state.pending_confirmation is None
     assert convo.state.profile.location.attempts == 1
-    assert "Ask for: location." in text_of(result)
+    assert "Ask for: location." in convo.said
 
 
 def test_ambiguous_city_offers_options():
     convo = Convo(phone="+528100000012")
     convo.through_license()
-    result = convo.send(ext(city_text="san pedro"))
-    assert "Ask for: city_choice. Options: Guadalajara, Monterrey." in text_of(result) or (
-        "Ask for: city_choice. Options: Monterrey, Guadalajara." in text_of(result)
+    convo.send(ext(city_text="san pedro"))
+    assert "Ask for: city_choice. Options: Guadalajara, Monterrey." in convo.said or (
+        "Ask for: city_choice. Options: Monterrey, Guadalajara." in convo.said
     )
     assert convo.state.profile.location.attempts == 1
 
@@ -354,8 +362,8 @@ def test_city_never_given_is_flagged_after_two_reasks():
     convo = Convo()
     convo.through_license()
     for _ in range(2):
-        result = convo.send(ext(), text="por la zona sur")
-        assert "Ask for: location." in text_of(result)
+        convo.send(ext(), text="por la zona sur")
+        assert "Ask for: location." in convo.said
     convo.send(ext(), text="eso se lo digo al reclutador")
     location = convo.state.profile.location
     assert location.status is FieldStatus.FLAGGED
@@ -371,8 +379,8 @@ def test_question_uses_no_attempt_and_gets_the_approved_answer():
     convo.through_license()
     result = convo.send(ext(intent="question", question="¿Cuánto pagan?", faq_id="pay"))
     assert convo.state.profile.location.attempts == 0
-    assert "El pago depende de la ciudad" in text_of(result)
-    assert "Ask for: location." in text_of(result)
+    assert "El pago depende de la ciudad" in convo.said
+    assert "Ask for: location." in convo.said
     faq_events = [event for event in result.events if event.type == "faq_answered"]
     assert faq_events[0].data == {"faq_id": "pay"}
 
@@ -380,24 +388,24 @@ def test_question_uses_no_attempt_and_gets_the_approved_answer():
 def test_uncovered_question_defers_to_a_recruiter():
     convo = Convo()
     convo.through_license()
-    result = convo.send(ext(intent="question", question="¿Dan uniforme?"))
-    assert "a recruiter will confirm" in text_of(result)
+    convo.send(ext(intent="question", question="¿Dan uniforme?"))
+    assert "a recruiter will confirm" in convo.said
 
 
 def test_answer_with_question_does_both():
     convo = Convo()
     convo.through_license()
-    result = convo.send(ext(city_text="Madrid", question="¿Cuánto pagan?", faq_id="pay"))
+    convo.send(ext(city_text="Madrid", question="¿Cuánto pagan?", faq_id="pay"))
     assert convo.state.profile.location.status is FieldStatus.ACCEPTED
-    assert "El pago depende" in text_of(result)
-    assert "Ask for: availability." in text_of(result)
+    assert "El pago depende" in convo.said
+    assert "Ask for: availability." in convo.said
 
 
 def test_unknown_faq_id_is_treated_as_uncovered():
     convo = Convo()
     convo.through_license()
-    result = convo.send(ext(intent="question", question="¿Hay bonus?", faq_id="bonus"))
-    assert "a recruiter will confirm" in text_of(result)
+    convo.send(ext(intent="question", question="¿Hay bonus?", faq_id="bonus"))
+    assert "a recruiter will confirm" in convo.said
 
 
 # Rows 5-8: opt-out, human, off-topic, abuse, injection
@@ -433,8 +441,8 @@ def test_first_offtopic_message_gets_a_redirect():
     result = convo.send(ext(intent="offtopic"), text="¿qué opinas del Madrid-Barça?")
     assert convo.state.offtopic_strikes == 1
     assert convo.state.status is Status.IN_PROGRESS
-    assert "wasn't about the application" in text_of(result)
-    assert "Ask for: location." in text_of(result)
+    assert "wasn't about the application" in convo.said
+    assert "Ask for: location." in convo.said
     assert "offtopic" in event_types(result)
 
 
@@ -473,7 +481,7 @@ def test_correction_at_confirm_updates_and_reads_back_again():
     assert convo.state.profile.location.value == Location(country="ES", city="malaga")
     assert "field_corrected" in event_types(result)
     assert convo.state.stage is Stage.CONFIRM
-    assert "Repasemos:" in text_of(result) and "Málaga" in text_of(result)
+    assert "Repasemos:" in convo.said and "Málaga" in convo.said
 
     convo.send(ext(confirmation="confirm"))
     assert convo.state.status is Status.QUALIFIED
@@ -482,16 +490,16 @@ def test_correction_at_confirm_updates_and_reads_back_again():
 def test_deny_without_details_asks_what_to_change():
     convo = Convo()
     convo.to_confirm()
-    result = convo.send(ext(confirmation="deny"), text="no")
+    convo.send(ext(confirmation="deny"), text="no")
     assert convo.state.stage is Stage.CONFIRM
-    assert "Ask for: correction." in text_of(result)
+    assert "Ask for: correction." in convo.said
 
 
 def test_question_at_confirm_re_asks_confirm():
     convo = Convo()
     convo.to_confirm()
-    result = convo.send(ext(intent="question", question="¿Hay entrevista?", faq_id="process"))
-    assert "Ask for: confirm." in text_of(result)
+    convo.send(ext(intent="question", question="¿Hay entrevista?", faq_id="process"))
+    assert "Ask for: confirm." in convo.said
     assert convo.state.status is Status.IN_PROGRESS
 
 
@@ -503,7 +511,7 @@ def test_voice_note_asks_for_text_without_calling_the_llm():
     convo.send(ext(consent="yes"))
     calls_before = len(convo.llm.calls)
     result = convo.send(None, text="", media="audio")
-    assert "audios" in text_of(result)
+    assert "audios" in convo.said
     assert "media_received" in event_types(result)
     assert len(convo.llm.calls) == calls_before
     assert convo.state.profile.full_name.attempts == 0
@@ -513,18 +521,18 @@ def test_message_after_close_gets_after_close_reply():
     convo = Convo()
     convo.to_confirm()
     convo.send(ext(confirmation="confirm"))
-    result = convo.send(ext(intent="smalltalk"), text="gracias!")
+    convo.send(ext(intent="smalltalk"), text="gracias!")
     assert convo.state.status is Status.QUALIFIED
-    assert "Un reclutador de Grupo Sazón revisará" in text_of(result)
+    assert "Un reclutador de Grupo Sazón revisará" in convo.said
 
 
 def test_faq_after_close_is_still_answered():
     convo = Convo()
     convo.to_confirm()
     convo.send(ext(confirmation="confirm"))
-    result = convo.send(ext(intent="question", question="¿Cuánto pagan?", faq_id="pay"))
-    assert "El pago depende" in text_of(result)
-    assert "Ask for" not in text_of(result)
+    convo.send(ext(intent="question", question="¿Cuánto pagan?", faq_id="pay"))
+    assert "El pago depende" in convo.said
+    assert "Ask for" not in convo.said
     assert convo.state.status is Status.QUALIFIED
 
 
@@ -544,9 +552,9 @@ def test_late_reply_reopens_an_abandoned_conversation():
 def test_replies_follow_the_language_of_the_latest_message():
     convo = Convo()
     convo.send(ext(consent="yes"))
-    result = convo.send(ext(language="en", full_name="Tom Baker", license="no"))
+    convo.send(ext(language="en", full_name="Tom Baker", license="no"))
     assert convo.state.language == "en"
-    assert "driver's license" in text_of(result)
+    assert "driver's license" in convo.said
 
 
 def test_asap_start_date_uses_the_candidates_local_date():
@@ -600,7 +608,7 @@ def test_llm_failure_sends_holding_reply_and_keeps_state(failing):
         convo.llm.scripts["compose"] = [LLMError("down")]
         result = convo.send(ext(full_name="Laura Pérez"))
 
-    assert "problema técnico" in text_of(result)
+    assert "problema técnico" in convo.said
     assert "llm_error" in event_types(result)
     after: ConversationState = convo.state
     assert after.profile == before.profile

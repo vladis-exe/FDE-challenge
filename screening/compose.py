@@ -5,10 +5,13 @@ candidate asked something, and what to ask next. The persona prompt is static so
 it caches; the plan and recent conversation go in the user message.
 """
 
+from dataclasses import dataclass, field
 from typing import Literal
 
 from pydantic import BaseModel
 
+from screening.config import MessageLimits
+from screening.guard import check_reply, trim_reply
 from screening.llm import LLMClient, LLMResult
 from screening.prompts import load_prompt
 from screening.schemas import TranscriptLine
@@ -101,14 +104,53 @@ def user_prompt(plan: ReplyPlan, transcript: list[TranscriptLine]) -> str:
     )
 
 
+@dataclass
+class Composed:
+    text: str
+    calls: list[LLMResult[str]] = field(default_factory=list)  # one, or two after a retry
+    problems: list[str] = field(default_factory=list)  # rules the first draft broke
+    trimmed: bool = False  # the retry broke rules too, so code cut it down
+
+
 def compose_reply(
-    plan: ReplyPlan, transcript: list[TranscriptLine], *, llm: LLMClient
-) -> LLMResult[str]:
-    """Raises LLMError when the model can't be reached; the engine sends the holding reply."""
+    plan: ReplyPlan,
+    transcript: list[TranscriptLine],
+    *,
+    llm: LLMClient,
+    limits: MessageLimits,
+) -> Composed:
+    """Draft, check the message rules, regenerate once if broken, then trim if still broken.
+
+    Raises LLMError when the model can't be reached; the engine sends the holding reply.
+    """
+    asks = plan.ask is not None
+    messages = [{"role": "user", "content": user_prompt(plan, transcript)}]
+    draft = _draft(messages, llm)
+    composed = Composed(text=draft.value, calls=[draft])
+    composed.problems = check_reply(draft.value, asks=asks, limits=limits)
+    if not composed.problems:
+        return composed
+
+    feedback = (
+        f'Your draft was: "{draft.value}"\n'
+        f"It broke these rules: {'; '.join(composed.problems)}. "
+        "Write the message again, following every rule."
+    )
+    retry = _draft(messages + [{"role": "assistant", "content": draft.value},
+                               {"role": "user", "content": feedback}], llm)  # fmt: skip
+    composed.calls.append(retry)
+    composed.text = retry.value
+    if check_reply(retry.value, asks=asks, limits=limits):
+        composed.text = trim_reply(retry.value, asks=asks, limits=limits)
+        composed.trimmed = True
+    return composed
+
+
+def _draft(messages: list[dict[str, str]], llm: LLMClient) -> LLMResult[str]:
     return llm.text(
         purpose="compose",
         system=load_prompt("compose"),
-        messages=[{"role": "user", "content": user_prompt(plan, transcript)}],
+        messages=messages,
         tier="fast",
         max_tokens=REPLY_MAX_TOKENS,
     )

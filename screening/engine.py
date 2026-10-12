@@ -12,7 +12,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from screening import messages, timers
-from screening.compose import ReplyPlan, compose_reply
+from screening.compose import Composed, ReplyPlan, compose_reply
 from screening.config import ScreeningConfig
 from screening.llm import LLMClient, LLMError, LLMResult
 from screening.locale import candidate_timezone
@@ -103,9 +103,14 @@ def handle_message(
         outbound: list[OutboundMessage] = []
         for reply in decision.replies:
             if isinstance(reply, ReplyPlan):
-                composed = compose_reply(reply, decision.state.transcript_tail, llm=ctx.llm)
-                events.append(_llm_call("compose", composed, now))
-                outbound.append(OutboundMessage(text=composed.value, kind="reply"))
+                composed = compose_reply(
+                    reply,
+                    decision.state.transcript_tail,
+                    llm=ctx.llm,
+                    limits=ctx.config.message_limits,
+                )
+                events.extend(_compose_calls(composed, now))
+                outbound.append(OutboundMessage(text=composed.text, kind="reply"))
             else:
                 outbound.append(_fixed(reply, decision.state, ctx))
     except LLMError as error:
@@ -222,6 +227,17 @@ def _append(
 ) -> None:
     state.transcript_tail.append(TranscriptLine(role=role, text=text, at=at, message_id=message_id))
     del state.transcript_tail[: -config.transcript_tail_size]
+
+
+def _compose_calls(composed: Composed, now: datetime) -> list[Event]:
+    """One llm_call per draft; a retry records why it happened and whether it was trimmed."""
+    events = [_llm_call("compose", composed.calls[0], now)]
+    if len(composed.calls) > 1:
+        retry = _llm_call("compose", composed.calls[1], now)
+        retry.data["retry_for"] = composed.problems
+        retry.data["trimmed"] = composed.trimmed
+        events.append(retry)
+    return events
 
 
 def _llm_call(purpose: str, result: LLMResult, now: datetime) -> Event:

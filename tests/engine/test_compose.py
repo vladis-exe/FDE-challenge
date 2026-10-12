@@ -174,8 +174,9 @@ def test_compose_reply_uses_static_persona_prompt():
         {"compose": ["¡Genial! ¿Buscas jornada completa, media jornada o fines de semana?"]}
     )
     plan = ReplyPlan(language="es", country="ES", ask=Ask(field="availability"))
-    result = compose_reply(plan, [], llm=llm)
-    assert result.value.endswith("?")
+    result = compose_reply(plan, [], llm=llm, limits=load_config().message_limits)
+    assert result.text.endswith("?")
+    assert result.problems == []
     call = llm.calls_for("compose")[0]
     assert call.system == load_prompt("compose")
     assert call.tier == "fast"
@@ -186,3 +187,30 @@ def test_out_of_area_names_the_city_as_not_served():
         language="es", country="MX", ask=Ask(field="out_of_area", city_not_served="Tijuana")
     )
     assert "City they named, where we are not hiring: Tijuana." in instructions(plan)
+
+
+def test_a_reply_breaking_the_rules_is_regenerated_once():
+    llm = FakeLLM(
+        {"compose": ["¡Genial! Anotado. ¿Qué horario? Puedes combinar.", "¿Qué horario?"]}
+    )
+    plan = ReplyPlan(language="es", country="ES", ask=Ask(field="schedule"))
+    result = compose_reply(plan, [], llm=llm, limits=load_config().message_limits)
+    assert result.text == "¿Qué horario?"
+    assert len(result.calls) == 2
+    assert "text after the question" in result.problems
+    assert result.trimmed is False
+    retry = llm.calls_for("compose")[1].messages
+    assert retry[1] == {
+        "role": "assistant",
+        "content": "¡Genial! Anotado. ¿Qué horario? Puedes combinar.",
+    }
+    assert "It broke these rules" in retry[2]["content"]
+
+
+def test_a_retry_that_still_breaks_the_rules_is_trimmed():
+    bad = "¡Genial! Anotado. ¿Qué horario prefieres? Puedes combinar."
+    llm = FakeLLM({"compose": [bad, bad]})
+    plan = ReplyPlan(language="es", country="ES", ask=Ask(field="schedule"))
+    result = compose_reply(plan, [], llm=llm, limits=load_config().message_limits)
+    assert result.text == "Anotado. ¿Qué horario prefieres?"
+    assert result.trimmed is True

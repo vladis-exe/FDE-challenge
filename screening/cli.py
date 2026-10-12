@@ -211,8 +211,10 @@ def fake_extract(system: str, messages: list[dict[str, str]]) -> dict[str, Any]:
 
 
 def fake_compose(system: str, messages: list[dict[str, str]]) -> str:
-    plan = messages[-1]["content"].split("<write>\n")[1].split("\n</write>")[0]
-    return "[fake compose] " + " ".join(plan.splitlines())
+    """The plan as one line that passes the message rules (one sentence, question last)."""
+    plan = messages[0]["content"].split("<write>\n")[1].split("\n</write>")[0]
+    text = re.sub(r"[.?!¿¡]", "", "; ".join(plan.splitlines()))
+    return f"(fake) {text}" + ("?" if "Ask for:" in plan else ".")
 
 
 if __name__ == "__main__":

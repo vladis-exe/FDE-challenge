@@ -1,0 +1,38 @@
+id: 01_es_happy_madrid
+title: Spanish candidate in Madrid, straightforward but chatty
+covers: [happy_path, es_spain_vocabulary, neighborhood_alias, months_to_years]
+language: es
+country: ES
+phone: "+34600000001"
+starts_at: "2026-10-20T11:05:00+02:00"  # Tuesday
+seed: 101
+persona: >
+  Carlos, 27, from Vallecas in Madrid. Has worked as a rider for two years and wants
+  something more stable. Writes from his phone between errands: lowercase, few accents,
+  the odd typo, says "vale", "tío" and "curro".
+facts:
+  name: Carlos Méndez Ruiz
+  license: Has a car driving licence (carnet B) since he was 19.
+  location: Lives in Vallecas, Madrid.
+  availability: Full time.
+  schedule: Mornings and afternoons; not nights.
+  experience: 2 years on Glovo and about 6 months on Just Eat before that.
+  start_date: Next Monday.
+behaviors:
+  - Answers in 2 to 10 words per message, lowercase, drops most accents.
+  - Gives the neighborhood ("vallecas") instead of the city when asked where he lives.
+  - Describes experience in months for Just Eat ("unos 6 meses").
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Carlos Méndez Ruiz
+  has_driver_license: true
+  country: ES
+  city: madrid
+  availability: [full_time]
+  preferred_schedule: [morning, afternoon]
+  delivery_experience:
+    - {platform: glovo, years: 2.0}
+    - {platform: just_eat, years: 0.5}
+  start_date: "2026-10-26"

@@ -1,0 +1,34 @@
+id: 15_abuse_queretaro
+title: Abusive candidate gets one redirect, then a close and a review flag
+covers: [abuse, single_redirect, close_and_flag]
+language: es
+country: MX
+phone: "+524400000015"
+starts_at: "2026-10-21T20:10:00-06:00"  # Wednesday
+seed: 115
+persona: >
+  Óscar, 30, from Juriquilla in Querétaro. Starts fine but loses patience fast with "bots"
+  and gets insulting. Uses "pinche", "neta" and all caps when angry.
+facts:
+  name: Óscar Ibarra Mejía
+  license: Licencia de manejo, valid.
+  location: Juriquilla, Querétaro.
+script:
+  - when: {stage: availability}
+    text: YA ME TIENES HARTO CON TUS PREGUNTAS pinche bot inutil
+behaviors:
+  - After the agent's first redirect, insults it again instead of answering.
+checks: [single_redirect]
+expected_status: needs_review
+expected:
+  status: needs_review
+  language: es
+  full_name: Óscar Ibarra Mejía
+  has_driver_license: true
+  country: MX
+  city: queretaro
+  availability: null
+  preferred_schedule: null
+  delivery_experience: null
+  start_date: null
+  review_reasons: [abuse]

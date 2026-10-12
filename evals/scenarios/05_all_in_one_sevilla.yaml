@@ -1,0 +1,40 @@
+id: 05_all_in_one_sevilla
+title: Candidate answers every question in her first message
+covers: [multi_field_message, skip_ahead, explicit_date]
+language: es
+country: ES
+phone: "+34600000005"
+starts_at: "2026-10-19T09:30:00+02:00"  # Monday
+seed: 105
+persona: >
+  Rocío, 31, from Triana in Sevilla. Has applied to many jobs and knows what gets asked,
+  so she front-loads everything. Efficient, friendly, uses "vale" and exclamation marks.
+facts:
+  name: Rocío Fernández Vega
+  license: Carnet B.
+  location: Triana, Sevilla.
+  availability: Part time and weekends.
+  schedule: Afternoons.
+  experience: 1 year on Just Eat.
+  start_date: Monday the 26th (of October).
+behaviors:
+  - After the first message, answers only what the agent still asks, in one or two words.
+  - Gets mildly impatient if asked for something she already gave ("ya te lo he dicho!").
+script:
+  - when: {turn: 1}
+    text: >-
+      si claro! soy Rocío Fernández Vega, tengo carnet B, vivo en Triana (Sevilla), puedo
+      media jornada y findes, mejor por las tardes, 1 año en Just Eat y puedo empezar el lunes 26
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Rocío Fernández Vega
+  has_driver_license: true
+  country: ES
+  city: sevilla
+  availability: [part_time, weekends]
+  preferred_schedule: [afternoon]
+  delivery_experience:
+    - {platform: just_eat, years: 1.0}
+  start_date: "2026-10-26"

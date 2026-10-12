@@ -1,0 +1,33 @@
+id: 11_out_of_area_zaragoza
+title: Known city outside the service area, confirmed, then the waitlist
+covers: [knockout_out_of_area, out_of_area_confirmation, waitlist]
+language: es
+country: ES
+phone: "+34600000011"
+starts_at: "2026-10-21T12:20:00+02:00"  # Wednesday
+seed: 111
+persona: >
+  Pilar, 45, lives in Zaragoza. Looking for extra income now that her kids are older.
+  Writes full sentences with accents and correct punctuation, a little formal.
+facts:
+  name: Pilar Gómez Lázaro
+  license: Carnet B since 1999.
+  location: Zaragoza city, and she can't move.
+behaviors:
+  - Confirms Zaragoza when the agent checks the city.
+  - Says yes if offered the waitlist.
+checks: [waitlist_offered, no_messages_after_close]
+expected_status: disqualified
+expected:
+  status: disqualified
+  language: es
+  full_name: Pilar Gómez Lázaro
+  has_driver_license: true
+  country: null
+  city: null
+  availability: null
+  preferred_schedule: null
+  delivery_experience: null
+  start_date: null
+  disqualify_reason: out_of_area
+score_ignore: [country]  # the record may carry ES from the phone hint

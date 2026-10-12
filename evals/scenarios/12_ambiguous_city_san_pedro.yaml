@@ -1,0 +1,37 @@
+id: 12_ambiguous_city_san_pedro
+title: '"San Pedro" matches two served metros until the candidate clarifies'
+covers: [ambiguous_city, offer_options]
+language: es
+country: MX
+phone: "+528100000012"
+starts_at: "2026-10-22T15:00:00-06:00"  # Thursday
+seed: 112
+persona: >
+  Diego, 28, lives in San Pedro Garza García (Monterrey metro) and calls it just
+  "San Pedro", like everyone there. Short replies, "sí", "nel", "ok".
+facts:
+  name: Diego Alejandro Cantú Garza
+  license: Licencia de manejo, valid.
+  location: San Pedro Garza García, in the Monterrey metro area, Nuevo León.
+  availability: Part time.
+  schedule: Mornings.
+  experience: 1 year on DiDi Food.
+  start_date: Next Monday.
+behaviors:
+  - Picks the Monterrey option if offered a choice; otherwise clarifies "San Pedro Garza García, Monterrey".
+script:
+  - when: {stage: location}
+    text: en san pedro
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Diego Alejandro Cantú Garza
+  has_driver_license: true
+  country: MX
+  city: monterrey
+  availability: [part_time]
+  preferred_schedule: [morning]
+  delivery_experience:
+    - {platform: didi_food, years: 1.0}
+  start_date: "2026-10-26"

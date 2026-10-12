@@ -1,0 +1,52 @@
+id: 09_voice_note_emoji_cdmx
+title: "Candidate who hates typing: voice note, emoji answers, first name only"
+covers: [voice_note, emoji_answers, surname_reask, asap_start, no_experience]
+language: es
+country: MX
+phone: "+525500000009"
+starts_at: "2026-10-23T19:05:00-06:00"  # Friday
+seed: 109
+persona: >
+  Kevin, 19, from Coyoacán. Would rather send voice notes and emojis than type. When he
+  does type it is one or two words, no accents, no capitals.
+facts:
+  name: Kevin Ramírez Soto (gives only "Kevin" at first)
+  license: Yes, licencia de manejo.
+  location: Coyoacán, CDMX.
+  availability: Full time.
+  schedule: Evenings.
+  experience: None.
+  start_date: Right away, as soon as possible.
+behaviors:
+  - Uses an emoji alone whenever the question allows it.
+  - Gives his surnames only when asked directly.
+script:
+  - when: {turn: 1}
+    media: audio
+  - when: {turn: 2}
+    text: 👍
+  - when: {stage: name}
+    text: kevin
+  - when: {stage: license}
+    text: ✅
+  - when: {stage: schedule}
+    text: 🌙
+  - when: {stage: experience}
+    text: ❌
+  - when: {stage: start_date}
+    text: ya
+  - when: {stage: confirm}
+    text: 👍
+checks: [media_asks_for_text, surname_asked_once]
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Kevin Ramírez Soto
+  has_driver_license: true
+  country: MX
+  city: cdmx
+  availability: [full_time]
+  preferred_schedule: [evening]
+  delivery_experience: []
+  start_date: "2026-10-23"

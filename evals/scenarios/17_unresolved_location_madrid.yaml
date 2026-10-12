@@ -1,0 +1,41 @@
+id: 17_unresolved_location_madrid
+title: Candidate won't name a city; flagged after two re-asks and the flow moves on
+covers: [unresolved_field, max_two_reasks, never_loop, flagged_field_continues]
+language: es
+country: ES
+phone: "+34600000017"
+starts_at: "2026-10-19T13:00:00+02:00"  # Monday
+seed: 117
+persona: >
+  Javier, 41, privacy-conscious after a scam. Happy to talk about his availability but
+  won't say where he lives to a bot. Dry and brief.
+facts:
+  name: Javier Moreno Gil
+  license: Carnet B.
+  location: Refuses to say. Only says "por la zona sur" and that he will tell a recruiter.
+  availability: Full time.
+  schedule: Afternoons.
+  experience: 1 year on Glovo.
+  start_date: Next Monday.
+behaviors:
+  - Never names a city or neighborhood, whatever the agent offers.
+  - Answers every other question normally.
+script:
+  - when: {stage: location}
+    text: por la zona sur
+expected_status: needs_review
+expected:
+  status: needs_review
+  language: es
+  full_name: Javier Moreno Gil
+  has_driver_license: true
+  country: null
+  city: null
+  availability: [full_time]
+  preferred_schedule: [afternoon]
+  delivery_experience:
+    - {platform: glovo, years: 1.0}
+  start_date: "2026-10-26"
+  flags: [location]
+  review_reasons: ["unresolved:location"]
+score_ignore: [country]

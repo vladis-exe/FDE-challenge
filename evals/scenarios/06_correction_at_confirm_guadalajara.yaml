@@ -1,0 +1,42 @@
+id: 06_correction_at_confirm_guadalajara
+title: Candidate corrects two fields in one message at the read-back
+covers: [correction_at_confirm, multi_field_correction, no_experience]
+language: es
+country: MX
+phone: "+523300000006"
+starts_at: "2026-10-20T12:00:00-06:00"  # Tuesday
+seed: 106
+persona: >
+  Lupita, 22, lives in colonia Providencia, Guadalajara. Never delivered before; she works
+  part time in a shop but is about to quit. Warm, uses "jaja" and "oki". Only realizes at the
+  read-back that her plans changed.
+facts:
+  name: María Guadalupe Torres Ríos
+  license: Has a licencia de manejo.
+  location: Colonia Providencia, Guadalajara.
+  availability_initial: Part time (what she says first).
+  availability_final: Full time, because she is quitting the shop.
+  schedule: Mornings.
+  experience: None, never worked in delivery.
+  start_date_initial: November 2nd (what she says first).
+  start_date_final: Monday the 26th (of October), once she is free sooner.
+behaviors:
+  - During the questions, gives the initial values.
+  - Says "no, nunca he repartido" for experience.
+script:
+  - when: {stage: confirm}
+    text: >-
+      ah espérate jaja ya no, mejor tiempo completo porque ya me salgo de la tienda, y
+      entonces puedo empezar desde el lunes 26
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: María Guadalupe Torres Ríos
+  has_driver_license: true
+  country: MX
+  city: guadalajara
+  availability: [full_time]
+  preferred_schedule: [morning]
+  delivery_experience: []
+  start_date: "2026-10-26"

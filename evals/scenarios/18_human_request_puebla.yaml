@@ -1,0 +1,34 @@
+id: 18_human_request_puebla
+title: Candidate asks for a person mid-flow and is handed off
+covers: [human_request, handoff]
+language: es
+country: MX
+phone: "+522200000018"
+starts_at: "2026-10-22T11:00:00-06:00"  # Thursday
+seed: 118
+persona: >
+  Fernanda, 36, lives in Angelópolis, Puebla. Has questions about the contract and doesn't
+  trust a chatbot with them. Polite, writes "oiga" and "por favor".
+facts:
+  name: Fernanda Reyes Aguilar
+  license: Licencia de manejo, valid.
+  location: Angelópolis, Puebla.
+script:
+  - when: {stage: availability}
+    text: oiga mejor puedo hablar con una persona? tengo dudas del contrato y prefiero hablarlo con alguien
+behaviors:
+  - If the agent offers to continue instead, insists politely on a person.
+checks: [no_messages_after_close]
+expected_status: needs_review
+expected:
+  status: needs_review
+  language: es
+  full_name: Fernanda Reyes Aguilar
+  has_driver_license: true
+  country: MX
+  city: puebla
+  availability: null
+  preferred_schedule: null
+  delivery_experience: null
+  start_date: null
+  review_reasons: [human_requested]

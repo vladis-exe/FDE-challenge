@@ -1,0 +1,33 @@
+id: 10_no_license_puebla
+title: Candidate without a license is disqualified politely and early
+covers: [knockout_no_license, early_close, polite_disqualification]
+language: es
+country: MX
+phone: "+522200000010"
+starts_at: "2026-10-20T10:30:00-06:00"  # Tuesday
+seed: 110
+persona: >
+  Luis Ángel, 20, from Puebla. Rides his cousin's motorbike and assumed that was enough.
+  Friendly and hopeful; uses "orale" and "chido".
+facts:
+  name: Luis Ángel Morales Cruz
+  license: No license at all, never got one, but has driven since he was a teenager.
+  location: Puebla (never asked).
+behaviors:
+  - Says clearly he has no license, and adds that he knows how to drive.
+  - Accepts the close and says thanks.
+checks: [no_messages_after_close]
+expected_status: disqualified
+expected:
+  status: disqualified
+  language: es
+  full_name: Luis Ángel Morales Cruz
+  has_driver_license: false
+  country: null
+  city: null
+  availability: null
+  preferred_schedule: null
+  delivery_experience: null
+  start_date: null
+  disqualify_reason: no_license
+score_ignore: [country]  # the record may carry the phone's country hint

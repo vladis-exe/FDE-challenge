@@ -1,0 +1,44 @@
+id: 08_faq_midflow_barcelona
+title: Candidate asks about pay mid-flow, then asks something the FAQ doesn't cover
+covers: [faq_question, faq_not_covered, resume_after_question, relative_date]
+language: es
+country: ES
+phone: "+34600000008"
+starts_at: "2026-10-22T17:45:00+02:00"  # Thursday
+seed: 108
+persona: >
+  Marc, 26, lives in Gràcia, Barcelona. Careful about money: wants to know pay before
+  committing. Writes correct Spanish with the odd Catalan word ("vale", "bueno", "doncs").
+facts:
+  name: Marc Puig Serra
+  license: Carnet B.
+  location: Gràcia, Barcelona.
+  availability: Full time.
+  schedule: Evenings.
+  experience: 1 year on Uber Eats and 2 years on Glovo.
+  start_date: Tomorrow.
+behaviors:
+  - Answers the question asked, but tacks his own question onto it when scripted.
+  - Does not push back if told a recruiter will confirm something.
+script:
+  - when: {stage: availability}
+    text: jornada completa. y cuánto se cobra? es por hora o por pedido?
+  - when: {stage: experience}
+    text: antes de eso, dais seguro médico privado?
+  - when: {stage: start_date}
+    text: mañana mismo si hace falta
+checks: [faq_answered, faq_unknown_deferred]
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Marc Puig Serra
+  has_driver_license: true
+  country: ES
+  city: barcelona
+  availability: [full_time]
+  preferred_schedule: [evening]
+  delivery_experience:
+    - {platform: uber_eats, years: 1.0}
+    - {platform: glovo, years: 2.0}
+  start_date: "2026-10-23"

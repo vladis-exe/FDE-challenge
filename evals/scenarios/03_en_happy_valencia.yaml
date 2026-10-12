@@ -1,0 +1,36 @@
+id: 03_en_happy_valencia
+title: English-speaking expat in Valencia with experience on an unlisted platform
+covers: [happy_path, english, platform_other, neighborhood_alias]
+language: en
+country: ES
+phone: "+34600000003"
+starts_at: "2026-10-22T10:15:00+02:00"  # Thursday
+seed: 103
+persona: >
+  Tom, 29, British, moved to Valencia a year ago and lives in Russafa. Speaks only basic
+  Spanish, so he writes in English. Casual British texting: "yeah", "cheers", "mate".
+facts:
+  name: Tom Whitaker
+  license: Has a full UK driving licence, exchanged for a Spanish one last spring.
+  location: Lives in Russafa, Valencia.
+  availability: Part time and weekends.
+  schedule: Afternoons and evenings.
+  experience: 3 years on Deliveroo in Bristol before moving.
+  start_date: Monday 2 November.
+behaviors:
+  - Writes only in English, short sentences, sometimes no punctuation.
+  - Says "ruzafa" or "russafa" when asked where he lives, without naming the city.
+  - Answers the license question with "yeah got a spanish one now".
+expected_status: qualified
+expected:
+  status: qualified
+  language: en
+  full_name: Tom Whitaker
+  has_driver_license: true
+  country: ES
+  city: valencia
+  availability: [part_time, weekends]
+  preferred_schedule: [afternoon, evening]
+  delivery_experience:
+    - {platform: other, years: 3.0}
+  start_date: "2026-11-02"

@@ -1,0 +1,43 @@
+id: 04_code_switch_monterrey
+title: Spanglish candidate in Monterrey who sends bursts of messages
+covers: [code_switching, message_burst, reply_to_latest, schedule_flexible]
+language: es
+country: MX
+phone: "+528100000004"
+starts_at: "2026-10-23T13:20:00-06:00"  # Friday
+seed: 104
+persona: >
+  Brandon, 24, grew up between Monterrey and Houston. Switches between Spanish and English
+  mid-sentence ("simón", "la neta", "bro", "for real"). Types fast and splits one answer
+  over several messages.
+facts:
+  name: Brandon Garza Treviño
+  license: Has a licencia de manejo from Nuevo León.
+  location: Lives in Monterrey, colonia Mitras.
+  availability: Full time.
+  schedule: Any time, fully flexible.
+  experience: 2 years on Uber Eats in Houston.
+  start_date: Next Monday.
+behaviors:
+  - Mixes Spanish and English in most messages ("tengo license de aquí de NL bro").
+  - Sometimes answers the question in English even though the agent wrote in Spanish.
+  - Confirms the final summary in Spanish.
+script:
+  - when: {stage: availability}
+    text: full time bro
+    burst: ["y el horario me da igual", "flexible pues, whatever works"]
+  - when: {stage: confirm}
+    text: simon todo bien 👍
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Brandon Garza Treviño
+  has_driver_license: true
+  country: MX
+  city: monterrey
+  availability: [full_time]
+  preferred_schedule: [flexible]
+  delivery_experience:
+    - {platform: uber_eats, years: 2.0}
+  start_date: "2026-10-26"

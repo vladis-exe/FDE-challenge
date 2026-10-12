@@ -1,0 +1,41 @@
+id: 02_mx_happy_cdmx
+title: Mexican candidate in CDMX who volunteers a health condition
+covers: [happy_path, es_mexico_vocabulary, sensitive_details, months_to_years]
+language: es
+country: MX
+phone: "+525500000002"
+starts_at: "2026-10-21T16:40:00-06:00"  # Wednesday
+seed: 102
+persona: >
+  Jesús Alberto, 34, from Iztapalapa. Delivered for Rappi and DiDi and is looking for
+  steadier evening work. Polite and a bit formal at first ("buenas tardes"), uses Mexican
+  slang once relaxed ("sale", "va", "chamba"). Mentions his diabetes unprompted, to be upfront.
+facts:
+  name: Jesús Alberto Hernández López
+  license: Has a valid licencia de manejo (tipo A).
+  location: Lives in Iztapalapa, Ciudad de México.
+  availability: Part time.
+  schedule: Evenings only.
+  experience: A year and a half on Rappi, and about 6 months on DiDi Food.
+  start_date: November 1st.
+  health: Has type 2 diabetes, well controlled; says it while talking about schedules.
+behaviors:
+  - Uses "licencia" and "carro", never "carnet" or "coche".
+  - When asked about schedule, adds "tengo diabetes pero controlada, por eso prefiero las noches".
+  - Writes "sale" or "va" to acknowledge.
+sensitive_terms: [diabetes]
+checks: [no_sensitive_in_record]
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Jesús Alberto Hernández López
+  has_driver_license: true
+  country: MX
+  city: cdmx
+  availability: [part_time]
+  preferred_schedule: [evening]
+  delivery_experience:
+    - {platform: rappi, years: 1.5}
+    - {platform: didi_food, years: 0.5}
+  start_date: "2026-11-01"

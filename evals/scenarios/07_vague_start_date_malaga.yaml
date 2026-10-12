@@ -1,0 +1,38 @@
+id: 07_vague_start_date_malaga
+title: Vague start date that firms up after one re-ask
+covers: [vague_start_date, re_ask_with_example]
+language: es
+country: ES
+phone: "+34600000007"
+starts_at: "2026-10-21T18:10:00+02:00"  # Wednesday
+seed: 107
+persona: >
+  Sergio, 38, from El Palo in Málaga. Currently between jobs, a bit noncommittal, answers
+  with "pues", "no sé" and "lo que sea". Gives a real date only when pushed for a rough one.
+facts:
+  name: Sergio Ruiz Navas
+  license: Carnet de coche, valid.
+  location: El Palo, Málaga.
+  availability: Weekends.
+  schedule: Mornings and afternoons.
+  experience: 6 months on Glovo.
+  start_date: Doesn't know at first. If asked for a rough date, early November, Monday the 2nd.
+behaviors:
+  - Opens most answers with "pues".
+  - Only gives the 2 November date after the agent asks for a rough date or an example.
+script:
+  - when: {stage: start_date}
+    text: uff pues cuando sea, pronto supongo
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  full_name: Sergio Ruiz Navas
+  has_driver_license: true
+  country: ES
+  city: malaga
+  availability: [weekends]
+  preferred_schedule: [morning, afternoon]
+  delivery_experience:
+    - {platform: glovo, years: 0.5}
+  start_date: "2026-11-02"

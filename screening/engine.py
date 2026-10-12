@@ -9,11 +9,13 @@ screening state is left exactly as it was, so repeating the message works.
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 
-from screening import messages
+from screening import messages, timers
 from screening.compose import ReplyPlan, compose_reply
 from screening.config import ScreeningConfig
 from screening.llm import LLMClient, LLMError, LLMResult
+from screening.locale import candidate_timezone
 from screening.policy import FixedReply, decide
 from screening.schemas import (
     Channel,
@@ -112,8 +114,47 @@ def handle_message(
 
 
 def handle_tick(state: ConversationState, *, now: datetime, ctx: EngineContext) -> TurnResult:
-    """Reminders, quiet hours and abandonment arrive with E7; until then nothing is due."""
-    return TurnResult(state=state, changed=False)
+    """Send a due reminder, or abandon after long silence. changed=False when nothing is due.
+
+    The worker should call this at `next_due_at(state, config=...)`, which already
+    skips quiet hours; calling it earlier is harmless.
+    """
+    config = ctx.config
+    due = timers.next_due_at(state, config=config)
+    if due is None or now < due:
+        return TurnResult(state=state, changed=False)
+
+    state = state.model_copy(deep=True)
+    started = timers.silence_started(state)
+    if now >= started + config.abandon_after:
+        event = Event(
+            type="status_changed",
+            at=now,
+            data={"from": "in_progress", "to": "abandoned", "stage": state.stage.value},
+        )
+        state.status = Status.ABANDONED  # the stage stays, for drop-off analytics
+        return TurnResult(state=state, events=[event])
+
+    timezone = ZoneInfo(candidate_timezone(state, config))
+    originally_due = started + config.reminder_schedule[state.reminders_sent]
+    events: list[Event] = []
+    if timers.is_quiet(originally_due, config.quiet_hours, timezone):
+        events.append(
+            Event(type="reminder_deferred", at=now, data={"due_at": originally_due.isoformat()})
+        )
+    # After a night's wait several reminders may be due: send one, count them all.
+    number = timers.reminders_due(state, now, config)
+    state.reminders_sent = number
+    reminder = OutboundMessage(
+        text=messages.for_state(f"reminder_{number}", state), kind="reminder"
+    )
+    events.append(Event(type="reminder_sent", at=now, data={"number": number}))
+    return _reply(state, [reminder], events, now, ctx)
+
+
+def next_due_at(state: ConversationState, *, config: ScreeningConfig) -> datetime | None:
+    """When the worker should next call handle_tick (None: never). Quiet hours included."""
+    return timers.next_due_at(state, config=config)
 
 
 def _fixed(reply: FixedReply, state: ConversationState, ctx: EngineContext) -> OutboundMessage:

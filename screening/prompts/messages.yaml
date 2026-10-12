@@ -62,3 +62,14 @@ holding:
 media:
   es: "Perdona, todavía no puedo escuchar audios ni ver imágenes. ¿Me lo escribes en un mensaje?"
   en: "Sorry, I can't listen to audio or view images yet. Could you type it in a message?"
+
+# Reminders after silence (15 min, 2 h, 20 h; see screening.yaml). Never sent 21:00-09:00.
+reminder_1:
+  es: "¿Sigues por ahí{name}? Cuando puedas, contéstame y seguimos donde lo dejamos 🙂"
+  en: "Still there{name}? Whenever you're ready, just reply and we'll pick up where we left off 🙂"
+reminder_2:
+  es: "Hola{name}, te queda muy poco para terminar tu candidatura de repartidor. ¿Seguimos?"
+  en: "Hi{name}, you're almost done with your delivery driver application. Shall we continue?"
+reminder_3:
+  es: "Último recordatorio{name}: tu candidatura sigue abierta unas horas más. Si te interesa el puesto, contéstame y terminamos en un par de minutos."
+  en: "Last reminder{name}: your application stays open for a few more hours. If you're interested in the job, reply and we'll finish in a couple of minutes."

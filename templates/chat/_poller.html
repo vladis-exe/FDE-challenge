@@ -1,0 +1,4 @@
+<div id="poller" hidden
+     hx-get="{% url 'chat_poll' conversation.pk %}?after={{ last_id }}"
+     hx-trigger="every 1500ms, chat:poll from:body"
+     hx-swap="outerHTML"></div>

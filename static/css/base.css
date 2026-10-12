@@ -1,0 +1,48 @@
+/* Design tokens shared by the candidate chat and the recruiter dashboard. */
+:root {
+  --bg: #f4f1ec;
+  --surface: #ffffff;
+  --surface-2: #faf8f5;
+  --text: #1f1b16;
+  --muted: #6b645b;
+  --border: #e4ded5;
+  --accent: #c2410c;          /* terracotta: "sazón" */
+  --accent-strong: #9a3412;
+  --accent-soft: #fde7da;
+  --on-accent: #ffffff;
+  --ok: #15803d;
+  --warn: #b45309;
+  --bad: #b91c1c;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 8px 24px rgb(0 0 0 / 6%);
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14110e;
+    --surface: #1e1a16;
+    --surface-2: #252019;
+    --text: #f2ede6;
+    --muted: #a39a8f;
+    --border: #352e26;
+    --accent: #f97316;
+    --accent-strong: #fb923c;
+    --accent-soft: #3b2215;
+    --on-accent: #1a0e06;
+    --shadow: none;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+a { color: var(--accent-strong); }
+button, input, select, textarea { font: inherit; color: inherit; }

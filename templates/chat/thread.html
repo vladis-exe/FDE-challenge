@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% block lang %}{{ conversation.language|default:"es" }}{% endblock %}
+{% block title %}Alex · Grupo Sazón{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/chat.css' %}">{% endblock %}
+{% block body_class %}chat-body{% endblock %}
+{% block body %}
+<main class="phone chat">
+  <header class="chat__header">
+    <div class="avatar" aria-hidden="true">A</div>
+    <div>
+      <div class="chat__name">Alex</div>
+      <div class="chat__subtitle">{{ ui.subtitle }}</div>
+    </div>
+  </header>
+
+  <section class="chat__scroll" id="scroll" aria-live="polite">
+    <div class="thread" id="thread">
+      {% for message in messages %}{% include "chat/_bubble.html" %}{% endfor %}
+    </div>
+    {% include "chat/_typing.html" %}
+  </section>
+  {% include "chat/_poller.html" %}
+
+  <form class="composer" method="post" action="{% url 'chat_send' conversation.pk %}"
+        hx-post="{% url 'chat_send' conversation.pk %}" hx-swap="none"
+        hx-on::after-request="if (event.detail.successful) this.reset()">
+    {% csrf_token %}
+    <input type="text" name="text" placeholder="{{ ui.placeholder }}" autocomplete="off"
+           maxlength="2000" required autofocus enterkeyhint="send">
+    <button type="submit" aria-label="{{ ui.send }}">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg>
+    </button>
+  </form>
+</main>
+<script>
+  // Keep the newest message in view, like a messaging app.
+  const scroll = document.getElementById("scroll");
+  const toBottom = () => { scroll.scrollTop = scroll.scrollHeight; };
+  toBottom();
+  document.body.addEventListener("htmx:afterSettle", toBottom);
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+<div class="bubble bubble--{% if message.direction == 'in' %}me{% else %}alex{% endif %}" id="m-{{ message.pk }}">
+  <p>{{ message.text|linebreaksbr }}</p>
+  <time datetime="{{ message.created_at|date:'c' }}">{{ message.created_at|time:"H:i" }}</time>
+</div>

@@ -55,14 +55,14 @@ Order: E1 → E3 → E2 → E4 → E6a → E5 → E9 (CP1) → E7 → E8 → E6b
   - `LLMClient` protocol, `AnthropicClient` and `FakeLLM`.
   - Check the current Anthropic docs for structured outputs or forced tool use, and for prompt caching, before writing it.
   - Timeouts, retries and usage capture.
-- [ ] **E2 Validators.** Pure functions with heavy unit tests:
+- [x] **E2 Validators.** Pure functions with heavy unit tests:
   - **City matcher:** handles accents, case, aliases, neighborhoods and fuzzy matches. It returns `matched`, `ambiguous(options)` or `not_served(city_text)`. A `not_served` result sets `pending_confirmation` so the candidate confirms before disqualification. Unresolved after 2 attempts → flagged.
   - **License:** yes / no / unclear(note).
   - **Availability and schedule:** normalization to the enums.
   - **Experience:** months → years and platform aliases.
   - **Start date:** resolve against the message's local date and weekday (dateparser or the LLM), then validate in code: not in the past, at most `start_date_max_days` away, "ASAP" means today.
   - **Name:** a first name plus a surname, with a single soft re-ask.
-- [ ] **E4 Understand.**
+- [x] **E4 Understand.**
   - An `Extraction` schema: intent (`answer`, `question`, `correction`, `smalltalk`, `offtopic`, `opt_out`, `human_request`, `abuse`), language, raw values for any fields mentioned, and the question text.
   - The extraction prompt, with few-shot examples: multi-field messages, corrections, code-switching, Mexican vocabulary, emoji answers.
 - [ ] **E6a Compose (basic):**
@@ -116,7 +116,7 @@ Order: A1 → A2 (stub engine) → A3 (CP1) → A4 → A5 → A9 (CP2) → A6 �
 
 ## Evals (V): `evals/`
 V1 can start on day 1 straight from the spec. V2 onward needs E1, E3 and E9.
-- [ ] **V1 Scenarios.** 15–20 YAML files with ground truth, covering:
+- [x] **V1 Scenarios.** 15–20 YAML files with ground truth, covering:
   - Happy paths: ES Spanish, MX Spanish, English.
   - Conversation behavior: code-switching, everything in one message, corrections at confirm, a vague start date, FAQ questions mid-flow, emoji-only answers, a voice note.
   - Outcomes: no license, out of area (confirmed), an ambiguous city, an unclear (expired) license, prompt injection, abuse, silence then a late reply.

@@ -3,12 +3,13 @@
 Last updated: 2026-10-12
 
 ## Current task
-E3 LLM layer (next). E1 done.
+E2 validators (next). E1 and E3 done.
 
 ## Done
 | Task | What changed | How to verify | Commit |
 | --- | --- | --- | --- |
 | E1 | `screening/schemas.py` (verbatim from CONTRACTS §1). `screening/config/`: `load_config(path=None)` → `ScreeningConfig`, plus `screening.yaml`, `service_areas.yaml` (6 ES and 5 MX cities with aliases and neighborhoods), `faq.yaml` (6 entries, es+en, `placeholder: true` on client terms) | `uv run python -m pytest tests/engine -p no:django` (15 pass); `uv run ruff check screening tests/engine` | 56b5071 |
+| E3 | `screening/llm/`: `LLMClient` protocol and types (CONTRACTS §3), `AnthropicClient` (`messages.parse` structured output, effort `low` + thinking headroom, cached system block, SDK retries=3 / timeout 30 s, one extra try on an invalid record, refusal/max_tokens/API errors → `LLMError`), `FakeLLM` (scripts by purpose: list or callable; exceptions raised; `.calls` recorded) | `uv run python -m pytest tests/engine -p no:django` (29 pass). Live smoke on Haiku 5.5: structured 2.4 s, text 0.9 s | 3fe8f62 |
 
 ## Blocked
 None
@@ -30,12 +31,13 @@ None
 8. **License:** a vague answer ("bueno…") gets a yes/no re-ask. An explicit unclear case (expired, in progress, foreign) is flagged at once and screening continues. *Proposal:* as stated.
 
 ## Contract change requests
-None
+- **CONTRACTS §3 `LLMUsage`: add `cache_read_tokens: int = 0` and `cache_write_tokens: int = 0`.** Cached input is billed at about 0.1× and cache writes at 1.25×, so the cost per conversation (A6, V3) is wrong without them. Until this lands, `input_tokens` = uncached + cache read + cache write (honest totals, but cost is overestimated). The change is backward-compatible thanks to the defaults.
 
 ## Notes for other lanes
 - E1 is in (56b5071): `from screening.schemas import ...` and `from screening.config import load_config`.
 - `ScreeningConfig.timezone_for("ES"|"MX")` gives the IANA zone.
 - After `DEMO_TIME_SCALE`, `reminder_schedule` and `abandon_after` are already scaled timedeltas, and `config.time_scale` holds the factor. Quiet hours are not scaled (wall-clock rule).
+- LLM: `from screening.llm import AnthropicClient, FakeLLM, LLMError`. `FakeLLM({"extract": [...], "compose": lambda system, messages: "..."})`. Engine purposes: `extract`, `compose`, `summary`.
 - FAQ answers flagged `placeholder: true` are client terms to replace before launch.
 
 ## Prep notes (engine-internal)

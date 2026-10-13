@@ -7,6 +7,7 @@ Owned by the lead; only the lead ticks boxes. Lanes report progress in `status/<
   - `uv run python -m screening.cli` completes a full Spanish screening against the real LLM.
   - The web chat creates conversations end to end through the worker (stub or real engine).
   - The Django admin shows them.
+  - **✅ Verified by lead, 2026-10-13.** CLI: engine's own live run against Haiku 5.5 (MX/Spanish, 11 turns to qualified, see `status/engine.md` E9). Web chat + worker + admin: via the A1–A3 test suite (39 passing, incl. admin-render and worker-ordering tests) rather than a manual browser pass — that's still worth doing once before demo day. `uv run pytest tests/engine tests/evals` (212 pass) and `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (39 pass) both green; `uv run ruff check .` clean tree-wide.
 - **CP2, end of day 2:**
   - A WhatsApp sandbox conversation runs end to end.
   - Reminders fire with time scaling.
@@ -65,18 +66,18 @@ Order: E1 → E3 → E2 → E4 → E6a → E5 → E9 (CP1) → E7 → E8 → E6b
 - [x] **E4 Understand.**
   - An `Extraction` schema: intent (`answer`, `question`, `correction`, `smalltalk`, `offtopic`, `opt_out`, `human_request`, `abuse`), language, raw values for any fields mentioned, and the question text.
   - The extraction prompt, with few-shot examples: multi-field messages, corrections, code-switching, Mexican vocabulary, emoji answers.
-- [ ] **E6a Compose (basic):**
+- [x] **E6a Compose (basic):**
   - The Alex persona prompt and per-action instructions.
   - Language and country vocabulary.
   - The opening message and the closes.
-- [ ] **E5 Policy and state machine.**
+- [x] **E5 Policy and state machine.**
   - Write the transition table as a docstring first.
   - Covers: consent, slot filling in spec order, knockouts with confirmation, attempts and flags, the confirm step with corrections, outcomes, opt-out, human handoff, FAQ answers, media, off-topic strikes, and injection-proof outcomes.
   - Exhaustive tests with FakeLLM.
-- [ ] **E9 CLI:** `uv run python -m screening.cli [--lang es|en] [--country ES|MX] [--fake] [--script file.txt]`. Prints each reply, the state diff and the events.
-- [ ] **E7 Timers:** `handle_tick` covers the reminder schedule, quiet hours in the candidate's timezone, abandonment and `DEMO_TIME_SCALE`.
-- [ ] **E8 Summary and final record:** the summary uses the smart tier; `record.final_record(state)` is deterministic.
-- [ ] **E6b Compose polish:**
+- [x] **E9 CLI:** `uv run python -m screening.cli [--lang es|en] [--country ES|MX] [--fake] [--script file.txt]`. Prints each reply, the state diff and the events.
+- [x] **E7 Timers:** `handle_tick` covers the reminder schedule, quiet hours in the candidate's timezone, abandonment and `DEMO_TIME_SCALE`.
+- [x] **E8 Summary and final record:** the summary uses the smart tier; `record.final_record(state)` is deterministic.
+- [x] **E6b Compose polish:**
   - A length and one-question guard: regenerate once if violated, then trim safely.
   - Tone tuning from eval findings.
 
@@ -86,10 +87,10 @@ Order: A1 → A2 (stub engine) → A3 (CP1) → A4 → A5 → A9 (CP2) → A6 �
   - Django project `config/`: settings from env, `dj-database-url` (Postgres, or SQLite fallback), TZ=UTC, whitenoise.
   - Apps `apps/candidates`, `apps/messaging`, `apps/dashboard`.
   - Models from CONTRACTS §5, migrations and admin.
-- [ ] **A2 Worker and pipeline.**
+- [x] **A2 Worker and pipeline.**
   - The `run_worker` command: claim with `skip_locked`, oldest-first per conversation, reply-to-latest suppression, a transactional persist, send after commit, and ticks via `next_tick_at`.
   - Use a stub engine with the contract's signatures until E5 lands, then switch.
-- [ ] **A3 Web chat.**
+- [x] **A3 Web chat.**
   - `/chat/` entry (country and language picker) and a mobile-style chat page.
   - HTMX send, plus a poll every 1.5 s.
 - [ ] **A4 WhatsApp.**

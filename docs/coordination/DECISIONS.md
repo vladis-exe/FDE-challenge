@@ -67,3 +67,8 @@ Every composed reply is checked for ≤300 characters, ≤2 sentences, exactly o
 
 ## D22 [engine] next_due_at includes quiet hours
 The engine tells the worker when the next tick is due, already moved to 09:00 local if a reminder falls in quiet hours. The worker doesn't poll every minute overnight, `reminder_deferred` is logged once, and the timing logic lives in one place. If several reminders came due overnight, only one message is sent.
+
+## D23 [lead] CONTRACTS v3: next_due_at added; LLM-failure bookkeeping clarified
+Two items engine and app converged on independently, both approved as implemented (no code changed, contract caught up to it):
+- `screening.engine.next_due_at(state, *, config) -> datetime | None` added to §2, so the worker stops duplicating E7's reminder-timing logic (app's own proposal, built by engine against it directly).
+- The "state unchanged except `transcript_tail`" line on LLM failure was read literally by app as excluding `last_inbound_at`/`last_outbound_at`/`reminders_sent`, but engine updates them (the holding reply is real outbound contact, and reminder timing would drift otherwise). The contract now says so explicitly. Checked against `screening/engine.py` directly: matches.

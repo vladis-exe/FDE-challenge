@@ -2,7 +2,7 @@
 
 Owned by the lead. Lanes code against this file. To change it, add a request under "Contract change requests" in your status file; the lead updates this file and logs the change in `DECISIONS.md`.
 
-Version: 2
+Version: 3
 
 ## 1. Engine schemas (`screening/schemas.py`, engine lane, task E1)
 
@@ -143,11 +143,13 @@ def start(state: ConversationState, *, now: datetime, ctx: EngineContext) -> Tur
 def handle_message(state: ConversationState, message: InboundMessage, *, ctx: EngineContext) -> TurnResult
 def handle_tick(state: ConversationState, *, now: datetime, ctx: EngineContext) -> TurnResult
     # reminders, quiet-hours deferral, abandonment; changed=False when nothing is due
+def next_due_at(state: ConversationState, *, config: ScreeningConfig) -> datetime | None
+    # when the app should next call handle_tick; already moved past quiet hours. None = nothing scheduled.
 ```
 
 Rules:
-- All three functions are pure with respect to storage: they never touch a DB or network except through `ctx.llm`.
-- They never raise on LLM failure. After retries they return a holding reply and an `llm_error` event, with the state unchanged except `transcript_tail`.
+- All three turn functions are pure with respect to storage: they never touch a DB or network except through `ctx.llm`. `next_due_at` is pure and needs no `ctx`.
+- They never raise on LLM failure. After retries they return a holding reply and an `llm_error` event. Bookkeeping updates as normal — `last_inbound_at`, `last_outbound_at` and `reminders_sent` (reset to 0: the holding reply counts as outbound contact, so reminder timing restarts from it) — because reminder timing depends on them and must not drift. Profile, stage, status, attempts and strikes are untouched; `transcript_tail` gains the inbound message and the holding reply.
 - When `status` leaves `in_progress`, the engine sets `state.summary`, or `None` plus an `llm_error` event if the summary call failed.
 - `screening.record.final_record(state) -> dict` builds the final JSON deterministically (no LLM):
 

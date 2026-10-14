@@ -57,6 +57,38 @@ def validate_license(answer: LicenseAnswer) -> Verdict[bool]:
     return Verdict.flag(_UNCLEAR_LICENSE_NOTES[answer])
 
 
+BooleanAnswer = Literal["yes", "no", "expired", "in_progress", "foreign", "vague"]
+_UNCLEAR = {"expired": "expired", "in_progress": "in progress", "foreign": "from another country"}
+
+
+def validate_boolean(answer: BooleanAnswer, *, name: str) -> Verdict[bool]:
+    """Yes/no is decided. Expired, in progress or foreign goes to a recruiter, never rejected.
+
+    `name` only words the note ("license expired"); whether a "no" disqualifies is
+    the policy's call, from the field's requirement level.
+    """
+    if answer == "yes":
+        return Verdict.accept(True)
+    if answer == "no":
+        return Verdict.accept(False)
+    if answer == "vague":
+        return Verdict.reask("not a clear yes or no")
+    return Verdict.flag(f"{name} {_UNCLEAR[answer]}")
+
+
+def validate_options(
+    values: list[str], *, options: list[str], exclusive: list[str]
+) -> Verdict[list[str]]:
+    """At least one option, in display order. An exclusive option ("flexible") stands alone."""
+    chosen = [option for option in options if option in values]
+    alone = [option for option in chosen if option in exclusive]
+    if alone:
+        return Verdict.accept(alone[:1])
+    if not chosen:
+        return Verdict.reask("no option chosen")
+    return Verdict.accept(chosen)
+
+
 def validate_name(raw: str, *, surname_asked: bool) -> Verdict[str]:
     """First name plus a surname. Asks once for the surname, then accepts what was given."""
     name = " ".join(raw.split())

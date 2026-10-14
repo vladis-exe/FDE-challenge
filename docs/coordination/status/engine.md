@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-**All engine tasks done** (E1–E9, E6b). Now: hardening from the eval scenarios while V2 is built; open for eval-driven fixes.
+**Phase 2: E10 vacancy config, in progress.** Then E11 → E12 (with the read-back loop fix) → E13 → E14 → E15.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -39,6 +39,11 @@ None (pytest config and UP046 resolved by the lead in 5944914)
 8. **License:** a vague answer ("bueno…") gets a yes/no re-ask. An explicit unclear case (expired, in progress, foreign) is flagged at once and screening continues. *Proposal:* as stated.
 
 ## Contract change requests
+- **Lead: four optional `FieldSpec` keys for CONTRACTS §7 (v4.1). Vlad approved all four directly, 2026-10-14.** All are additive with defaults, so a FieldSpec without them is still valid:
+  1. `reason: str | None = None`: the name used in outcome strings. A boolean knockout gives `no_<reason or name>`, an unclear value gives `<reason or name>_unclear`. Driver sets `reason: license`, so it keeps `no_license` / `license_unclear` (unchanged behavior, and the evals/dashboard/seed strings stay valid).
+  2. `summary: dict[str, str] = {}`: the noun used in the read-back (fixed text, D18), keys `es`/`en` with optional `es_ES`/`es_MX` overrides like `messages.yaml` (e.g. carnet de conducir vs licencia de manejo). Falls back to the field name.
+  3. `option_labels: dict[str, dict[str, str]] = {}`: enum_multi display text per option and locale (`part_time`: media jornada / medio tiempo / part-time). Falls back to the option value.
+  4. `exclusive_options: list[str] = []`: enum_multi options that stand alone (schedule's `flexible`, which today's code hardcodes).
 - **Support app's `next_due_at` proposal; it's implemented.** `screening.engine.next_due_at(state, *, config) -> datetime | None` exists (7dcc63a). It includes quiet hours: a reminder due at 22:30 returns 09:00 local. So the worker needs no 1-minute retry loop, and `reminder_deferred` is logged once rather than every minute all night. Please add it to CONTRACTS §2; the app can then drop its own computation.
 - (Done: cache-token request, CONTRACTS v2, D14.)
 

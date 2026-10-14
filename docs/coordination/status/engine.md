@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-**Phase 2: E10 vacancy config, in progress.** Then E11 → E12 (with the read-back loop fix) → E13 → E14 → E15.
+**Phase 2: E11–E14 in progress** as one schema switch-over (see note below). E10 done.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -22,11 +22,17 @@ Last updated: 2026-10-12
 | E6b | `screening/guard.py`: `check_reply` / `trim_reply` for the message rules. `compose_reply` drafts, regenerates once with the broken rules quoted back, then trims; the retry's `llm_call` event carries `retry_for` and `trimmed`. Prompt tuning from live runs: name in at most 1 message in 3, varied openers, no judging answers (not even positively), availability options inside the question | `uv run pytest tests/engine` (201 pass). Live probe: first drafts broke a rule in 4 of 18 → 0 of 18 after the guard. Two demo runs: natural tone, no retries needed | a4cbb86 |
 | E4 fixes | The extract prompt now treats "mañana (mismo)" as tomorrow's date, not asap (scenario 16 ground truth); vague areas like "por la zona sur" are not a `city_text` (scenario 17: avoids a false out-of-area confirmation); hedged dates like "cuando sea, pronto supongo" are `vague` (scenario 07). Found by running **every scenario's scripted line** through the live extractor: all 20 lines now give the intent and fields the scenarios expect | `uv run pytest tests/engine` (201 pass); live re-probe 18/18 with regressions | b3562cc, see git log |
 
+## Done (Phase 2)
+| Task | What changed | How to verify | Commit |
+| --- | --- | --- | --- |
+| E10 | `screening/config/vacancy.py`: `FieldSpec`/`VacancyConfig` (CONTRACTS §7 + the 4 approved keys), validators (text/city never preferred, options only on enum_multi, weight only on preferred, no duplicate names), `VacancyConfig.asked` = required fields then preferred ones, `off` never asked. `vacancies/driver.yaml` (the 7 original fields, all required, `reason: license`), `vacancies/kitchen_prep.yaml` (license preferred, weight 1.5; food handler certificate preferred, weight 1.0; no delivery experience). `ScreeningConfig.vacancies`, `config.vacancy(id)` → `KeyError` listing valid ids. `screening/llm/pricing.py` (`call_cost`, `events_cost`, `PRICES`) | `uv run pytest tests/engine` (214 pass), `tests/evals` (36 pass) | 5952809 |
+
 ## Blocked
 None
 
 ## Requests (to other lanes or the lead)
-None (pytest config and UP046 resolved by the lead in 5944914)
+- **Evals:** `screening/llm/pricing.py` is in (5952809), a copy of `evals/pricing.py`. Please switch `evals/scoring.py` and `tests/evals/test_harness.py` to it and delete `evals/pricing.py`, so there's one price table.
+- **App:** `apps/dashboard/analytics.py` can now `from screening.llm.pricing import call_cost` (your TODO).
 
 ## Spec questions: answered (approved as proposed, D13). E5 builds against these
 1. **Consent declined:** which status? The spec says "close, nothing stored". *Proposal:* `opted_out`, empty profile, one close message.
@@ -48,6 +54,7 @@ None (pytest config and UP046 resolved by the lead in 5944914)
 - (Done: cache-token request, CONTRACTS v2, D14.)
 
 ## Notes for other lanes
+- **Phase 2 sequencing (E11–E14):** the v4 schema change (`CandidateProfile.fields`, the generic `Stage`) breaks policy, extraction, compose and the record all at once. So E11–E14 land as **one switch-over commit** that keeps the suite green, preceded by small green commits for the new pure modules (field-type catalog, scoring). Until it lands, keep coding against CONTRACTS v4 shapes; nothing in `main` will be half-migrated.
 - **App (A2): the real engine is ready to replace the stub.** `from screening import engine`, `engine.EngineContext(config=load_config(), llm=AnthropicClient())`, same signatures as CONTRACTS §2. `handle_tick` and summaries are live (E7, E8). `from screening.record import final_record` for `Conversation.final_record`. For `next_tick_at`, use `engine.next_due_at(state, config=...)` (see Contract change requests).
 - **Lead, please confirm a contract reading:** on an LLM failure, CONTRACTS §2 says "state unchanged except `transcript_tail`". I also update the bookkeeping fields `last_inbound_at`, `reminders_sent = 0` and `last_outbound_at` (the holding reply was sent), because reminders are timed from the candidate's last message. Profile, stage, status, attempts and strikes are untouched.
 - E1 is in (56b5071): `from screening.schemas import ...` and `from screening.config import load_config`.

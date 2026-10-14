@@ -160,10 +160,12 @@ def summarize(state: ConversationState, config: ScreeningConfig) -> str:
             continue
         intro = localized(spec.summary, locale, language)
         if field.status is FieldStatus.FLAGGED:
-            if (
-                spec.type == "boolean"
-            ):  # an unclear yes/no is worth naming; others are just left out
-                parts.append(f"{intro or spec.name}: {words['review']}")
+            # An unclear yes/no is worth naming, with the candidate's own detail ("caducó
+            # en agosto") so they can see it was heard; other flagged fields are left out.
+            if spec.type == "boolean":
+                detail = field.note.split(": ", 1)[1] if field.note and ": " in field.note else ""
+                said = f"{detail} ({words['review']})" if detail else words["review"]
+                parts.append(f"{intro or spec.name}: {said}")
             continue
         value = typed(spec, field.value)
         if spec.type == "text":
@@ -174,7 +176,7 @@ def summarize(state: ConversationState, config: ScreeningConfig) -> str:
             parts.append(_city_name(config, value.country, value.city))
         elif spec.type == "enum_multi":
             parts.append(
-                _join([_option(spec, option, locale, language) for option in value], words)
+                _join([option_label(spec, option, locale, language) for option in value], words)
             )
         elif spec.type == "experience":
             if not value:
@@ -192,7 +194,7 @@ def localized(texts: dict[str, str], locale: str, language: Language) -> str:
     return texts.get(locale) or texts.get(language) or ""
 
 
-def _option(spec: FieldSpec, option: str, locale: str, language: Language) -> str:
+def option_label(spec: FieldSpec, option: str, locale: str, language: Language) -> str:
     return localized(spec.option_labels.get(option, {}), locale, language) or option
 
 

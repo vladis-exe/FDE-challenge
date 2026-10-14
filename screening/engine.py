@@ -197,7 +197,8 @@ def _write_summary(result: TurnResult, now: datetime, ctx: EngineContext) -> Non
         state.summary = f"Opted out at stage {state.stage.value}."
         return
     try:
-        summary = summarize(state, llm=ctx.llm)
+        job_title = ctx.config.vacancy(state.vacancy_id).title["es"]  # the note is in Spanish
+        summary = summarize(state, job_title=job_title, llm=ctx.llm)
     except LLMError as error:
         state.summary = None
         result.events.append(Event(type="llm_error", at=now, data={"error": str(error)}))

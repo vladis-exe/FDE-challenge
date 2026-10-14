@@ -887,3 +887,21 @@ def test_restating_a_flagged_answer_without_new_detail_changes_nothing():
     result = convo.send(ext(has_driver_license="expired"))
     assert convo.field("has_driver_license").note == "license expired: caducó en agosto"
     assert "field_flagged" not in event_types(result)
+
+
+# E17: findings from the app's and V8's live runs
+
+
+def test_option_questions_use_the_candidates_vocabulary():
+    """App live check: Mexico was asked "jornada completa, media jornada"."""
+    convo = Convo(phone="+525500000003")
+    convo.through_license()
+    convo.send(ext(location="CDMX"))
+    assert "Options: tiempo completo, medio tiempo, fines de semana." in convo.said
+
+
+def test_the_summary_names_the_job_by_its_title():
+    convo = Convo(vacancy="kitchen_prep")
+    convo.send(ext(intent="human_request"))
+    content = convo.llm.calls_for("summary")[0].messages[0]["content"]
+    assert content.startswith("<job>Ayudante de cocina</job>")

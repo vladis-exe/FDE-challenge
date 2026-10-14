@@ -105,7 +105,7 @@ from screening.compose import Ask, ReplyPlan
 from screening.config import FieldSpec, ScreeningConfig
 from screening.fields import is_knockout, typed, validate
 from screening.locale import candidate_country, candidate_timezone
-from screening.messages import first_name, localized
+from screening.messages import first_name, localized, option_label
 from screening.schemas import (
     ConversationState,
     Event,
@@ -528,10 +528,17 @@ class _Turn:
     def field_ask(self, spec: FieldSpec, retry_reason: str | None = None) -> Ask:
         if spec.type == "text" and self.field(spec.name).value:
             return Ask(field="surname", retry_reason=retry_reason)
+        # The options in the candidate's own vocabulary (es_MX: "medio tiempo"), from config,
+        # so the question and the read-back use the same words.
+        options = [
+            option_label(spec, option, self.locale, self.state.language)
+            for option in spec.options or []
+        ]
         return Ask(
             field=spec.name,
             about=spec.label[self.state.language],
             optional=spec.requirement == "preferred",
+            options=options,
             retry_reason=retry_reason,
         )
 

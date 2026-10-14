@@ -276,3 +276,15 @@ def test_under_a_year_of_experience_reads_in_months(config):
     state = completed_state()
     state.profile.fields["experience"] = accepted([ExperienceItem(platform="just_eat", years=0.5)])
     assert "Just Eat 6 meses" in summarize(state, config)
+
+
+def test_the_read_back_shows_what_they_said_about_a_flagged_answer(config):
+    """V8 scenario 13: "lo revisará un reclutador" alone made the candidate keep correcting it."""
+    state = completed_state()
+    state.profile.fields["has_driver_license"] = FieldValue(
+        status=FieldStatus.FLAGGED, note="license expired: caducó en agosto, renueva en 2 semanas"
+    )
+    assert (
+        "carnet de conducir: caducó en agosto, renueva en 2 semanas (lo revisará un reclutador)"
+        in summarize(state, config)
+    )

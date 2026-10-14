@@ -45,6 +45,10 @@ Asking for: consent. Country: ES.
 Message: "sí, soy Laura Pérez y tengo carnet de coche"
 {{"intent": "answer", "language": "es", "consent": "yes", "fields": {{"full_name": "Laura Pérez", "has_driver_license": "yes"}}}}
 
+Asking for: consent. Country: MX.
+Message: "simón, empecemos"
+{{"intent": "answer", "language": "es", "consent": "yes", "fields": {{}}}}
+
 Asking for: location. Country: MX. Local date: 2026-10-14 (Wednesday).
 Message: "vivo en Zapopan, puedo media jornada por las tardes y empiezo el lunes"
 {{"intent": "answer", "language": "es", "fields": {{"location": "Zapopan", "availability": ["part_time"], "schedule": ["afternoon"], "start_date": {{"kind": "date", "resolved": "2026-10-19"}}}}}}

@@ -4,7 +4,8 @@
 #
 # Field keys (CONTRACTS §7): name, type, requirement (required | preferred | off),
 # label (what to ask, per language), and optionally weight, options, reason,
-# summary (read-back noun), option_labels and exclusive_options.
+# summary (how the read-back introduces the value), option_labels and
+# exclusive_options.
 
 id: driver
 title:
@@ -70,6 +71,9 @@ fields:
     label:
       es: si ha trabajado antes en reparto (Glovo, Uber Eats, Just Eat, Rappi, DiDi Food...) y cuánto tiempo; no tener experiencia está bien
       en: whether they have done delivery work before (Glovo, Uber Eats, Just Eat, Rappi, DiDi Food...) and for how long; none is fine
+    summary:
+      es: experiencia en reparto
+      en: delivery experience
 
   - name: start_date
     type: date
@@ -77,3 +81,6 @@ fields:
     label:
       es: cuándo podría empezar
       en: when they could start
+    summary:
+      es: empiezas el
+      en: starting

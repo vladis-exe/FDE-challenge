@@ -9,10 +9,7 @@ DEFAULT_COUNTRY: Literal["ES", "MX"] = "ES"
 
 
 def candidate_country(state: ConversationState) -> Literal["ES", "MX"]:
-    """The confirmed city's country, else the phone-prefix or chat-picker hint."""
-    location = state.profile.location.value
-    if location is not None:
-        return location.country
+    """The phone-prefix or chat-picker hint, replaced by the city's country once accepted."""
     return state.country_hint or DEFAULT_COUNTRY
 
 

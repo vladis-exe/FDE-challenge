@@ -3,17 +3,13 @@
 from screening.validators.city import CityMatch, match_city
 from screening.validators.fields import (
     BooleanAnswer,
-    LicenseAnswer,
     RawExperience,
     StartDateAnswer,
     local_date,
-    validate_availability,
     validate_boolean,
     validate_experience,
-    validate_license,
     validate_name,
     validate_options,
-    validate_schedule,
     validate_start_date,
 )
 from screening.validators.verdict import Verdict
@@ -21,18 +17,14 @@ from screening.validators.verdict import Verdict
 __all__ = [
     "BooleanAnswer",
     "CityMatch",
-    "LicenseAnswer",
     "RawExperience",
     "StartDateAnswer",
     "Verdict",
     "local_date",
     "match_city",
-    "validate_availability",
     "validate_boolean",
     "validate_experience",
-    "validate_license",
     "validate_name",
     "validate_options",
-    "validate_schedule",
     "validate_start_date",
 ]

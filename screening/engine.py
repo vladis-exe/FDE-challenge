@@ -44,6 +44,7 @@ def new_conversation(
     conversation_id: str,
     channel: Channel,
     *,
+    vacancy_id: str,
     phone: str | None,
     language: Literal["es", "en"] | None,
     now: datetime,
@@ -59,13 +60,19 @@ def new_conversation(
     return ConversationState(
         conversation_id=conversation_id,
         channel=channel,
+        vacancy_id=vacancy_id,
         language=language or "es",
         country_hint=hint,
     )
 
 
 def start(state: ConversationState, *, now: datetime, ctx: EngineContext) -> TurnResult:
-    """The opening message: AI disclosure, privacy link and the consent question."""
+    """The opening message: AI disclosure, privacy link and the consent question.
+
+    Raises KeyError (listing the valid ids) for an unknown vacancy. That check lives
+    here rather than in new_conversation, which has no config to check against.
+    """
+    ctx.config.vacancy(state.vacancy_id)
     state = state.model_copy(deep=True)
     opening = OutboundMessage(text=messages.opening(state, ctx.config), kind="reply")
     _record_outbound(state, [opening], now, ctx.config)
@@ -140,7 +147,12 @@ def handle_tick(state: ConversationState, *, now: datetime, ctx: EngineContext) 
         event = Event(
             type="status_changed",
             at=now,
-            data={"from": "in_progress", "to": "abandoned", "stage": state.stage.value},
+            data={
+                "from": "in_progress",
+                "to": "abandoned",
+                "stage": state.stage.value,
+                "field": state.current_field,  # where they dropped off
+            },
         )
         state.status = Status.ABANDONED  # the stage stays, for drop-off analytics
         result = TurnResult(state=state, events=[event])

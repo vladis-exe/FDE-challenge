@@ -1,6 +1,7 @@
 """Talk to the screening engine in the terminal.
 
-    uv run python -m screening.cli [--lang es|en] [--country ES|MX] [--fake] [--script file.txt]
+    uv run python -m screening.cli [--vacancy ID] [--lang es|en] [--country ES|MX] [--fake]
+                                   [--script file.txt]
 
 Each turn prints Alex's replies, what changed in the state, and the events.
 --script reads one candidate message per line ("#" starts a comment, "[audio]"
@@ -20,7 +21,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from screening import engine
-from screening.config import load_config
+from screening.config import VacancyConfig, load_config
 from screening.llm import AnthropicClient, FakeLLM, LLMClient
 from screening.record import final_record
 from screening.schemas import Channel, ConversationState, InboundMessage, Status, TurnResult
@@ -38,17 +39,23 @@ def main(argv: list[str] | None = None) -> int:
         prog="python -m screening.cli", description=__doc__.split("\n")[0]
     )
     parser.add_argument("--lang", choices=["es", "en"], default="es")
+    parser.add_argument("--vacancy", default="driver", help="a file name in config/vacancies/")
     parser.add_argument("--country", choices=["ES", "MX"], default="ES")
     parser.add_argument("--fake", action="store_true", help="keyword stub instead of the real LLM")
     parser.add_argument("--script", type=Path, help="file with one candidate message per line")
     args = parser.parse_args(argv)
 
     load_dotenv()
-    llm: LLMClient = fake_llm() if args.fake else AnthropicClient()
-    ctx = engine.EngineContext(config=load_config(), llm=llm)
+    config = load_config()
+    if args.vacancy not in config.vacancies:
+        parser.error(f"unknown vacancy {args.vacancy!r}; choose from {', '.join(config.vacancies)}")
+    llm: LLMClient = fake_llm(config.vacancy(args.vacancy)) if args.fake else AnthropicClient()
+    ctx = engine.EngineContext(config=config, llm=llm)
     now = datetime.now(UTC)
 
-    state = engine.new_conversation("cli", Channel.SIM, phone=None, language=args.lang, now=now)
+    state = engine.new_conversation(
+        "cli", Channel.SIM, vacancy_id=args.vacancy, phone=None, language=args.lang, now=now
+    )
     state.country_hint = args.country  # what the web chat's country picker does
     result = engine.start(state, now=now, ctx=ctx)
     show(state, result)
@@ -137,11 +144,11 @@ def interactive_lines() -> Iterator[str]:
         yield line
 
 
-# --fake: a keyword stub that answers whatever field is being asked.
+# --fake: a keyword stub that answers whatever field is being asked, by field type.
 
 YES = {"si", "sí", "yes", "claro", "vale", "ok", "👍"}
 NO = {"no", "nope", "nel", "👎"}
-AVAILABILITY_WORDS = {
+OPTION_WORDS = {
     "complet": "full_time",
     "full": "full_time",
     "media": "part_time",
@@ -149,8 +156,6 @@ AVAILABILITY_WORDS = {
     "part": "part_time",
     "fin": "weekends",
     "weekend": "weekends",
-}
-SCHEDULE_WORDS = {
     "mañana": "morning",
     "morning": "morning",
     "tarde": "afternoon",
@@ -161,17 +166,17 @@ SCHEDULE_WORDS = {
 }
 
 
-def fake_llm() -> FakeLLM:
+def fake_llm(vacancy: VacancyConfig) -> FakeLLM:
     return FakeLLM(
         {
-            "extract": fake_extract,
+            "extract": lambda system, messages: fake_extract(vacancy, messages),
             "compose": fake_compose,
             "summary": lambda system, messages: "[fake summary]",
         }
     )
 
 
-def fake_extract(system: str, messages: list[dict[str, str]]) -> dict[str, Any]:
+def fake_extract(vacancy: VacancyConfig, messages: list[dict[str, str]]) -> dict[str, Any]:
     prompt = messages[-1]["content"]
     asking = re.search(r"Asking for: (.+)", prompt).group(1)
     text = prompt.split("<candidate_message>\n")[1].split("\n</candidate_message>")[0].strip()
@@ -180,33 +185,37 @@ def fake_extract(system: str, messages: list[dict[str, str]]) -> dict[str, Any]:
     english = re.search(r"\b(yes|i|my|the)\b", lowered) is not None
     record: dict[str, Any] = {"intent": "answer", "language": "en" if english else "es"}
     fields: dict[str, Any] = {}
+    record["fields"] = fields
 
     if asking == "consent":
         record["consent"] = "no" if no else "yes"
-    elif asking == "full name":
-        fields["full_name"] = text
-    elif asking == "license":
-        fields["license"] = "yes" if yes else "no" if no else "vague"
-    elif asking.startswith("confirmation of") and (yes or no):
-        record["confirmation"] = "confirm" if yes else "deny"
-    elif asking == "city" or asking.startswith("confirmation of"):
-        fields["city_text"] = text
-    elif asking == "availability":
-        fields["availability"] = [v for k, v in AVAILABILITY_WORDS.items() if k in lowered]
-    elif asking == "schedule":
-        fields["schedule"] = [v for k, v in SCHEDULE_WORDS.items() if k in lowered]
-    elif asking == "experience":
+        return record
+    if asking.startswith("confirm"):  # the read-back, or an out-of-area city
+        if yes or no:
+            record["confirmation"] = "confirm" if yes else "deny"
+        else:
+            city = next(spec for spec in vacancy.asked if spec.type == "city")
+            fields[city.name] = text
+        return record
+    spec = next((spec for spec in vacancy.asked if asking.startswith(spec.name)), None)
+    if spec is None:
+        return record
+    if spec.type in ("text", "city"):
+        fields[spec.name] = text
+    elif spec.type == "boolean":
+        fields[spec.name] = "yes" if yes else "no" if no else "vague"
+    elif spec.type == "enum_multi":
+        chosen = {value for word, value in OPTION_WORDS.items() if word in lowered}
+        fields[spec.name] = [option for option in spec.options if option in chosen]
+    elif spec.type == "experience":
         years = re.search(r"\d+(?:[.,]\d+)?", lowered)
         if no or not years:
-            fields["has_experience"] = False
+            fields[spec.name] = {"has_experience": False}
         else:
             amount = float(years.group().replace(",", "."))
-            fields["experience"] = [{"platform": lowered.split()[0], "years": amount}]
-    elif asking == "start date":
-        fields["start_date"] = {"kind": "asap"}
-    elif asking.startswith("confirm"):
-        record["confirmation"] = "confirm" if yes else "deny"
-    record["fields"] = fields
+            fields[spec.name] = {"items": [{"platform": lowered.split()[0], "years": amount}]}
+    elif spec.type == "date":
+        fields[spec.name] = {"kind": "asap"}
     return record
 
 

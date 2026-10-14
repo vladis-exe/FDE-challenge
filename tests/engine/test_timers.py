@@ -6,7 +6,7 @@ import pytest
 from screening.config import load_config
 from screening.engine import EngineContext, handle_tick, new_conversation, next_due_at, start
 from screening.llm import FakeLLM
-from screening.schemas import Channel, ConversationState, Stage, Status
+from screening.schemas import Channel, ConversationState, FieldValue, Stage, Status
 
 MADRID = ZoneInfo("Europe/Madrid")
 MEXICO = ZoneInfo("America/Mexico_City")
@@ -20,11 +20,14 @@ def ctx(monkeypatch):
 
 def silent_since(ctx, at: datetime, phone="+34600000000", replied=True) -> ConversationState:
     """A conversation whose candidate last wrote at `at` (or got the opening then)."""
-    state = new_conversation("c1", Channel.WHATSAPP, phone=phone, language="es", now=at)
+    state = new_conversation(
+        "c1", Channel.WHATSAPP, vacancy_id="driver", phone=phone, language="es", now=at
+    )
     state = start(state, now=at, ctx=ctx).state
     if replied:
-        state.stage = Stage.LOCATION
-        state.profile.full_name.value = "Laura Pérez"
+        state.stage = Stage.COLLECTING
+        state.current_field = "location"
+        state.profile.fields["full_name"] = FieldValue(value="Laura Pérez")
         state.last_inbound_at = at
     return state
 
@@ -64,12 +67,13 @@ def test_reminders_at_15_min_2_h_and_20_h_then_abandoned(ctx):
 
     abandoned, state = tick(state, ctx, local(15, 14))
     assert state.status is Status.ABANDONED
-    assert state.stage is Stage.LOCATION  # kept for drop-off analytics
+    assert (state.stage, state.current_field) == (Stage.COLLECTING, "location")  # for drop-off
     assert abandoned.outbound == []
     assert abandoned.events[0].data == {
         "from": "in_progress",
         "to": "abandoned",
-        "stage": "location",
+        "stage": "collecting",
+        "field": "location",
     }
     assert tick(state, ctx, local(16, 14))[0].changed is False
 

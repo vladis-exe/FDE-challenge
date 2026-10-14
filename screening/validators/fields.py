@@ -10,17 +10,9 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel
 
-from screening.schemas import Availability, ExperienceItem, Schedule
+from screening.schemas import ExperienceItem
 from screening.validators.text import normalize
 from screening.validators.verdict import Verdict
-
-LicenseAnswer = Literal["yes", "no", "expired", "in_progress", "foreign", "vague"]
-
-_UNCLEAR_LICENSE_NOTES = {
-    "expired": "license expired",
-    "in_progress": "license in progress",
-    "foreign": "foreign license",
-}
 
 # Normalized spelling with spaces removed -> platform key.
 _PLATFORMS = {
@@ -44,17 +36,6 @@ class RawExperience(BaseModel):
 class StartDateAnswer(BaseModel):
     kind: Literal["asap", "date", "vague"]
     resolved: date | None = None  # set by the LLM when kind == "date"
-
-
-def validate_license(answer: LicenseAnswer) -> Verdict[bool]:
-    """Yes/no is decided; expired, in-progress or foreign goes to a recruiter (never rejected)."""
-    if answer == "yes":
-        return Verdict.accept(True)
-    if answer == "no":
-        return Verdict.accept(False)
-    if answer == "vague":
-        return Verdict.reask("not a clear yes or no")
-    return Verdict.flag(_UNCLEAR_LICENSE_NOTES[answer])
 
 
 BooleanAnswer = Literal["yes", "no", "expired", "in_progress", "foreign", "vague"]
@@ -100,22 +81,6 @@ def validate_name(raw: str, *, surname_asked: bool) -> Verdict[str]:
     if not surname_asked:
         return Verdict.reask("surname missing")
     return Verdict.accept(name, note="no surname given")
-
-
-def validate_availability(values: list[Availability]) -> Verdict[list[Availability]]:
-    chosen = [option for option in Availability if option in values]
-    if not chosen:
-        return Verdict.reask("no availability option chosen")
-    return Verdict.accept(chosen)
-
-
-def validate_schedule(values: list[Schedule]) -> Verdict[list[Schedule]]:
-    if Schedule.FLEXIBLE in values:
-        return Verdict.accept([Schedule.FLEXIBLE])  # "flexible" already covers the rest
-    chosen = [option for option in Schedule if option in values]
-    if not chosen:
-        return Verdict.reask("no schedule option chosen")
-    return Verdict.accept(chosen)
 
 
 def validate_experience(

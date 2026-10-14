@@ -3,19 +3,21 @@ from datetime import UTC, date, datetime
 import pytest
 
 from screening.config import load_config
-from screening.schemas import Availability, ExperienceItem, Location, Schedule
+from screening.schemas import ExperienceItem, Location
 from screening.validators import (
     RawExperience,
     StartDateAnswer,
     local_date,
     match_city,
-    validate_availability,
+    validate_boolean,
     validate_experience,
-    validate_license,
     validate_name,
-    validate_schedule,
+    validate_options,
     validate_start_date,
 )
+
+AVAILABILITY = ["full_time", "part_time", "weekends"]
+SCHEDULE = ["morning", "afternoon", "evening", "flexible"]
 
 
 @pytest.fixture(scope="module")
@@ -90,26 +92,30 @@ def test_blank_city_is_not_served(config):
     assert match_city("   ", config).kind == "not_served"
 
 
-# License
+# Yes/no fields (the license)
 
 
 def test_license_yes_and_no_are_accepted():
-    assert validate_license("yes").outcome == "accept"
-    assert validate_license("yes").value is True
-    no = validate_license("no")
+    assert validate_boolean("yes", name="license").value is True
+    no = validate_boolean("no", name="license")
     assert no.outcome == "accept" and no.value is False
 
 
-@pytest.mark.parametrize("answer", ["expired", "in_progress", "foreign"])
-def test_unclear_license_is_flagged_with_a_note(answer):
-    verdict = validate_license(answer)
-    assert verdict.outcome == "flag"
-    assert verdict.value is None
-    assert verdict.note
+@pytest.mark.parametrize(
+    "answer, note",
+    [
+        ("expired", "license expired"),
+        ("in_progress", "license in progress"),
+        ("foreign", "license from another country"),
+    ],
+)
+def test_unclear_license_is_flagged_with_a_note(answer, note):
+    verdict = validate_boolean(answer, name="license")
+    assert (verdict.outcome, verdict.value, verdict.note) == ("flag", None, note)
 
 
 def test_vague_license_answer_is_reasked():
-    assert validate_license("vague").outcome == "reask"
+    assert validate_boolean("vague", name="license").outcome == "reask"
 
 
 # Name
@@ -134,32 +140,28 @@ def test_non_name_is_reasked(raw):
     assert validate_name(raw, surname_asked=True).outcome == "reask"
 
 
-# Availability and schedule
+# Option fields (availability, schedule)
 
 
 def test_availability_combinations_are_kept_in_canonical_order():
-    verdict = validate_availability([Availability.WEEKENDS, Availability.PART_TIME])
+    verdict = validate_options(["weekends", "part_time"], options=AVAILABILITY, exclusive=[])
     assert verdict.outcome == "accept"
-    assert verdict.value == [Availability.PART_TIME, Availability.WEEKENDS]
+    assert verdict.value == ["part_time", "weekends"]
 
 
 def test_empty_availability_is_reasked():
-    assert validate_availability([]).outcome == "reask"
+    assert validate_options([], options=AVAILABILITY, exclusive=[]).outcome == "reask"
 
 
 def test_schedule_duplicates_are_removed():
-    verdict = validate_schedule([Schedule.EVENING, Schedule.MORNING, Schedule.EVENING])
-    assert verdict.value == [Schedule.MORNING, Schedule.EVENING]
+    verdict = validate_options(["evening", "morning", "evening"], options=SCHEDULE, exclusive=[])
+    assert verdict.value == ["morning", "evening"]
 
 
 def test_flexible_schedule_stands_alone():
-    verdict = validate_schedule([Schedule.MORNING, Schedule.FLEXIBLE])
+    verdict = validate_options(["morning", "flexible"], options=SCHEDULE, exclusive=["flexible"])
     assert verdict.outcome == "accept"
-    assert verdict.value == [Schedule.FLEXIBLE]
-
-
-def test_empty_schedule_is_reasked():
-    assert validate_schedule([]).outcome == "reask"
+    assert verdict.value == ["flexible"]
 
 
 # Experience

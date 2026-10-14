@@ -4,7 +4,7 @@ These models are the boundary between the engine, the Django shell and the evals
 Change them only through a contract change request.
 """
 
-from datetime import date, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import Any, Generic, Literal, TypeVar
 
@@ -28,15 +28,9 @@ class Status(StrEnum):
     OPTED_OUT = "opted_out"
 
 
-class Stage(StrEnum):  # order = the conversation order in the spec
+class Stage(StrEnum):  # v4: generic phases, not one value per field (CONTRACTS §7)
     CONSENT = "consent"
-    NAME = "name"
-    LICENSE = "license"
-    LOCATION = "location"
-    AVAILABILITY = "availability"
-    SCHEDULE = "schedule"
-    EXPERIENCE = "experience"
-    START_DATE = "start_date"
+    COLLECTING = "collecting"  # which field is current: state.current_field
     CONFIRM = "confirm"
     DONE = "done"
 
@@ -78,14 +72,8 @@ class ExperienceItem(BaseModel):
     years: float  # months converted, 0-40
 
 
-class CandidateProfile(BaseModel):
-    full_name: FieldValue[str] = FieldValue[str]()
-    has_driver_license: FieldValue[bool] = FieldValue[bool]()
-    location: FieldValue[Location] = FieldValue[Location]()
-    availability: FieldValue[list[Availability]] = FieldValue[list[Availability]]()
-    schedule: FieldValue[list[Schedule]] = FieldValue[list[Schedule]]()
-    experience: FieldValue[list[ExperienceItem]] = FieldValue[list[ExperienceItem]]()  # [] = none
-    start_date: FieldValue[date] = FieldValue[date]()
+class CandidateProfile(BaseModel):  # v4: keyed by the vacancy's field names (CONTRACTS §7)
+    fields: dict[str, FieldValue[Any]] = {}
 
 
 class TranscriptLine(BaseModel):
@@ -98,14 +86,16 @@ class TranscriptLine(BaseModel):
 class ConversationState(BaseModel):
     conversation_id: str
     channel: Channel
+    vacancy_id: str  # which VacancyConfig this screening is against (CONTRACTS §7)
     status: Status = Status.IN_PROGRESS
     stage: Stage = Stage.CONSENT
+    current_field: str | None = None  # the field being asked, when stage = COLLECTING
     language: Literal["es", "en"] = "es"
     country_hint: Literal["ES", "MX"] | None = None  # from phone prefix until location is known
     consent_at: datetime | None = None
     profile: CandidateProfile = Field(default_factory=CandidateProfile)
-    disqualify_reason: Literal["no_license", "out_of_area"] | None = None
-    review_reasons: list[str] = []  # e.g. "license_unclear", "unresolved:location", "abuse"
+    disqualify_reason: str | None = None  # "out_of_area", or "no_<field>" for a boolean knockout
+    review_reasons: list[str] = []  # e.g. "<field>_unclear", "unresolved:<field>", "abuse"
     pending_confirmation: dict[str, Any] | None = None  # e.g. out-of-area city awaiting confirm
     reminders_sent: int = 0
     last_inbound_at: datetime | None = None
@@ -113,7 +103,8 @@ class ConversationState(BaseModel):
     offtopic_strikes: int = 0
     transcript_tail: list[TranscriptLine] = []  # last N lines (config), for LLM context
     summary: str | None = None  # set when status leaves in_progress
-    schema_version: int = 1
+    preference_score: float = 0.0  # sum of matched preferred fields' weights; ranking only
+    schema_version: int = 2
 
 
 class InboundMessage(BaseModel):

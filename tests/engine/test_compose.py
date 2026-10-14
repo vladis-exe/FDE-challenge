@@ -8,13 +8,12 @@ from screening.llm import FakeLLM
 from screening.messages import fixed, opening, readback, summarize
 from screening.prompts import load_prompt
 from screening.schemas import (
-    Availability,
     Channel,
     ConversationState,
     ExperienceItem,
     FieldStatus,
+    FieldValue,
     Location,
-    Schedule,
 )
 
 
@@ -23,19 +22,32 @@ def config():
     return load_config()
 
 
+def accepted(value) -> FieldValue:
+    return FieldValue(value=value, status=FieldStatus.ACCEPTED)
+
+
 def completed_state(language="es", country="ES", city="barcelona") -> ConversationState:
-    state = ConversationState(conversation_id="c1", channel=Channel.SIM, language=language)
-    profile = state.profile
-    profile.full_name.value = "Laura Pérez"
-    profile.has_driver_license.value = True
-    profile.has_driver_license.status = FieldStatus.ACCEPTED
-    profile.location.value = Location(country=country, city=city)
-    profile.availability.value = [Availability.PART_TIME, Availability.WEEKENDS]
-    profile.schedule.value = [Schedule.EVENING]
-    profile.experience.value = [ExperienceItem(platform="glovo", years=1.5)]
-    profile.experience.status = FieldStatus.ACCEPTED
-    profile.start_date.value = date(2026, 10, 19)
+    state = ConversationState(
+        conversation_id="c1",
+        channel=Channel.SIM,
+        vacancy_id="driver",
+        language=language,
+        country_hint=country,
+    )
+    state.profile.fields = {
+        "full_name": accepted("Laura Pérez"),
+        "has_driver_license": accepted(True),
+        "location": accepted(Location(country=country, city=city)),
+        "availability": accepted(["part_time", "weekends"]),
+        "schedule": accepted(["evening"]),
+        "experience": accepted([ExperienceItem(platform="glovo", years=1.5)]),
+        "start_date": accepted(date(2026, 10, 19)),
+    }
     return state
+
+
+def plan(**values) -> ReplyPlan:
+    return ReplyPlan(**{"language": "es", "country": "ES", "job_title": "Repartidor"} | values)
 
 
 # Fixed messages
@@ -43,7 +55,9 @@ def completed_state(language="es", country="ES", city="barcelona") -> Conversati
 
 @pytest.mark.parametrize("language", ["es", "en"])
 def test_opening_discloses_ai_and_links_privacy(config, language):
-    state = ConversationState(conversation_id="c1", channel=Channel.SIM, language=language)
+    state = ConversationState(
+        conversation_id="c1", channel=Channel.SIM, vacancy_id="driver", language=language
+    )
     text = opening(state, config)
     assert "Alex" in text
     assert ("(IA)" if language == "es" else "(AI)") in text
@@ -51,12 +65,17 @@ def test_opening_discloses_ai_and_links_privacy(config, language):
     assert text.endswith("?")
 
 
+def test_opening_names_the_job_and_its_question_count(config):
+    state = ConversationState(conversation_id="c1", channel=Channel.SIM, vacancy_id="kitchen_prep")
+    assert "Son 7 preguntas rápidas sobre el puesto de ayudante de cocina" in opening(state, config)
+
+
 def test_every_fixed_message_has_both_languages():
     catalogue_keys = [
         "opening",
         "readback",
         "close_completed",
-        "close_no_license",
+        "close_knockout",
         "close_out_of_area",
         "close_opt_out",
         "close_consent_declined",
@@ -69,18 +88,20 @@ def test_every_fixed_message_has_both_languages():
     for key in catalogue_keys:
         for language in ("es", "en"):
             for country in ("ES", "MX"):
-                text = fixed(
-                    key, language=language, country=country, summary="x", city="x", privacy_url="x"
-                )
+                values = {"summary": "x", "city": "x", "privacy_url": "x", "job": "x"}
+                values |= {"questions": "7", "requirement": "x"}
+                text = fixed(key, language=language, country=country, **values)
                 assert "{" not in text, (key, language, country)
 
 
-def test_no_license_close_uses_country_vocabulary():
-    spain = fixed("close_no_license", language="es", country="ES", first_name="Laura")
-    mexico = fixed("close_no_license", language="es", country="MX", first_name="Laura")
-    assert spain.startswith("Gracias, Laura.")
-    assert "carnet de conducir" in spain
-    assert "licencia de manejo" in mexico
+def test_knockout_close_names_the_requirement():
+    spain = fixed(
+        "close_knockout", language="es", country="ES", first_name="Laura",
+        requirement="carnet de conducir",
+    )  # fmt: skip
+    assert spain.startswith("Gracias, Laura. Para este puesto es imprescindible tener carnet")
+    mexico = fixed("close_knockout", language="es", country="MX", requirement="x")
+    assert "indispensable" in mexico and "solicitud" in mexico
 
 
 def test_name_placeholder_disappears_when_name_unknown():
@@ -113,12 +134,23 @@ def test_summary_in_english(config):
 
 def test_summary_shows_flagged_license_and_no_experience(config):
     state = completed_state()
-    state.profile.has_driver_license.value = None
-    state.profile.has_driver_license.status = FieldStatus.FLAGGED
-    state.profile.experience.value = []
+    state.profile.fields["has_driver_license"] = FieldValue(status=FieldStatus.FLAGGED)
+    state.profile.fields["experience"] = accepted([])
     text = summarize(state, config)
     assert "carnet de conducir: lo revisará un reclutador" in text
     assert "sin experiencia en reparto" in text
+
+
+def test_summary_follows_the_vacancy_and_shows_a_preferred_no(config):
+    state = completed_state()
+    state.vacancy_id = "kitchen_prep"
+    state.profile.fields["has_driver_license"] = accepted(False)
+    state.profile.fields["food_handler_certificate"] = accepted(True)
+    assert summarize(state, config) == (
+        "Laura Pérez, Barcelona, media jornada y fines de semana, noches, "
+        "empiezas el lunes 19 de octubre, carnet de conducir: no, "
+        "carnet de manipulador de alimentos: sí"
+    )  # no delivery experience: it isn't a kitchen_prep field
 
 
 def test_readback_fits_message_limit(config):
@@ -132,14 +164,13 @@ def test_readback_fits_message_limit(config):
 
 
 def test_instructions_follow_plan_order():
-    plan = ReplyPlan(
-        language="es",
+    reply = plan(
         country="MX",
         acknowledge=["city: Guadalajara"],
         faq_answer="Hay turnos de mañana, tarde y noche.",
         ask=Ask(field="availability"),
     )
-    assert instructions(plan) == (
+    assert instructions(reply) == (
         "1. Briefly acknowledge what they just told you: city: Guadalajara.\n"
         "2. Answer their question with this approved information, in your own words but "
         'without adding or changing any fact: "Hay turnos de mañana, tarde y noche."\n'
@@ -148,22 +179,35 @@ def test_instructions_follow_plan_order():
 
 
 def test_reask_with_options_and_reason():
-    plan = ReplyPlan(
+    reply = plan(
         language="en",
-        country="ES",
         ask=Ask(field="city_choice", options=["Madrid", "Barcelona"], retry_reason="two cities"),
     )
-    assert "Options: Madrid, Barcelona." in instructions(plan)
-    assert "didn't work (two cities)" in instructions(plan)
+    assert "Options: Madrid, Barcelona." in instructions(reply)
+    assert "didn't work (two cities)" in instructions(reply)
+
+
+def test_field_ask_carries_its_label_and_optional_marker():
+    ask = Ask(field="has_driver_license", about="si tiene carnet", optional=True)
+    assert instructions(plan(ask=ask)) == (
+        "1. Ask for: has_driver_license. Ask about: si tiene carnet. "
+        "This question is optional for this job."
+    )
+
+
+def test_redirect_names_the_job():
+    assert "the Ayudante de cocina application" in instructions(
+        plan(job_title="Ayudante de cocina", redirect=True)
+    )
 
 
 def test_unanswered_question_defers_to_recruiter():
-    plan = ReplyPlan(language="es", country="ES", unanswered_question="¿Dan uniforme?")
-    assert "a recruiter will confirm" in instructions(plan)
+    assert "a recruiter will confirm" in instructions(plan(unanswered_question="¿Dan uniforme?"))
 
 
 def test_user_prompt_has_language_and_vocabulary():
-    prompt = user_prompt(ReplyPlan(language="es", country="MX", first_name="Ana"), [])
+    prompt = user_prompt(plan(country="MX", first_name="Ana"), [])
+    assert "Job: Repartidor" in prompt
     assert "Language: Spanish" in prompt
     assert "licencia de manejo, carro, celular" in prompt
     assert "Candidate's first name: Ana" in prompt
@@ -173,8 +217,8 @@ def test_compose_reply_uses_static_persona_prompt():
     llm = FakeLLM(
         {"compose": ["¡Genial! ¿Buscas jornada completa, media jornada o fines de semana?"]}
     )
-    plan = ReplyPlan(language="es", country="ES", ask=Ask(field="availability"))
-    result = compose_reply(plan, [], llm=llm, limits=load_config().message_limits)
+    reply = plan(ask=Ask(field="availability"))
+    result = compose_reply(reply, [], llm=llm, limits=load_config().message_limits)
     assert result.text.endswith("?")
     assert result.problems == []
     call = llm.calls_for("compose")[0]
@@ -183,18 +227,16 @@ def test_compose_reply_uses_static_persona_prompt():
 
 
 def test_out_of_area_names_the_city_as_not_served():
-    plan = ReplyPlan(
-        language="es", country="MX", ask=Ask(field="out_of_area", city_not_served="Tijuana")
-    )
-    assert "City they named, where we are not hiring: Tijuana." in instructions(plan)
+    reply = plan(ask=Ask(field="out_of_area", city_not_served="Tijuana"))
+    assert "City they named, where we are not hiring: Tijuana." in instructions(reply)
 
 
 def test_a_reply_breaking_the_rules_is_regenerated_once():
     llm = FakeLLM(
         {"compose": ["¡Genial! Anotado. ¿Qué horario? Puedes combinar.", "¿Qué horario?"]}
     )
-    plan = ReplyPlan(language="es", country="ES", ask=Ask(field="schedule"))
-    result = compose_reply(plan, [], llm=llm, limits=load_config().message_limits)
+    reply = plan(ask=Ask(field="schedule"))
+    result = compose_reply(reply, [], llm=llm, limits=load_config().message_limits)
     assert result.text == "¿Qué horario?"
     assert len(result.calls) == 2
     assert "text after the question" in result.problems
@@ -210,7 +252,7 @@ def test_a_reply_breaking_the_rules_is_regenerated_once():
 def test_a_retry_that_still_breaks_the_rules_is_trimmed():
     bad = "¡Genial! Anotado. ¿Qué horario prefieres? Puedes combinar."
     llm = FakeLLM({"compose": [bad, bad]})
-    plan = ReplyPlan(language="es", country="ES", ask=Ask(field="schedule"))
-    result = compose_reply(plan, [], llm=llm, limits=load_config().message_limits)
+    reply = plan(ask=Ask(field="schedule"))
+    result = compose_reply(reply, [], llm=llm, limits=load_config().message_limits)
     assert result.text == "Anotado. ¿Qué horario prefieres?"
     assert result.trimmed is True

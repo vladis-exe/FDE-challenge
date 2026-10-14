@@ -1,0 +1,9 @@
+# Live CLI demo (kitchen_prep, ES): no license, still qualifies; certificate raises the score.
+# uv run python -m screening.cli --vacancy kitchen_prep --script tests/engine/scripts/demo_kitchen.txt
+hola! sí, me llamo Marta Gil
+vivo en Lavapiés
+media jornada, por las tardes
+el lunes que viene
+no, no tengo carnet de coche
+sí, tengo el de manipulador de alimentos
+todo bien, gracias

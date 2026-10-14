@@ -27,7 +27,7 @@ class FieldSpec(BaseModel):
     options: list[str] | None = None  # enum_multi only: allowed values, display order
     # Additions approved by Vlad, 2026-10-14 (status/engine.md, contract change requests):
     reason: str | None = None  # name in outcome strings: no_<reason>, <reason>_unclear
-    summary: dict[str, str] = {}  # read-back noun; "es"/"en", optional "es_ES"/"es_MX"
+    summary: dict[str, str] = {}  # how the read-back introduces it; "es"/"en", "es_ES"/"es_MX"
     option_labels: dict[str, dict[str, str]] = {}  # option -> locale -> display text
     exclusive_options: list[str] = []  # enum_multi: options that stand alone
 

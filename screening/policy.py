@@ -101,10 +101,11 @@ Details:
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from screening.compose import Ask, AskField, ReplyPlan
-from screening.config import ScreeningConfig
+from screening.compose import Ask, ReplyPlan
+from screening.config import FieldSpec, ScreeningConfig
+from screening.fields import is_knockout, typed, validate
 from screening.locale import candidate_country, candidate_timezone
-from screening.messages import first_name
+from screening.messages import first_name, localized
 from screening.schemas import (
     ConversationState,
     Event,
@@ -114,43 +115,12 @@ from screening.schemas import (
     Stage,
     Status,
 )
+from screening.scoring import preference_score
 from screening.understand import Extraction
-from screening.validators import (
-    RawExperience,
-    Verdict,
-    local_date,
-    match_city,
-    validate_availability,
-    validate_experience,
-    validate_license,
-    validate_name,
-    validate_schedule,
-    validate_start_date,
-)
+from screening.validators import Verdict, local_date, match_city
 from screening.validators.text import normalize
 
-# Profile fields in spec order, with the stage that asks for each.
-FIELDS: list[tuple[str, Stage]] = [
-    ("full_name", Stage.NAME),
-    ("has_driver_license", Stage.LICENSE),
-    ("location", Stage.LOCATION),
-    ("availability", Stage.AVAILABILITY),
-    ("schedule", Stage.SCHEDULE),
-    ("experience", Stage.EXPERIENCE),
-    ("start_date", Stage.START_DATE),
-]
-STAGE_FIELD = {stage: name for name, stage in FIELDS}
-ASK_FIELD: dict[str, AskField] = {
-    "full_name": "full_name",
-    "has_driver_license": "license",
-    "location": "location",
-    "availability": "availability",
-    "schedule": "schedule",
-    "experience": "experience",
-    "start_date": "start_date",
-}
 FINAL = {Status.QUALIFIED, Status.NEEDS_REVIEW, Status.DISQUALIFIED}
-FLAG_REASONS = {"has_driver_license": "license_unclear"}
 
 
 @dataclass(frozen=True)
@@ -181,6 +151,8 @@ def decide(
     """Apply the transition table to one message. `state` is not modified."""
     turn = _Turn(state.model_copy(deep=True), extraction, message, config)
     turn.run()
+    vacancy = config.vacancy(turn.state.vacancy_id)
+    turn.state.preference_score = preference_score(vacancy, turn.state.profile.fields)
     return Decision(turn.state, turn.events, turn.replies)
 
 
@@ -198,11 +170,18 @@ class _Turn:
         self.x = extraction
         self.message = message
         self.config = config
-        self.asked = state.stage  # the field Alex asked for in its last message
+        self.vacancy = config.vacancy(state.vacancy_id)
+        # What Alex asked in its last message.
+        self.at_confirm = state.stage is Stage.CONFIRM
+        self.asked: FieldSpec | None = (
+            self.vacancy.field(state.current_field)
+            if state.stage is Stage.COLLECTING and state.current_field
+            else None
+        )
         self.events: list[Event] = []
         self.replies: list[Reply] = []
         self.acknowledge: list[str] = []
-        self.retry: Ask | None = None
+        self.retry: tuple[str, Ask] | None = None  # (field name, how to re-ask it)
         self.attempt_used = False
         self.faq_given = False
 
@@ -231,14 +210,10 @@ class _Turn:
                 return self.reply(Ask(field="consent"))
             state.consent_at = self.message.received_at
             self.event("consent_given")
-        if state.pending_confirmation and self.resolve_pending():
+        if self.pending("out_of_area") and self.resolve_pending():
             return
-        if state.stage is Stage.CONFIRM and not self.fields_given():
-            if x.confirmation == "confirm":
-                return self.finish()
-            if x.confirmation == "deny":
-                return self.reply(Ask(field="correction"))
-            return self.reply(Ask(field="confirm"))
+        if self.at_confirm:
+            return self.confirm()
         self.collect()
 
     def after_close(self) -> None:
@@ -259,204 +234,248 @@ class _Turn:
 
     def resolve_pending(self) -> bool:
         """Returns True when the turn is fully handled here."""
-        pending_city = self.state.pending_confirmation["city_text"]
-        city_text = self.x.fields.city_text
+        pending = self.state.pending_confirmation
+        spec = self.vacancy.field(pending["field"])
+        city_text = self.raw(spec)
         if city_text:
             match = match_city(city_text, self.config)
-            if match.kind == "not_served" and normalize(city_text) == normalize(pending_city):
-                self.disqualify("out_of_area", city=pending_city)
+            if match.kind == "not_served" and normalize(city_text) == normalize(
+                pending["city_text"]
+            ):
+                self.disqualify("out_of_area", "close_out_of_area", city=pending["city_text"])
                 return True
             self.state.pending_confirmation = None
             return False  # collect() handles the new city
         if self.x.confirmation == "confirm":
-            self.disqualify("out_of_area", city=pending_city)
+            self.disqualify("out_of_area", "close_out_of_area", city=pending["city_text"])
             return True
         if self.x.confirmation == "deny":
             self.state.pending_confirmation = None
-            self.fail("location", "the city they named is not where they'd work")
+            self.fail(spec, "the city they named is not where they'd work")
             return False
-        self.reply(Ask(field="out_of_area", city_not_served=pending_city))
+        self.reply(self.current_ask())
         return True
+
+    # Rows 20-24: the read-back
+
+    def confirm(self) -> None:
+        if not self.fields_given():
+            if self.x.confirmation == "confirm":
+                return self.finish()
+            if self.x.confirmation == "deny":
+                return self.another_round(lambda: self.reply(Ask(field="correction")))
+            return self.reply(Ask(field="confirm"))
+        before = self.state.profile.model_dump(mode="json")
+        self.apply_given()
+        if self.state.status is not Status.IN_PROGRESS:
+            return
+        if self.state.profile.model_dump(mode="json") == before and not self.retry:
+            # A restatement ("todo bien, vivo en Vallecas") changes nothing: it's an answer to
+            # the read-back, not a correction, so it must not trigger the same read-back again.
+            if self.x.confirmation == "deny":
+                return self.another_round(lambda: self.reply(Ask(field="correction")))
+            return self.finish()
+        self.next_step()
+
+    def another_round(self, send) -> None:
+        """One more read-back round; past the cap the read-back is flagged instead (row 24)."""
+        rounds = (self.state.pending_confirmation or {}).get("rounds", 0) + 1
+        if rounds > self.config.max_attempts_per_field:
+            self.add_reason("unresolved:confirm")
+            return self.finish()
+        self.state.pending_confirmation = {"type": "readback", "rounds": rounds}
+        send()
 
     # Rows 16-19: collecting fields
 
     def collect(self) -> None:
-        fields = self.x.fields
-        has_experience = fields.has_experience
-        if has_experience is None and fields.experience:
-            has_experience = True  # listing platforms answers the question
-        raw: dict[str, Any] = {
-            "full_name": fields.full_name,
-            "has_driver_license": fields.license,
-            "location": fields.city_text,
-            "availability": fields.availability,
-            "schedule": fields.schedule,
-            "experience": has_experience,
-            "start_date": fields.start_date,
-        }
-        given = False
-        for name, stage in FIELDS:
-            if raw[name] is None:
-                continue
-            given = True
-            asked = stage is self.asked or self.asked is Stage.CONFIRM
-            self.apply(name, raw[name], asked=asked)
-            if self.state.status is not Status.IN_PROGRESS:
-                return
-        asked_field = STAGE_FIELD.get(self.asked)
+        given = self.apply_given()
+        if self.state.status is not Status.IN_PROGRESS:
+            return
         if (
             not given
             and not self.attempt_used
-            and asked_field
+            and self.asked
             and self.x.intent in ("answer", "correction")
         ):
-            self.fail(asked_field, "no answer to the question")
+            self.fail(self.asked, "no answer to the question")
         self.next_step()
 
-    def apply(self, name: str, raw: Any, *, asked: bool) -> None:
-        profile = self.state.profile
-        if name == "full_name":
-            self.apply_name(raw, asked=asked)
-        elif name == "has_driver_license":
-            verdict = validate_license(raw)
-            if verdict.outcome == "accept" and verdict.value is False:
-                profile.has_driver_license.value = False
-                profile.has_driver_license.status = FieldStatus.ACCEPTED
-                profile.has_driver_license.source_message_id = self.message.id
-                return self.disqualify("no_license")
-            self.settle(name, verdict, asked=asked)
-        elif name == "location":
-            self.apply_city(raw)
-        elif name == "availability":
-            self.settle(name, validate_availability(raw), asked=asked)
-        elif name == "schedule":
-            self.settle(name, validate_schedule(raw), asked=asked)
-        elif name == "experience":
-            items: list[RawExperience] = self.x.fields.experience or []
-            verdict = validate_experience(has_experience=raw, items=items)
-            self.settle(name, verdict, asked=asked)
-        elif name == "start_date":
-            today = local_date(
-                self.message.received_at, candidate_timezone(self.state, self.config)
-            )
-            verdict = validate_start_date(
-                raw, today=today, max_days=self.config.start_date_max_days
-            )
-            self.settle(name, verdict, asked=asked)
+    def apply_given(self) -> bool:
+        """Apply every field the message gave, in the vacancy's order. True if any."""
+        given = False
+        for spec in self.vacancy.asked:
+            raw = self.raw(spec)
+            if raw is None:
+                continue
+            given = True
+            asked = self.at_confirm or (self.asked is not None and spec.name == self.asked.name)
+            self.apply(spec, raw, asked=asked)
+            if self.state.status is not Status.IN_PROGRESS:
+                break
+        return given
 
-    def apply_name(self, raw: str, *, asked: bool) -> None:
-        name_field = self.state.profile.full_name
+    def apply(self, spec: FieldSpec, raw: Any, *, asked: bool) -> None:
+        if spec.type == "city":
+            return self.apply_city(spec, raw)
+        if spec.type == "text":
+            return self.apply_name(spec, raw, asked=asked)
+        timezone = candidate_timezone(self.state, self.config)
+        verdict = validate(
+            spec,
+            raw,
+            today=local_date(self.message.received_at, timezone),
+            max_days=self.config.start_date_max_days,
+            surname_asked=False,
+        )
+        knockout = verdict.outcome == "accept" and is_knockout(spec, verdict.value)
+        if knockout and spec.requirement == "required":
+            self.store(spec, verdict.value)
+            requirement = localized(spec.summary, self.locale, self.state.language) or spec.name
+            return self.disqualify(
+                f"no_{spec.outcome_name}", "close_knockout", requirement=requirement
+            )
+        # On a preferred field a knockout-shaped answer is just a value, kept for scoring.
+        self.settle(spec, verdict, asked=asked)
+
+    def apply_name(self, spec: FieldSpec, raw: str, *, asked: bool) -> None:
+        name_field = self.field(spec.name)
         candidate = " ".join(raw.split())
         partial = name_field.value if name_field.status is FieldStatus.MISSING else None
         if partial and len(candidate.split()) == 1 and candidate.casefold() != partial.casefold():
             candidate = f"{partial} {candidate}"  # "Laura" + "Pérez"
-        verdict = validate_name(candidate, surname_asked=name_field.attempts > 0)
-        if verdict.outcome == "reask" and verdict.note == "surname missing":
-            name_field.value = candidate  # kept; the surname is asked once
-        self.settle(
-            "full_name", verdict, asked=True if verdict.note == "surname missing" else asked
+        verdict = validate(
+            spec,
+            candidate,
+            today=self.message.received_at.date(),
+            max_days=0,
+            surname_asked=name_field.attempts > 0,
         )
+        surname_missing = verdict.outcome == "reask" and verdict.note == "surname missing"
+        if surname_missing:
+            name_field.value = candidate  # kept; the surname is asked once
+        self.settle(spec, verdict, asked=asked or surname_missing)
 
-    def apply_city(self, city_text: str) -> None:
+    def apply_city(self, spec: FieldSpec, city_text: str) -> None:
         match = match_city(city_text, self.config)
         if match.kind == "matched":
-            self.settle("location", Verdict.accept(match.location), asked=True)
+            self.settle(spec, Verdict.accept(match.location), asked=True)
         elif match.kind == "ambiguous":
             names = [self.city_name(option.country, option.city) for option in match.options]
-            options = Ask(
-                field="city_choice", options=names, retry_reason="more than one city matches"
-            )
-            self.fail("location", "more than one city matches", ask=options)
+            reason = "more than one city matches"
+            ask = Ask(field="city_choice", options=names, retry_reason=reason)
+            self.fail(spec, reason, ask=ask)
         else:
-            self.state.pending_confirmation = {"type": "out_of_area", "city_text": match.city_text}
+            self.state.pending_confirmation = {
+                "type": "out_of_area",
+                "field": spec.name,
+                "city_text": match.city_text,
+            }
 
-    def settle(self, name: str, verdict: Verdict, *, asked: bool) -> None:
-        value: FieldValue = getattr(self.state.profile, name)
+    def settle(self, spec: FieldSpec, verdict: Verdict, *, asked: bool) -> None:
+        value = self.field(spec.name)
         if verdict.outcome == "accept":
-            corrected = value.status is FieldStatus.ACCEPTED and value.value != verdict.value
-            value.value = verdict.value
-            value.status = FieldStatus.ACCEPTED
-            value.source_message_id = self.message.id
-            value.note = verdict.note
+            if value.status is FieldStatus.ACCEPTED and typed(spec, value.value) == verdict.value:
+                return  # a restatement: nothing to record or acknowledge
+            corrected = value.status is FieldStatus.ACCEPTED
+            self.store(spec, verdict.value, note=verdict.note)
             stored = value.model_dump(mode="json")["value"]
-            self.event(
-                "field_corrected" if corrected else "field_accepted", field=name, value=stored
-            )
-            self.acknowledge.append(self.describe(name))
-        elif verdict.outcome == "flag":
+            event_type = "field_corrected" if corrected else "field_accepted"
+            self.event(event_type, field=spec.name, value=stored)
+            self.acknowledge.append(self.describe(spec))
+        elif verdict.outcome == "flag" and spec.requirement == "required":
+            if value.status is FieldStatus.FLAGGED and value.note == verdict.note:
+                return  # the same unclear answer again ("caducó en agosto"): nothing new
             value.value = None
             value.status = FieldStatus.FLAGGED
             value.source_message_id = self.message.id
             value.note = verdict.note
-            self.event("field_flagged", field=name, note=verdict.note)
-            self.add_reason(FLAG_REASONS.get(name, f"unclear:{name}"))
-            self.acknowledge.append(f"{name}: noted, a recruiter will look at it")
+            self.event("field_flagged", field=spec.name, note=verdict.note)
+            self.add_reason(f"{spec.outcome_name}_unclear")
+            self.acknowledge.append(f"{spec.name}: noted, a recruiter will look at it")
         elif asked:
-            self.fail(name, verdict.note or "invalid answer")
+            self.fail(spec, verdict.note or "invalid answer")
         # A bad value volunteered for a field not being asked is ignored; it gets asked in turn.
 
-    def fail(self, name: str, reason: str, ask: Ask | None = None) -> None:
-        """One more failed answer for `name`: re-ask, or flag once re-asks are used up."""
+    def store(self, spec: FieldSpec, value: Any, note: str | None = None) -> None:
+        field_value = self.field(spec.name)
+        field_value.value = value
+        field_value.status = FieldStatus.ACCEPTED
+        field_value.source_message_id = self.message.id
+        field_value.note = note
+        if spec.type == "city":
+            self.state.country_hint = value.country  # vocabulary and time zone follow the city
+
+    def fail(self, spec: FieldSpec, reason: str, ask: Ask | None = None) -> None:
+        """One more failed answer: re-ask, flag once re-asks are used up, or (preferred) move on."""
         self.attempt_used = True
-        value: FieldValue = getattr(self.state.profile, name)
+        value = self.field(spec.name)
+        if value.status is FieldStatus.ACCEPTED:
+            # A correction that didn't validate: the old value is wrong, the new one unusable.
+            value.value = None
+            value.status = FieldStatus.MISSING
+        if spec.requirement == "preferred":
+            value.attempts = 1  # asked once; never re-asked, never flagged
+            return
         max_attempts = self.config.max_attempts_per_field
         if value.attempts >= max_attempts:
             value.value = None
             value.status = FieldStatus.FLAGGED
             value.note = f"unresolved after {max_attempts} re-asks"
-            self.event("field_flagged", field=name, note=value.note)
-            self.add_reason(f"unresolved:{name}")
+            self.event("field_flagged", field=spec.name, note=value.note)
+            self.add_reason(f"unresolved:{spec.name}")
             return
         value.attempts += 1
-        if value.status is FieldStatus.ACCEPTED:
-            # A correction that didn't validate: the old value is wrong, the new one unusable.
-            value.value = None
-            value.status = FieldStatus.MISSING
-        self.retry = ask or Ask(field=self.ask_field(name), retry_reason=reason)
+        self.retry = (spec.name, ask or self.field_ask(spec, retry_reason=reason))
 
     def next_step(self) -> None:
-        state = self.state
-        if state.pending_confirmation:
-            city = state.pending_confirmation["city_text"]
-            return self.reply(Ask(field="out_of_area", city_not_served=city))
-        missing = next(
-            (
-                (name, stage)
-                for name, stage in FIELDS
-                if getattr(state.profile, name).status is FieldStatus.MISSING
-            ),
-            None,
-        )
-        if missing is None:
-            self.enter(Stage.CONFIRM)
-            if self.x.faq_id or self.x.question:
-                self.reply(None)
-            self.replies.append(FixedReply("readback"))
-            return
-        name, stage = missing
-        self.enter(stage)
-        ask = self.retry if self.retry and self.retry_is_for(name) else None
-        self.reply(ask or Ask(field=self.ask_field(name)))
+        if self.pending("out_of_area"):
+            return self.reply(self.current_ask())
+        spec = self.next_field()
+        if spec is not None:
+            self.enter(Stage.COLLECTING, spec.name)
+            retry = self.retry[1] if self.retry and self.retry[0] == spec.name else None
+            return self.reply(retry or self.field_ask(spec))
+        if self.at_confirm:
+            return self.another_round(self.send_readback)
+        self.enter(Stage.CONFIRM)
+        self.state.pending_confirmation = {"type": "readback", "rounds": 0}
+        self.send_readback()
 
-    # Rows 21 and knockouts: outcomes
+    def next_field(self) -> FieldSpec | None:
+        """The first required field still missing; then each preferred field, once."""
+        for spec in self.vacancy.asked:
+            value = self.field(spec.name)
+            asked_once = spec.requirement == "preferred" and value.attempts > 0
+            if value.status is FieldStatus.MISSING and not asked_once:
+                return spec
+        return None
+
+    def send_readback(self) -> None:
+        self.enter(Stage.CONFIRM)
+        if self.x.faq_id or self.x.question:
+            self.reply(None)
+        self.replies.append(FixedReply("readback"))
+
+    # Rows 21, 24 and knockouts: outcomes
 
     def finish(self) -> None:
         flagged = any(
-            getattr(self.state.profile, name).status is FieldStatus.FLAGGED for name, _ in FIELDS
+            self.field(spec.name).status is FieldStatus.FLAGGED for spec in self.vacancy.asked
         )
         needs_review = flagged or bool(self.state.review_reasons)
         self.close(Status.NEEDS_REVIEW if needs_review else Status.QUALIFIED, "close_completed")
 
-    def disqualify(self, reason: Literal["no_license", "out_of_area"], **values: str) -> None:
+    def disqualify(self, reason: str, key: str, **values: str) -> None:
         self.state.disqualify_reason = reason
         self.state.pending_confirmation = None
         self.event("knockout_failed", reason=reason)
-        key = "close_no_license" if reason == "no_license" else "close_out_of_area"
         self.close(Status.DISQUALIFIED, key, **values)
 
     def close(self, status: Status, key: str, **values: str) -> None:
         self.set_status(status)
         self.enter(Stage.DONE)
+        self.state.pending_confirmation = None
         self.replies.append(FixedReply(key, kind="close", values=values))
 
     # Helpers
@@ -465,6 +484,7 @@ class _Turn:
         plan = ReplyPlan(
             language=self.state.language,
             country=candidate_country(self.state),
+            job_title=self.vacancy.title[self.state.language],
             first_name=first_name(self.state),
             acknowledge=self.acknowledge,
             redirect=redirect,
@@ -482,30 +502,33 @@ class _Turn:
 
     def current_ask(self) -> Ask:
         state = self.state
-        if state.pending_confirmation:
-            return Ask(field="out_of_area", city_not_served=state.pending_confirmation["city_text"])
+        if self.pending("out_of_area"):
+            pending = state.pending_confirmation
+            return Ask(field="out_of_area", city_not_served=pending["city_text"])
         if state.stage is Stage.CONSENT:
             return Ask(field="consent")
         if state.stage is Stage.CONFIRM:
             return Ask(field="confirm")
-        return Ask(field=self.ask_field(STAGE_FIELD[state.stage]))
+        return self.field_ask(self.vacancy.field(state.current_field))
 
-    def ask_field(self, name: str) -> AskField:
-        if name == "full_name" and self.state.profile.full_name.value:
-            return "surname"
-        return ASK_FIELD[name]
+    def field_ask(self, spec: FieldSpec, retry_reason: str | None = None) -> Ask:
+        if spec.type == "text" and self.field(spec.name).value:
+            return Ask(field="surname", retry_reason=retry_reason)
+        return Ask(
+            field=spec.name,
+            about=spec.label[self.state.language],
+            optional=spec.requirement == "preferred",
+            retry_reason=retry_reason,
+        )
 
-    def retry_is_for(self, name: str) -> bool:
-        if self.retry is None:
-            return False
-        if self.retry.field == "city_choice":
-            return name == "location"
-        return self.retry.field in (ASK_FIELD[name], self.ask_field(name))
-
-    def enter(self, stage: Stage) -> None:
-        if self.state.stage is not stage:
-            self.state.stage = stage
-            self.event("stage_entered", stage=stage.value)
+    def enter(self, stage: Stage, current_field: str | None = None) -> None:
+        state = self.state
+        if (state.stage, state.current_field) != (stage, current_field):
+            if state.stage is Stage.CONFIRM and self.pending("readback"):
+                state.pending_confirmation = None  # leaving the read-back resets its rounds
+            state.stage = stage
+            state.current_field = current_field
+            self.event("stage_entered", stage=stage.value, field=current_field)
 
     def set_status(self, status: Status) -> None:
         if self.state.status is not status:
@@ -516,27 +539,44 @@ class _Turn:
         if reason not in self.state.review_reasons:
             self.state.review_reasons.append(reason)
 
-    def fields_given(self) -> bool:
-        fields = self.x.fields
-        return any(value is not None for value in fields.model_dump().values())
+    def field(self, name: str) -> FieldValue:
+        return self.state.profile.fields.setdefault(name, FieldValue())
 
-    def describe(self, name: str) -> str:
-        value = getattr(self.state.profile, name).value
-        if name == "has_driver_license":
-            return "has a valid driver's license"
-        if name == "location":
+    def raw(self, spec: FieldSpec) -> Any:
+        """This message's answer for a field; None when it gave none."""
+        raw = self.x.field(spec.name)
+        if spec.type == "experience" and raw is not None:
+            if raw.has_experience is None and not raw.items:
+                return None
+        return raw
+
+    def fields_given(self) -> bool:
+        return any(self.raw(spec) is not None for spec in self.vacancy.asked)
+
+    def pending(self, kind: str) -> bool:
+        return (self.state.pending_confirmation or {}).get("type") == kind
+
+    @property
+    def locale(self) -> str:
+        return f"{self.state.language}_{candidate_country(self.state)}"
+
+    def describe(self, spec: FieldSpec) -> str:
+        """What was just recorded, for the reply to acknowledge."""
+        value = typed(spec, self.field(spec.name).value)
+        if spec.type == "text":
+            return f"name: {value}"
+        if spec.type == "boolean":
+            return f"{spec.name}: {'yes' if value else 'no'}"
+        if spec.type == "city":
             return f"city: {self.city_name(value.country, value.city)}"
-        if name == "experience":
+        if spec.type == "experience":
             if not value:
-                return "no delivery experience (that's fine)"
-            return "experience: " + ", ".join(
-                f"{item.platform} {item.years:g} years" for item in value
-            )
-        if name == "start_date":
-            return f"start date: {value.isoformat()}"
-        if isinstance(value, list):
-            return f"{name}: {', '.join(item.value for item in value)}"
-        return f"name: {value}" if name == "full_name" else f"{name}: {value}"
+                return f"{spec.name}: none (that's fine)"
+            items = ", ".join(f"{item.platform} {item.years:g} years" for item in value)
+            return f"{spec.name}: {items}"
+        if spec.type == "date":
+            return f"{spec.name}: {value.isoformat()}"
+        return f"{spec.name}: {', '.join(value)}"
 
     def city_name(self, country: str, key: str) -> str:
         cities = self.config.service_areas[country].cities

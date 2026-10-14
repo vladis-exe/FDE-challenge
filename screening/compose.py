@@ -17,21 +17,9 @@ from screening.prompts import load_prompt
 from screening.schemas import TranscriptLine
 from screening.understand import render_transcript
 
-AskField = Literal[
-    "consent",
-    "full_name",
-    "surname",
-    "license",
-    "location",
-    "city_choice",
-    "out_of_area",
-    "availability",
-    "schedule",
-    "experience",
-    "start_date",
-    "confirm",
-    "correction",
-]
+# Asks with a fixed meaning (explained in the compose prompt); any other ask is a
+# field name from the vacancy, with its label as the question.
+SPECIAL_ASKS = {"consent", "surname", "city_choice", "out_of_area", "confirm", "correction"}
 
 VOCABULARY = {
     "ES": "Spain: carnet de conducir, coche, móvil",
@@ -41,7 +29,9 @@ REPLY_MAX_TOKENS = 300
 
 
 class Ask(BaseModel):
-    field: AskField
+    field: str  # a vacancy field name, or one of SPECIAL_ASKS
+    about: str | None = None  # field asks: the field's label, in the reply's language
+    optional: bool = False  # a preferred field: say it's not required for this job
     retry_reason: str | None = None  # set when re-asking: why the last answer didn't work
     options: list[str] = []  # city_choice: the cities to offer
     city_not_served: str | None = None  # out_of_area: the city the candidate named
@@ -50,6 +40,7 @@ class Ask(BaseModel):
 class ReplyPlan(BaseModel):
     language: Literal["es", "en"]
     country: Literal["ES", "MX"]
+    job_title: str  # in the reply's language
     first_name: str | None = None
     acknowledge: list[str] = []  # facts just recorded, e.g. "city: Barcelona"
     faq_answer: str | None = None  # approved text from faq.yaml
@@ -64,7 +55,7 @@ def instructions(plan: ReplyPlan) -> str:
     if plan.redirect:
         steps.append(
             "Their last message wasn't about the application. Say kindly, in a few words, "
-            "that you can only help with the delivery-driver application."
+            f"that you can only help with the {plan.job_title} application."
         )
     if plan.acknowledge:
         steps.append(f"Briefly acknowledge what they just told you: {'; '.join(plan.acknowledge)}.")
@@ -81,6 +72,10 @@ def instructions(plan: ReplyPlan) -> str:
     if plan.ask:
         ask = plan.ask
         line = f"Ask for: {ask.field}."
+        if ask.about:
+            line += f" Ask about: {ask.about}."
+        if ask.optional:
+            line += " This question is optional for this job."
         if ask.options:
             line += f" Options: {', '.join(ask.options)}."
         if ask.city_not_served:
@@ -95,6 +90,7 @@ def user_prompt(plan: ReplyPlan, transcript: list[TranscriptLine]) -> str:
     language = {"es": "Spanish", "en": "English"}[plan.language]
     return (
         "<situation>\n"
+        f"Job: {plan.job_title}\n"
         f"Language: {language}\n"
         f"Country vocabulary: {VOCABULARY[plan.country]}\n"
         f"Candidate's first name: {plan.first_name or 'unknown'}\n"

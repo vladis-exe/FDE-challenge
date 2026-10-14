@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Solicitud · Repartidor/a · Grupo Sazón{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/chat.css' %}">{% endblock %}
+{% block body_class %}chat-body{% endblock %}
+{% block body %}
+<main class="phone job-ad">
+  <div class="job-ad__hero">
+    <span class="job-ad__tag">Solicitud · WhatsApp</span>
+    <h1>Repartidor/a en Grupo Sazón</h1>
+    <p>Déjanos tu nombre y tu móvil. Alex, nuestro asistente virtual (IA), te escribirá por WhatsApp en un minuto para hacerte 7 preguntas rápidas.</p>
+  </div>
+  <form method="post" class="job-ad__form" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn-primary">Enviar solicitud</button>
+    <p class="fineprint">Demo con el sandbox de Twilio: antes, envía el código «join …» del sandbox a su número de WhatsApp.</p>
+  </form>
+</main>
+{% endblock %}

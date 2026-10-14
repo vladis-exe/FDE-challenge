@@ -1,6 +1,10 @@
 """Channel adapters (CONTRACTS §5): deliver one outbound message, return the provider's ID."""
 
+from functools import cache
 from typing import Protocol
+
+from django.conf import settings
+from twilio.rest import Client
 
 from apps.candidates.models import Conversation
 from screening.schemas import OutboundMessage
@@ -18,8 +22,24 @@ class WebChannel:
 
 
 class WhatsAppChannel:
+    """Twilio WhatsApp. Inside the 24 h customer-service window free text needs no template."""
+
     def send(self, conversation: Conversation, message: OutboundMessage) -> str | None:
-        raise NotImplementedError("WhatsApp sending lands in A4")
+        phone = conversation.candidate.phone
+        if not phone:
+            raise ValueError("WhatsApp conversation without a phone number")
+        sender = settings.TWILIO_WHATSAPP_FROM
+        sent = twilio_client().messages.create(
+            from_=sender if sender.startswith("whatsapp:") else f"whatsapp:{sender}",
+            to=f"whatsapp:{phone}",
+            body=message.text,
+        )
+        return sent.sid
+
+
+@cache
+def twilio_client() -> Client:
+    return Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
 
 
 def channel_for(conversation: Conversation) -> ChannelAdapter:

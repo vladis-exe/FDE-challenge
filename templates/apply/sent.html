@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Solicitud enviada · Grupo Sazón{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/chat.css' %}">{% endblock %}
+{% block body_class %}chat-body{% endblock %}
+{% block body %}
+<main class="phone job-ad">
+  <div class="job-ad__hero">
+    <span class="job-ad__tag">WhatsApp</span>
+    {% if resumed %}
+      <h1>Ya tenemos tu solicitud</h1>
+      <p>Seguimos donde lo dejaste: responde a Alex en WhatsApp para continuar.</p>
+    {% else %}
+      <h1>¡Revisa tu WhatsApp!</h1>
+      <p>Alex te acaba de escribir. Responde cuando quieras; son unos 3 minutos.</p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

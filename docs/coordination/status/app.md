@@ -3,7 +3,7 @@
 Last updated: 2026-10-14
 
 ## Current task
-None: **all app tasks (A1–A9) are done.** Remaining: the live WhatsApp sandbox run (needs Vlad, see Blocked) and any review notes. Deploy settings for L4 are under Notes.
+**A10 (Phase 2), partly.** E10/E11 haven't landed yet (`screening/schemas.py` is still v3, no `screening/config/vacancies/`), so I'm doing the parts that only depend on CONTRACTS v4 §5: the `vacancy_id` and `preference_score` columns plus their migration, and the queue sort by `preference_score` within a status (the A11 bit that needs only the column). The picker, `/apply/` and passing `vacancy_id` to `engine.new_conversation` wait for E10/E11 (see Blocked).
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -21,6 +21,7 @@ None: **all app tasks (A1–A9) are done.** Remaining: the live WhatsApp sandbox
 | A1 | Django project `config/` (settings from env, dj-database-url with a SQLite fallback, UTC, whitenoise, django-htmx). Apps `candidates`, `messaging`, `dashboard`. Models exactly as CONTRACTS §5, initial migrations, admin with message/event/review inlines on Conversation. | `cp .env.example .env && uv run python manage.py migrate && uv run pytest tests/app` | 049360c |
 
 ## Blocked
+- **A10 remainder needs E10 + E11:** the vacancy choice on `/chat/` and `/apply/` needs `ScreeningConfig.vacancies`; mirroring `state.vacancy_id`/`state.preference_score` and calling `new_conversation(vacancy_id=...)` need the v4 schemas. A11 (detail page, CSV, analytics on `final_record["fields"]`) needs E14; A12 needs a fresh eval run on both vacancies (V8).
 - **Live WhatsApp sandbox check (CP2) needs Vlad.** No `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_WHATSAPP_FROM` in this environment, and no tunnel. Steps once they're set: (1) join the sandbox from a phone, (2) expose the app (Railway from L4, or `ngrok http 8000`) and set `PUBLIC_BASE_URL` to that URL exactly, since the signature check depends on it, (3) set the sandbox "when a message comes in" URL to `<PUBLIC_BASE_URL>/webhooks/twilio/whatsapp/` (POST), (4) run the web server and `run_worker`, then message the sandbox or submit `/apply/`.
 
 ## Requests (to other lanes or the lead)

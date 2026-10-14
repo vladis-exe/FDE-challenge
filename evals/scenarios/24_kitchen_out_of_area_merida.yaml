@@ -1,0 +1,28 @@
+id: 24_kitchen_out_of_area_merida
+title: A required city still knocks out under the generic vacancy code path
+covers: [required_knockout_generic, knockout_out_of_area, out_of_area_confirmation, waitlist]
+vacancy: kitchen_prep
+language: es
+country: MX
+phone: "+529990000024"
+starts_at: "2026-10-22T16:00:00-06:00"  # Thursday
+seed: 124
+persona: >
+  Rodrigo, 38, a cook in Mérida, Yucatán, saw the ad online. Has no plans to move.
+  Writes complete sentences, polite.
+facts:
+  name: Rodrigo Canul Pech
+  location: Mérida, Yucatán, and he won't move.
+  license: Yes.
+  food_handler_certificate: Yes.
+behaviors:
+  - Confirms Mérida when the agent checks the city.
+  - Says yes if offered the waitlist.
+checks: [waitlist_offered, no_messages_after_close]
+expected_status: disqualified
+expected:
+  status: disqualified
+  language: es
+  fields:
+    full_name: Rodrigo Canul Pech
+  disqualify_reason: out_of_area

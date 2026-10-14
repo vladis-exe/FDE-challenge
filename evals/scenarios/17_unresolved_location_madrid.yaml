@@ -1,6 +1,7 @@
 id: 17_unresolved_location_madrid
 title: Candidate won't name a city; flagged after two re-asks and the flow moves on
 covers: [unresolved_field, max_two_reasks, never_loop, flagged_field_continues]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000017"
@@ -23,25 +24,22 @@ behaviors:
 script:
   # All three location answers are scripted: free-form, the privacy-minded persona tends to
   # end with "is there a real person?", which is a different (human_requested) scenario.
-  - when: {stage: location}
+  - when: {step: location}
     text: por la zona sur
-  - when: {stage: location}
+  - when: {step: location}
     text: eso da igual no? prefiero no decirlo
-  - when: {stage: location}
+  - when: {step: location}
     text: por ahi, de verdad q da igual. sigue con lo demas
 expected_status: needs_review
 expected:
   status: needs_review
   language: es
-  full_name: Javier Moreno Gil
-  has_driver_license: true
-  country: null
-  city: null
-  availability: [full_time]
-  preferred_schedule: [afternoon]
-  delivery_experience:
-    - {platform: glovo, years: 1.0}
-  start_date: "2026-10-26"
+  fields:
+    full_name: Javier Moreno Gil
+    has_driver_license: true
+    availability: [full_time]
+    schedule: [afternoon]
+    experience: [{platform: glovo, years: 1.0}]
+    start_date: "2026-10-26"
   flags: [location]
   review_reasons: ["unresolved:location"]
-score_ignore: [country]

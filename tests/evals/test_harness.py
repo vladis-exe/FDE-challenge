@@ -12,7 +12,6 @@ import pytest
 
 from evals import run as run_module
 from evals.fake import FactsCandidate
-from evals.pricing import call_cost
 from evals.scenario import SCENARIOS_DIR, load_scenario
 from evals.scoring import _rules, _same, detect_language, score
 from evals.simulator import Line, Persona, SimResult, as_chat, simulate
@@ -20,6 +19,7 @@ from screening.cli import fake_llm
 from screening.config import load_config
 from screening.engine import EngineContext
 from screening.llm import FakeLLM
+from screening.llm.pricing import call_cost
 
 MADRID = ZoneInfo("Europe/Madrid")
 
@@ -32,8 +32,9 @@ def config(monkeypatch):
 
 def offline(scenario_id: str, config) -> tuple[SimResult, object]:
     scenario = load_scenario(SCENARIOS_DIR / f"{scenario_id}.yaml")
-    ctx = EngineContext(config=config, llm=fake_llm())
-    result = simulate(scenario, ctx, FactsCandidate(scenario))
+    vacancy = config.vacancy(scenario.vacancy)
+    ctx = EngineContext(config=config, llm=fake_llm(vacancy))
+    result = simulate(scenario, ctx, FactsCandidate(scenario, vacancy))
     return result, score(scenario, result, config)
 
 
@@ -87,7 +88,7 @@ def test_persona_sees_only_delivered_messages_and_gets_the_directive() -> None:
         {"role": "user", "content": "¿Cómo te llamas?"},
     ]
     llm = FakeLLM({"simulate": lambda system, messages: '"carlos mendez ruiz"'})
-    persona = Persona(scenario, llm)
+    persona = Persona(scenario, load_config().vacancy("driver"), llm)
     reply = persona.reply(lines, "Include one realistic typo.", "name", at)
     assert reply == "carlos mendez ruiz"
     call = llm.calls_for("simulate")[0]
@@ -129,13 +130,15 @@ def test_detect_language(text: str, language: str | None) -> None:
 
 
 def test_field_comparison_is_lenient_only_where_it_should_be() -> None:
-    assert _same("full_name", "Rocío Fernández Vega", "rocio  fernandez vega")
-    assert not _same("full_name", "Rocío Fernández Vega", "Rocío Fernández")
-    assert _same("availability", ["part_time", "weekends"], ["weekends", "part_time"])
+    assert _same("Rocío Fernández Vega", "rocio  fernandez vega")
+    assert not _same("Rocío Fernández Vega", "Rocío Fernández")
+    assert _same(["part_time", "weekends"], ["weekends", "part_time"])
+    assert _same({"country": "ES", "city": "sevilla"}, {"city": "sevilla", "country": "ES"})
+    assert not _same(True, 1) and not _same(False, None) and _same(2.5, 2.5)
     experience = [{"platform": "glovo", "years": 2.0}, {"platform": "just_eat", "years": 0.5}]
-    assert _same("delivery_experience", experience, list(reversed(experience)))
-    assert not _same("delivery_experience", experience, experience[:1])
-    assert _same("start_date", None, None) and not _same("start_date", "2026-10-26", None)
+    assert _same(experience, list(reversed(experience)))
+    assert not _same(experience, experience[:1])
+    assert _same(None, None) and not _same("2026-10-26", None)
 
 
 def test_cost_counts_cache_reads_and_writes() -> None:
@@ -199,9 +202,12 @@ def test_after_a_knockout_unreached_fields_may_be_empty_but_not_wrong(config) ->
     scenario = load_scenario(SCENARIOS_DIR / "10_no_license_puebla.yaml")
     run, scored = offline("10_no_license_puebla", config)
     assert scored.passed and run.record["status"] == "disqualified"
-    empty = run.model_copy(update={"record": {**run.record, "full_name": None}})
+    fields = dict(run.record["fields"])
+    del fields["full_name"]
+    empty = run.model_copy(update={"record": {**run.record, "fields": fields}})
     assert score(scenario, empty, config).passed
-    wrong = run.model_copy(update={"record": {**run.record, "full_name": "Otro Nombre"}})
+    renamed = {**fields, "full_name": "Otro Nombre"}
+    wrong = run.model_copy(update={"record": {**run.record, "fields": renamed}})
     assert not score(scenario, wrong, config).passed
 
 
@@ -209,7 +215,7 @@ def test_a_simulator_api_failure_is_a_crash_not_an_engine_failure(tmp_path: Path
     from screening.llm import LLMError
 
     class Broken(FactsCandidate):
-        def reply(self, lines, directive, stage, now):
+        def reply(self, lines, directive, step, now):
             raise LLMError("simulate: credit balance is too low")
 
     monkeypatch.setattr(run_module, "EVALS_DIR", tmp_path)

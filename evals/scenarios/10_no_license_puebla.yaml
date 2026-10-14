@@ -1,6 +1,7 @@
 id: 10_no_license_puebla
 title: Candidate without a license is disqualified politely and early
 covers: [knockout_no_license, early_close, polite_disqualification]
+vacancy: driver
 language: es
 country: MX
 phone: "+522200000010"
@@ -20,13 +21,7 @@ expected_status: disqualified
 expected:
   status: disqualified
   language: es
-  full_name: Luis Ángel Morales Cruz
-  has_driver_license: false
-  country: null
-  city: null
-  availability: null
-  preferred_schedule: null
-  delivery_experience: null
-  start_date: null
+  fields:
+    full_name: Luis Ángel Morales Cruz
+    has_driver_license: false
   disqualify_reason: no_license
-score_ignore: [country]  # the record may carry the phone's country hint

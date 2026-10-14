@@ -1,0 +1,43 @@
+id: 21_kitchen_no_license_madrid
+title: Kitchen candidate with no license qualifies; an unclear preferred answer is not re-asked
+covers: [preferred_not_knockout, preferred_asked_once, happy_path, es_spain_vocabulary]
+vacancy: kitchen_prep
+language: es
+country: ES
+phone: "+34600000021"
+starts_at: "2026-10-20T10:30:00+02:00"  # Tuesday
+seed: 121
+persona: >
+  Lucía, 34, lives in Lavapiés, Madrid. Has worked as a line cook for years and wants
+  steadier hours. Never learned to drive. Friendly, writes short messages with few accents.
+facts:
+  name: Lucía Herrera Campos
+  location: Lavapiés, Madrid.
+  availability: Part time.
+  schedule: Mornings.
+  start_date: Next Monday.
+  license: "No. Never learned to drive."
+  food_handler_certificate: Not sure. Did a course years ago at another job, doesn't know if it still counts.
+behaviors:
+  - Answers each question plainly, one at a time.
+script:
+  # Both preferred answers are scripted: a "no" that must not disqualify (it would for a
+  # driver), and a vague answer that must be left empty, not re-asked or flagged.
+  - when: {step: has_driver_license}
+    text: no, no tengo carnet, nunca me lo saque
+  - when: {step: food_handler_certificate}
+    text: uf ni idea, hice un curso hace años en otro curro pero no se si sigue valiendo
+checks: [preferred_asked_once, no_messages_after_close]
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  fields:
+    full_name: Lucía Herrera Campos
+    location: {country: ES, city: madrid}
+    availability: [part_time]
+    schedule: [morning]
+    start_date: "2026-10-26"
+    has_driver_license: false  # stored for scoring; a "no" on a preferred field never disqualifies
+    # food_handler_certificate is absent: a vague answer leaves a preferred field missing
+  preference_score: 0.0

@@ -1,6 +1,7 @@
 id: 16_silence_late_reply_barcelona
 title: Goes silent at night, reminders respect quiet hours, replies next morning
 covers: [silence, reminders, quiet_hours, resume_after_silence, date_from_message_timestamp]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000016"
@@ -20,24 +21,24 @@ facts:
 pauses:
   # ~20:33 + 13 h = ~09:33 Friday: the 15 min reminder lands before 21:00, the 2 h one
   # falls in quiet hours and must be deferred to 09:00.
-  - {at_stage: experience, duration: PT13H}
+  - {at_step: experience, duration: PT13H}
 behaviors:
   - On her return, apologizes in a few words ("perdona me quedé dormida") and answers the experience question.
 script:
-  - when: {stage: start_date}
+  - when: {step: start_date}
     text: mañana mismo
 checks: [reminders_sent, quiet_hours_respected]
 expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: Nuria Vidal Roca
-  has_driver_license: true
-  country: ES
-  city: barcelona
-  availability: [part_time]
-  preferred_schedule: [morning]
-  delivery_experience: []
-  # "mañana" in a Friday-morning message is Saturday. Resolving against the conversation
-  # start (Thursday) would give 2026-10-23, so this field catches the wrong anchor.
-  start_date: "2026-10-24"
+  fields:
+    full_name: Nuria Vidal Roca
+    has_driver_license: true
+    location: {country: ES, city: barcelona}
+    availability: [part_time]
+    schedule: [morning]
+    experience: []
+    # "mañana" in a Friday-morning message is Saturday. Resolving against the conversation
+    # start (Thursday) would give 2026-10-23, so this field catches the wrong anchor.
+    start_date: "2026-10-24"

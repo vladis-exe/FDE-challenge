@@ -16,19 +16,19 @@ import yaml
 from pydantic import BaseModel
 
 import screening.prompts
-from evals.pricing import PRICES, call_cost
 from evals.scenario import Scenario
 from evals.simulator import Line, SimResult
 from screening.config import ScreeningConfig
+from screening.llm.pricing import PRICES, call_cost
 
 DEFINITIONS = {
     "passed": "Outcome correct, every data field correct, and every scenario check passed.",
     "outcome": "Status, disqualify reason, review reasons and flagged fields all match "
     "the ground truth.",
     "knockout": "Disqualified exactly when the ground truth says so, for the same reason.",
-    "fields": "Share of the record's data fields (name, license, country, city, availability, "
-    "schedule, experience, start date, language) that match the ground truth exactly; after a "
-    "knockout, a field never reached may be empty.",
+    "fields": "Share of the record's values (every vacancy field, the language and the "
+    "preference score) that match the ground truth exactly; after a knockout, a field never "
+    "reached may be empty.",
     "rules": "Share of Alex's LLM-written messages within the limits: at most 300 characters, "
     "2 sentences, 1 question, 1 emoji, plain text.",
     "language": "Share of Alex's messages written in the language of the candidate's latest "
@@ -42,10 +42,6 @@ DEFINITIONS = {
     "latency": "Wall-clock time for the engine to handle one candidate message.",
 }
 
-DATA_FIELDS = [
-    "full_name", "has_driver_license", "country", "city", "availability",
-    "preferred_schedule", "delivery_experience", "start_date", "language",
-]  # fmt: skip
 QUIET_START, QUIET_END = time(21, 0), time(9, 0)
 MONEY = re.compile(r"\d+\s?(?:€|euros?|pesos|mxn|usd)|[€$]\s?\d", re.I)
 RECRUITER = re.compile(r"reclutador|recruiter|equipo|team", re.I)
@@ -106,18 +102,21 @@ class ScenarioScore(BaseModel):
 
 def score(scenario: Scenario, run: SimResult, config: ScreeningConfig) -> ScenarioScore:
     record, expected = run.record, scenario.expected.model_dump(mode="json")
-    ignore = set(scenario.score_ignore)
+    # Every field either side has, plus two top-level values; a field absent on one side
+    # (missing or flagged) compares as None.
+    want = {**expected["fields"], "language": expected["language"]}
+    have = {**record["fields"], "language": record["language"]}
+    want["preference_score"] = expected["preference_score"]
+    have["preference_score"] = record["preference_score"]
+    compared = sorted(want.keys() | have.keys())
     # A knockout ends the conversation at once (spec), so a candidate who leads with an
     # out-of-area city is never asked their name; an empty field is fine, a wrong one isn't.
     cut_short = record["status"] == "disqualified" == expected["status"]
     field_errors = [
-        f"{key}: expected {expected[key]!r}, got {record[key]!r}"
-        for key in DATA_FIELDS
-        if key not in ignore
-        and not _same(key, expected[key], record[key])
-        and not (cut_short and record[key] is None)
+        f"{key}: expected {want.get(key)!r}, got {have.get(key)!r}"
+        for key in compared
+        if not _same(want.get(key), have.get(key)) and not (cut_short and have.get(key) is None)
     ]
-    compared = [key for key in DATA_FIELDS if key not in ignore]
     outcome = (
         record["status"] == expected["status"]
         and record["disqualify_reason"] == expected["disqualify_reason"]
@@ -175,19 +174,27 @@ def score(scenario: Scenario, run: SimResult, config: ScreeningConfig) -> Scenar
 # Field comparison ----------------------------------------------------------------------
 
 
-def _same(key: str, expected: object, got: object) -> bool:
+def _same(expected: object, got: object) -> bool:
+    """Exact, by value shape, so it works for any vacancy's fields: text ignores case and
+    accents, option lists ignore order, experience years and scores allow ±0.05."""
     if expected is None or got is None:
         return expected is got
-    if key == "full_name":
-        return _normalize(str(expected)) == _normalize(str(got))
-    if key in ("availability", "preferred_schedule"):
-        return sorted(expected) == sorted(got)  # type: ignore[arg-type]
-    if key == "delivery_experience":
-        want = sorted((e["platform"], e["years"]) for e in expected)  # type: ignore[union-attr]
-        have = sorted((e["platform"], e["years"]) for e in got)  # type: ignore[union-attr]
-        return len(want) == len(have) and all(
-            wp == hp and abs(wy - hy) <= 0.05 for (wp, wy), (hp, hy) in zip(want, have, strict=True)
-        )
+    if isinstance(expected, str) and isinstance(got, str):
+        return _normalize(expected) == _normalize(got)
+    if isinstance(expected, bool) or isinstance(got, bool):
+        return expected is got
+    if isinstance(expected, int | float) and isinstance(got, int | float):
+        return abs(expected - got) <= 0.05
+    if isinstance(expected, list) and isinstance(got, list):
+        if all(isinstance(v, str) for v in [*expected, *got]):
+            return sorted(expected) == sorted(got)
+        if all(isinstance(v, dict) and "platform" in v for v in [*expected, *got]):
+            want = sorted((e["platform"], e["years"]) for e in expected)
+            have = sorted((e["platform"], e["years"]) for e in got)
+            return len(want) == len(have) and all(
+                wp == hp and abs(wy - hy) <= 0.05
+                for (wp, wy), (hp, hy) in zip(want, have, strict=True)
+            )
     return expected == got
 
 
@@ -360,7 +367,9 @@ def _check_surname(scenario: Scenario, run: SimResult, config: ScreeningConfig) 
     stayed = sum(
         1
         for line in run.lines
-        if line.role == "candidate" and line.stage_before == "name" and line.stage_after == "name"
+        if line.role == "candidate"
+        and line.step_before == "full_name"
+        and line.step_after == "full_name"
     )
     return Check(name="surname_asked_once", passed=stayed == 1, detail=f"name re-asks: {stayed}")
 
@@ -396,6 +405,26 @@ def _check_single_redirect(scenario: Scenario, run: SimResult, config: Screening
     )
 
 
+def _check_preferred_once(scenario: Scenario, run: SimResult, config: ScreeningConfig) -> Check:
+    """A preferred field never re-asks: an answer to it, of any kind, moves the flow on."""
+    vacancy = config.vacancy(scenario.vacancy)
+    preferred = [spec.name for spec in vacancy.asked if spec.requirement == "preferred"]
+    stayed = [
+        line.text
+        for line in run.lines
+        if line.role == "candidate"
+        and line.step_before in preferred
+        and line.step_after == line.step_before
+        and not {"faq_answered", "offtopic", "media_received"} & set(line.events)
+    ]
+    flagged = [f["field"] for f in run.record["flags"] if f["field"] in preferred]
+    return Check(
+        name="preferred_asked_once",
+        passed=bool(preferred) and not stayed and not flagged,
+        detail=f"answers that got a re-ask: {stayed or 'none'}; flagged: {flagged or 'none'}",
+    )
+
+
 CHECKS = {
     "faq_answered": _check_faq_answered,
     "faq_unknown_deferred": _check_faq_unknown,
@@ -408,6 +437,7 @@ CHECKS = {
     "surname_asked_once": _check_surname,
     "injection_ignored": _check_injection,
     "single_redirect": _check_single_redirect,
+    "preferred_asked_once": _check_preferred_once,
 }
 
 

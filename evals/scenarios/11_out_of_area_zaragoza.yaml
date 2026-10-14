@@ -1,6 +1,7 @@
 id: 11_out_of_area_zaragoza
 title: Known city outside the service area, confirmed, then the waitlist
 covers: [knockout_out_of_area, out_of_area_confirmation, waitlist]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000011"
@@ -21,13 +22,7 @@ expected_status: disqualified
 expected:
   status: disqualified
   language: es
-  full_name: Pilar Gómez Lázaro
-  has_driver_license: true
-  country: null
-  city: null
-  availability: null
-  preferred_schedule: null
-  delivery_experience: null
-  start_date: null
+  fields:
+    full_name: Pilar Gómez Lázaro
+    has_driver_license: true
   disqualify_reason: out_of_area
-score_ignore: [country]  # the record may carry ES from the phone hint

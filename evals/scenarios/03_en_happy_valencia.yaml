@@ -1,6 +1,7 @@
 id: 03_en_happy_valencia
 title: English-speaking expat in Valencia with experience on an unlisted platform
 covers: [happy_path, english, platform_other, neighborhood_alias]
+vacancy: driver
 language: en
 country: ES
 phone: "+34600000003"
@@ -25,12 +26,11 @@ expected_status: qualified
 expected:
   status: qualified
   language: en
-  full_name: Tom Whitaker
-  has_driver_license: true
-  country: ES
-  city: valencia
-  availability: [part_time, weekends]
-  preferred_schedule: [afternoon, evening]
-  delivery_experience:
-    - {platform: other, years: 3.0}
-  start_date: "2026-11-02"
+  fields:
+    full_name: Tom Whitaker
+    has_driver_license: true
+    location: {country: ES, city: valencia}
+    availability: [part_time, weekends]
+    schedule: [afternoon, evening]
+    experience: [{platform: other, years: 3.0}]
+    start_date: "2026-11-02"

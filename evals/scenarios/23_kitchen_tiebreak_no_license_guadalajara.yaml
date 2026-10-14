@@ -1,0 +1,43 @@
+id: 23_kitchen_tiebreak_no_license_guadalajara
+title: "Tie-break pair (without license): equal on every required field, ranked by the preferred ones"
+covers: [preference_tiebreak, preferred_not_knockout, preferred_asked_once, es_mexico_vocabulary]
+vacancy: kitchen_prep
+language: es
+country: MX
+phone: "+523300000123"
+starts_at: "2026-10-21T11:00:00-06:00"  # Wednesday
+seed: 123
+persona: >
+  Paola, 27, prep cook from Chapalita, Guadalajara, looking for a steadier kitchen job.
+  Polite, short messages, Mexican Spanish.
+facts:
+  name: Paola Ruiz Ochoa
+  location: Chapalita, Guadalajara.
+  availability: Full time.
+  schedule: Mornings and afternoons.
+  start_date: Monday 2 November.
+  license: No. Has never had a license.
+  food_handler_certificate: Yes, has the curso de manejo higiénico de alimentos.
+behaviors:
+  - Answers each question plainly, one at a time.
+script:
+  # Scenarios 22 and 23 differ only in the license answer (the two candidates also have
+  # different names). Both preferred answers are scripted so the pair stays comparable.
+  - when: {step: has_driver_license}
+    text: no, no tengo licencia
+  - when: {step: food_handler_certificate}
+    text: si, tengo el curso de manejo higienico de alimentos
+checks: [preferred_asked_once]
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  fields:
+    full_name: Paola Ruiz Ochoa
+    location: {country: MX, city: guadalajara}
+    availability: [full_time]
+    schedule: [morning, afternoon]
+    start_date: "2026-11-02"
+    has_driver_license: false
+    food_handler_certificate: true
+  preference_score: 1.0  # license 1.5 if true + certificate 1.0

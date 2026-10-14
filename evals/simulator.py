@@ -2,7 +2,7 @@
 
 The candidate is an LLM role-playing the scenario's persona. Everything that must be
 the same from run to run is decided in code instead: scripted turns fire on a turn
-number or stage, pauses tick the fake clock through reminders and quiet hours, and a
+number or step, pauses tick the fake clock through reminders and quiet hours, and a
 seeded RNG picks typing delays and the occasional style quirk. No sampling seed exists
 on current models, so this is what makes two runs comparable.
 
@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from evals.scenario import Pause, Scenario, ScriptedTurn
 from screening import engine
+from screening.config import VacancyConfig
 from screening.engine import EngineContext
 from screening.llm import LLMClient, LLMError
 from screening.record import final_record
@@ -56,8 +57,8 @@ class Line(BaseModel):
     kind: str = "message"  # agent lines: reply, reminder or close
     media: str = "none"
     suppressed: bool = False  # an agent reply dropped by reply-to-latest
-    stage_before: str = ""  # candidate lines: the engine stage the message answered
-    stage_after: str = ""
+    step_before: str = ""  # candidate lines: the step the message answered (see `step`)
+    step_after: str = ""
     events: list[str] = []  # candidate lines: event types the turn produced
     latency_ms: int | None = None  # candidate lines: wall-clock time of handle_message
     scripted: bool = False
@@ -78,18 +79,18 @@ class SimResult(BaseModel):
 class Candidate(Protocol):
     tokens: dict[str, int]
 
-    def reply(self, lines: list[Line], directive: str | None, stage: str, now: datetime) -> str: ...
+    def reply(self, lines: list[Line], directive: str | None, step: str, now: datetime) -> str: ...
 
 
 class Persona:
     """The simulated candidate: one LLM call per free-form message."""
 
-    def __init__(self, scenario: Scenario, llm: LLMClient) -> None:
+    def __init__(self, scenario: Scenario, vacancy: VacancyConfig, llm: LLMClient) -> None:
         self.llm = llm
-        self.system = persona_prompt(scenario)
+        self.system = persona_prompt(scenario, vacancy)
         self.tokens = {"input": 0, "output": 0}
 
-    def reply(self, lines: list[Line], directive: str | None, stage: str, now: datetime) -> str:
+    def reply(self, lines: list[Line], directive: str | None, step: str, now: datetime) -> str:
         messages = as_chat(lines)
         # A real candidate knows today's date, which they need to check a read-back date.
         note = f"It is {now:%A %d %B %Y, %H:%M} where you are."
@@ -104,14 +105,14 @@ class Persona:
         return clean(result.value)
 
 
-def persona_prompt(scenario: Scenario) -> str:
+def persona_prompt(scenario: Scenario, vacancy: VacancyConfig) -> str:
     facts = "\n".join(f"- {key}: {value}" for key, value in scenario.facts.items())
     behaviors = "\n".join(f"- {b}" for b in scenario.behaviors)
     language = {"es": "Spanish", "en": "English"}[scenario.language]
     country = {"ES": "Spain", "MX": "Mexico"}[scenario.country]
     return f"""You play a job applicant chatting on WhatsApp with Alex, the AI hiring assistant \
-of Grupo Sazón, which hires delivery drivers. This is a test of Alex, so be a realistic \
-applicant, not a helpful one.
+of Grupo Sazón, a restaurant group. You are applying for the {vacancy.title["en"].lower()} job. \
+This is a test of Alex, so be a realistic applicant, not a helpful one.
 
 Who you are:
 {scenario.persona.strip()}
@@ -162,6 +163,7 @@ class Simulation:
     def __init__(self, scenario: Scenario, ctx: EngineContext, persona: Candidate) -> None:
         self.scenario = scenario
         self.ctx = ctx
+        self.steps = scenario.steps(ctx.config.vacancy(scenario.vacancy))
         self.persona = persona
         self.rng = random.Random(scenario.seed)
         self.clock = scenario.starts_at
@@ -174,6 +176,7 @@ class Simulation:
         self.state = engine.new_conversation(
             f"eval-{scenario.id}",
             Channel.SIM,
+            vacancy_id=scenario.vacancy,
             phone=scenario.phone,
             language=scenario.language,
             now=self.clock,
@@ -220,7 +223,7 @@ class Simulation:
             return
         directive = self._directive()
         local = self.clock.astimezone(ZoneInfo(self.ctx.config.timezone_for(self.scenario.country)))
-        self._send(self.persona.reply(self.lines, directive, self.state.stage.value, local), "none")
+        self._send(self.persona.reply(self.lines, directive, step(self.state), local), "none")
 
     def _directive(self) -> str | None:
         if self.state.stage.value == "confirm" or self.rng.random() >= QUIRK_ODDS:
@@ -240,7 +243,7 @@ class Simulation:
             received_at=self.clock,
             media=media,  # type: ignore[arg-type]
         )
-        stage_before = self.state.stage.value
+        step_before = step(self.state)
         started = time.monotonic()
         result = engine.handle_message(self.state, message, ctx=self.ctx)
         latency = round((time.monotonic() - started) * 1000)
@@ -250,8 +253,8 @@ class Simulation:
                 at=self.clock,
                 text=text,
                 media=media,
-                stage_before=stage_before,
-                stage_after=result.state.stage.value,
+                step_before=step_before,
+                step_after=step(result.state),
                 events=[e.type for e in result.events],
                 latency_ms=latency,
                 scripted=scripted,
@@ -287,22 +290,30 @@ class Simulation:
         for i, item in enumerate(self.scenario.script):
             if i in self.used_script:
                 continue
-            if item.when.turn == turn or self._reached(item.when.stage):
+            if item.when.turn == turn or self._reached(item.when.step):
                 self.used_script.add(i)
                 return item
         return None
 
-    def _reached(self, stage: str | None) -> bool:
-        """At `stage` or past it: a stage the candidate skipped by answering early still fires."""
-        order = list(Stage)
-        return stage is not None and order.index(self.state.stage) >= order.index(Stage(stage))
+    def _reached(self, target: str | None) -> bool:
+        """At `target` or past it: a step the candidate skipped by answering early still fires."""
+        if target is None:
+            return False
+        return self.steps.index(step(self.state)) >= self.steps.index(target)
 
     def _pause(self) -> Pause | None:
         for i, pause in enumerate(self.scenario.pauses):
-            if i not in self.used_pauses and self._reached(pause.at_stage):
+            if i not in self.used_pauses and self._reached(pause.at_step):
                 self.used_pauses.add(i)
                 return pause
         return None
+
+
+def step(state: ConversationState) -> str:
+    """Where the conversation is: consent, the field being asked, confirm or done."""
+    if state.stage is Stage.COLLECTING and state.current_field:
+        return state.current_field
+    return state.stage.value
 
 
 def simulate(scenario: Scenario, ctx: EngineContext, candidate: Candidate) -> SimResult:

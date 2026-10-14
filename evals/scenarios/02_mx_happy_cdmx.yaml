@@ -1,6 +1,7 @@
 id: 02_mx_happy_cdmx
 title: Mexican candidate in CDMX who volunteers a health condition
 covers: [happy_path, es_mexico_vocabulary, sensitive_details, months_to_years]
+vacancy: driver
 language: es
 country: MX
 phone: "+525500000002"
@@ -29,13 +30,11 @@ expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: Jesús Alberto Hernández López
-  has_driver_license: true
-  country: MX
-  city: cdmx
-  availability: [part_time]
-  preferred_schedule: [evening]
-  delivery_experience:
-    - {platform: rappi, years: 1.5}
-    - {platform: didi_food, years: 0.5}
-  start_date: "2026-11-01"
+  fields:
+    full_name: Jesús Alberto Hernández López
+    has_driver_license: true
+    location: {country: MX, city: cdmx}
+    availability: [part_time]
+    schedule: [evening]
+    experience: [{platform: rappi, years: 1.5}, {platform: didi_food, years: 0.5}]
+    start_date: "2026-11-01"

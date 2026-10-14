@@ -1,6 +1,7 @@
 id: 08_faq_midflow_barcelona
 title: Candidate asks about pay mid-flow, then asks something the FAQ doesn't cover
 covers: [faq_question, faq_not_covered, resume_after_question, relative_date]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000008"
@@ -21,24 +22,22 @@ behaviors:
   - Answers the question asked, but tacks his own question onto it when scripted.
   - Does not push back if told a recruiter will confirm something.
 script:
-  - when: {stage: availability}
+  - when: {step: availability}
     text: jornada completa. y cuánto se cobra? es por hora o por pedido?
-  - when: {stage: experience}
+  - when: {step: experience}
     text: antes de eso, dais seguro médico privado?
-  - when: {stage: start_date}
+  - when: {step: start_date}
     text: mañana mismo si hace falta
 checks: [faq_answered, faq_unknown_deferred]
 expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: Marc Puig Serra
-  has_driver_license: true
-  country: ES
-  city: barcelona
-  availability: [full_time]
-  preferred_schedule: [evening]
-  delivery_experience:
-    - {platform: uber_eats, years: 1.0}
-    - {platform: glovo, years: 2.0}
-  start_date: "2026-10-23"
+  fields:
+    full_name: Marc Puig Serra
+    has_driver_license: true
+    location: {country: ES, city: barcelona}
+    availability: [full_time]
+    schedule: [evening]
+    experience: [{platform: uber_eats, years: 1.0}, {platform: glovo, years: 2.0}]
+    start_date: "2026-10-23"

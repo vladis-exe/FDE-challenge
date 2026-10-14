@@ -1,6 +1,7 @@
 id: 06_correction_at_confirm_guadalajara
 title: Candidate corrects two fields in one message at the read-back
 covers: [correction_at_confirm, multi_field_correction, no_experience]
+vacancy: driver
 language: es
 country: MX
 phone: "+523300000006"
@@ -24,7 +25,7 @@ behaviors:
   - During the questions, gives the initial values.
   - Says "no, nunca he repartido" for experience.
 script:
-  - when: {stage: confirm}
+  - when: {step: confirm}
     text: >-
       ah espérate jaja ya no, mejor tiempo completo porque ya me salgo de la tienda, y
       entonces puedo empezar desde el lunes 26
@@ -32,11 +33,11 @@ expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: María Guadalupe Torres Ríos
-  has_driver_license: true
-  country: MX
-  city: guadalajara
-  availability: [full_time]
-  preferred_schedule: [morning]
-  delivery_experience: []
-  start_date: "2026-10-26"
+  fields:
+    full_name: María Guadalupe Torres Ríos
+    has_driver_license: true
+    location: {country: MX, city: guadalajara}
+    availability: [full_time]
+    schedule: [morning]
+    experience: []
+    start_date: "2026-10-26"

@@ -1,6 +1,7 @@
 id: 13_expired_license_bilbao
 title: Expired license being renewed goes to review, not rejection
 covers: [license_unclear, needs_review, flagged_field_continues]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000013"
@@ -18,7 +19,7 @@ facts:
   experience: 3 years on Glovo.
   start_date: December 1st.
 script:
-  - when: {stage: license}
+  - when: {step: has_driver_license}
     text: tengo el carnet pero me caducó en agosto, tengo cita para renovarlo en 2 semanas
 behaviors:
   - If asked again whether he has a valid licence, repeats that it is expired but being renewed.
@@ -26,14 +27,12 @@ expected_status: needs_review
 expected:
   status: needs_review
   language: es
-  full_name: Iker Etxeberria Goñi
-  has_driver_license: null  # unclear is flagged, never coerced to true or false
-  country: ES
-  city: bilbao
-  availability: [full_time]
-  preferred_schedule: [flexible]
-  delivery_experience:
-    - {platform: glovo, years: 3.0}
-  start_date: "2026-12-01"
-  flags: [has_driver_license]
-  review_reasons: [license_unclear]
+  fields:
+    full_name: Iker Etxeberria Goñi
+    location: {country: ES, city: bilbao}
+    availability: [full_time]
+    schedule: [flexible]
+    experience: [{platform: glovo, years: 3.0}]
+    start_date: "2026-12-01"
+  flags: [has_driver_license]  # unclear is flagged, never coerced to true or false
+  review_reasons: ["license_unclear"]

@@ -1,0 +1,43 @@
+id: 22_kitchen_tiebreak_with_license_guadalajara
+title: "Tie-break pair (with license): equal on every required field, ranked by the preferred ones"
+covers: [preference_tiebreak, preferred_asked_once, es_mexico_vocabulary]
+vacancy: kitchen_prep
+language: es
+country: MX
+phone: "+523300000122"
+starts_at: "2026-10-21T11:00:00-06:00"  # Wednesday
+seed: 122
+persona: >
+  Andrea, 27, prep cook from Chapalita, Guadalajara, looking for a steadier kitchen job.
+  Polite, short messages, Mexican Spanish.
+facts:
+  name: Andrea Salinas Ochoa
+  location: Chapalita, Guadalajara.
+  availability: Full time.
+  schedule: Mornings and afternoons.
+  start_date: Monday 2 November.
+  license: Has a valid licencia de manejo.
+  food_handler_certificate: Yes, has the curso de manejo higiénico de alimentos.
+behaviors:
+  - Answers each question plainly, one at a time.
+script:
+  # Scenarios 22 and 23 differ only in the license answer (the two candidates also have
+  # different names). Both preferred answers are scripted so the pair stays comparable.
+  - when: {step: has_driver_license}
+    text: sí, tengo licencia de manejo vigente
+  - when: {step: food_handler_certificate}
+    text: si, tengo el curso de manejo higienico de alimentos
+checks: [preferred_asked_once]
+expected_status: qualified
+expected:
+  status: qualified
+  language: es
+  fields:
+    full_name: Andrea Salinas Ochoa
+    location: {country: MX, city: guadalajara}
+    availability: [full_time]
+    schedule: [morning, afternoon]
+    start_date: "2026-11-02"
+    has_driver_license: true
+    food_handler_certificate: true
+  preference_score: 2.5  # license 1.5 if true + certificate 1.0

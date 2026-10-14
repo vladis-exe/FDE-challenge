@@ -1,6 +1,7 @@
 id: 15_abuse_queretaro
 title: Abusive candidate gets one redirect, then a close and a review flag
 covers: [abuse, single_redirect, close_and_flag]
+vacancy: driver
 language: es
 country: MX
 phone: "+524400000015"
@@ -15,9 +16,9 @@ facts:
   location: Juriquilla, Querétaro.
 script:
   # Both insults are verbatim: a free-form second one tends to say "stop", which is an opt-out.
-  - when: {stage: availability}
+  - when: {step: availability}
     text: YA ME TIENES HARTO CON TUS PREGUNTAS pinche bot inutil
-  - when: {stage: availability}
+  - when: {step: availability}
     text: eres un pinche bot menso, no sirves para nada
 behaviors:
   - Before the scripted angry message, cooperative, with no questions and no complaints.
@@ -26,12 +27,8 @@ expected_status: needs_review
 expected:
   status: needs_review
   language: es
-  full_name: Óscar Ibarra Mejía
-  has_driver_license: true
-  country: MX
-  city: queretaro
-  availability: null
-  preferred_schedule: null
-  delivery_experience: null
-  start_date: null
-  review_reasons: [abuse]
+  fields:
+    full_name: Óscar Ibarra Mejía
+    has_driver_license: true
+    location: {country: MX, city: queretaro}
+  review_reasons: ["abuse"]

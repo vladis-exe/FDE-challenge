@@ -1,6 +1,7 @@
 id: 05_all_in_one_sevilla
 title: Candidate answers every question in her first message
 covers: [multi_field_message, skip_ahead, explicit_date]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000005"
@@ -29,12 +30,11 @@ expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: Rocío Fernández Vega
-  has_driver_license: true
-  country: ES
-  city: sevilla
-  availability: [part_time, weekends]
-  preferred_schedule: [afternoon]
-  delivery_experience:
-    - {platform: just_eat, years: 1.0}
-  start_date: "2026-10-26"
+  fields:
+    full_name: Rocío Fernández Vega
+    has_driver_license: true
+    location: {country: ES, city: sevilla}
+    availability: [part_time, weekends]
+    schedule: [afternoon]
+    experience: [{platform: just_eat, years: 1.0}]
+    start_date: "2026-10-26"

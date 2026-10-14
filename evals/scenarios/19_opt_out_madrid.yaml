@@ -1,6 +1,7 @@
 id: 19_opt_out_madrid
 title: Candidate stops mid-flow; one confirmation, then silence
 covers: [opt_out, no_messages_after_close]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000019"
@@ -12,7 +13,7 @@ facts:
   name: Alba Castro Prieto
   license: Carnet B.
 script:
-  - when: {stage: location}
+  - when: {step: location}
     text: sabes qué, déjalo, ya encontré otro curro. no me escribas más porfa
 behaviors:
   - Before the scripted message, no questions and no hesitation.
@@ -22,12 +23,6 @@ expected_status: opted_out
 expected:
   status: opted_out
   language: es
-  full_name: Alba Castro Prieto
-  has_driver_license: true
-  country: null
-  city: null
-  availability: null
-  preferred_schedule: null
-  delivery_experience: null
-  start_date: null
-score_ignore: [country]
+  fields:
+    full_name: Alba Castro Prieto
+    has_driver_license: true

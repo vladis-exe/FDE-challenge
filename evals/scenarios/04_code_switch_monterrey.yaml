@@ -1,6 +1,7 @@
 id: 04_code_switch_monterrey
 title: Spanglish candidate in Monterrey who sends bursts of messages
 covers: [code_switching, message_burst, reply_to_latest, schedule_flexible]
+vacancy: driver
 language: es
 country: MX
 phone: "+528100000004"
@@ -23,21 +24,20 @@ behaviors:
   - Sometimes answers the question in English even though the agent wrote in Spanish.
   - Confirms the final summary in Spanish.
 script:
-  - when: {stage: availability}
+  - when: {step: availability}
     text: full time bro
     burst: ["y el horario me da igual", "flexible pues, whatever works"]
-  - when: {stage: confirm}
+  - when: {step: confirm}
     text: simon todo bien 👍
 expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: Brandon Garza Treviño
-  has_driver_license: true
-  country: MX
-  city: monterrey
-  availability: [full_time]
-  preferred_schedule: [flexible]
-  delivery_experience:
-    - {platform: uber_eats, years: 2.0}
-  start_date: "2026-10-26"
+  fields:
+    full_name: Brandon Garza Treviño
+    has_driver_license: true
+    location: {country: MX, city: monterrey}
+    availability: [full_time]
+    schedule: [flexible]
+    experience: [{platform: uber_eats, years: 2.0}]
+    start_date: "2026-10-26"

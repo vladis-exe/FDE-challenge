@@ -1,6 +1,7 @@
 id: 18_human_request_puebla
 title: Candidate asks for a person mid-flow and is handed off
 covers: [human_request, handoff]
+vacancy: driver
 language: es
 country: MX
 phone: "+522200000018"
@@ -14,7 +15,7 @@ facts:
   license: Licencia de manejo, valid.
   location: Angelópolis, Puebla.
 script:
-  - when: {stage: availability}
+  - when: {step: availability}
     text: oiga mejor puedo hablar con una persona? tengo dudas del contrato y prefiero hablarlo con alguien
 behaviors:
   - Before the scripted message, no questions of her own.
@@ -24,12 +25,8 @@ expected_status: needs_review
 expected:
   status: needs_review
   language: es
-  full_name: Fernanda Reyes Aguilar
-  has_driver_license: true
-  country: MX
-  city: puebla
-  availability: null
-  preferred_schedule: null
-  delivery_experience: null
-  start_date: null
-  review_reasons: [human_requested]
+  fields:
+    full_name: Fernanda Reyes Aguilar
+    has_driver_license: true
+    location: {country: MX, city: puebla}
+  review_reasons: ["human_requested"]

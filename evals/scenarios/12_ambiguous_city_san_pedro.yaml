@@ -1,6 +1,7 @@
 id: 12_ambiguous_city_san_pedro
 title: '"San Pedro" matches two served metros until the candidate clarifies'
 covers: [ambiguous_city, offer_options]
+vacancy: driver
 language: es
 country: MX
 phone: "+528100000012"
@@ -20,18 +21,17 @@ facts:
 behaviors:
   - Picks the Monterrey option if offered a choice; otherwise clarifies "San Pedro Garza García, Monterrey".
 script:
-  - when: {stage: location}
+  - when: {step: location}
     text: en san pedro
 expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: Diego Alejandro Cantú Garza
-  has_driver_license: true
-  country: MX
-  city: monterrey
-  availability: [part_time]
-  preferred_schedule: [morning]
-  delivery_experience:
-    - {platform: didi_food, years: 1.0}
-  start_date: "2026-10-26"
+  fields:
+    full_name: Diego Alejandro Cantú Garza
+    has_driver_license: true
+    location: {country: MX, city: monterrey}
+    availability: [part_time]
+    schedule: [morning]
+    experience: [{platform: didi_food, years: 1.0}]
+    start_date: "2026-10-26"

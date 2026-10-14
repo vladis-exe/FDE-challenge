@@ -1,7 +1,7 @@
 """Run eval scenarios against the engine and write transcripts, scores and a report.
 
     uv run python -m evals.run                          # all scenarios
-    uv run python -m evals.run --suite smoke            # 5 quick regression scenarios
+    uv run python -m evals.run --suite smoke            # 6 quick regression scenarios
     uv run python -m evals.run --only 13_expired_license_bilbao
     uv run python -m evals.run --name haiku --fast-model claude-haiku-5-5
     uv run python -m evals.run --fake                   # offline: no API key, no cost
@@ -35,13 +35,15 @@ from screening.llm import AnthropicClient, LLMClient
 EVALS_DIR = Path(__file__).parent
 SIM_MODEL = "claude-sonnet-5-5"  # the simulated candidate: smart tier, fixed across configs
 SUITES = {
-    # One per risk area: ES and EN happy paths, a knockout, the review path, timers.
+    # One per risk area: ES and EN happy paths, a knockout, the review path, timers, and
+    # a second vacancy where the license is only preferred.
     "smoke": [
         "01_es_happy_madrid",
         "03_en_happy_valencia",
         "10_no_license_puebla",
         "13_expired_license_bilbao",
         "16_silence_late_reply_barcelona",
+        "21_kitchen_no_license_madrid",
     ],
 }
 
@@ -136,13 +138,14 @@ def _run_one(
 ) -> ScenarioScore:
     engine_llm: LLMClient
     candidate: Candidate
+    vacancy = config.vacancy(scenario.vacancy)
     if settings.fake:
-        engine_llm, candidate = fake_llm(), FactsCandidate(scenario)
+        engine_llm, candidate = fake_llm(vacancy), FactsCandidate(scenario, vacancy)
     else:
         engine_llm = AnthropicClient(
             fast_model=settings.fast_model, smart_model=settings.smart_model
         )
-        candidate = Persona(scenario, AnthropicClient(smart_model=settings.sim_model))
+        candidate = Persona(scenario, vacancy, AnthropicClient(smart_model=settings.sim_model))
     run = simulate(scenario, EngineContext(config=config, llm=engine_llm), candidate)
     result = score(scenario, run, config)
     zone = config.timezone_for(scenario.country)

@@ -1,6 +1,7 @@
 id: 20_abandoned_monterrey
 title: Candidate never comes back; reminders, a deferred last reminder, then abandoned
 covers: [silence, reminders, quiet_hours, abandonment]
+vacancy: driver
 language: es
 country: MX
 phone: "+528100000020"
@@ -20,17 +21,13 @@ behaviors:
 pauses:
   # Last inbound ~09:47. Reminders ~10:02 and ~11:47; the 20 h one (~05:47) falls in quiet
   # hours and is deferred to 09:00; abandoned at 24 h (~09:47 Wednesday).
-  - {at_stage: availability, duration: PT30H, resume: false}
+  - {at_step: availability, duration: PT30H, resume: false}
 checks: [reminders_sent, quiet_hours_respected, no_messages_after_close]
 expected_status: abandoned
 expected:
   status: abandoned
   language: es
-  full_name: José Luis Treviño Salinas
-  has_driver_license: true
-  country: MX
-  city: monterrey
-  availability: null
-  preferred_schedule: null
-  delivery_experience: null
-  start_date: null
+  fields:
+    full_name: José Luis Treviño Salinas
+    has_driver_license: true
+    location: {country: MX, city: monterrey}

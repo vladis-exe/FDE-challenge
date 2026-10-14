@@ -1,6 +1,7 @@
 id: 01_es_happy_madrid
 title: Spanish candidate in Madrid, straightforward but chatty
 covers: [happy_path, es_spain_vocabulary, neighborhood_alias, months_to_years]
+vacancy: driver
 language: es
 country: ES
 phone: "+34600000001"
@@ -26,13 +27,11 @@ expected_status: qualified
 expected:
   status: qualified
   language: es
-  full_name: Carlos Méndez Ruiz
-  has_driver_license: true
-  country: ES
-  city: madrid
-  availability: [full_time]
-  preferred_schedule: [morning, afternoon]
-  delivery_experience:
-    - {platform: glovo, years: 2.0}
-    - {platform: just_eat, years: 0.5}
-  start_date: "2026-10-26"
+  fields:
+    full_name: Carlos Méndez Ruiz
+    has_driver_license: true
+    location: {country: ES, city: madrid}
+    availability: [full_time]
+    schedule: [morning, afternoon]
+    experience: [{platform: glovo, years: 2.0}, {platform: just_eat, years: 0.5}]
+    start_date: "2026-10-26"

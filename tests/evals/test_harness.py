@@ -220,3 +220,14 @@ def test_a_simulator_api_failure_is_a_crash_not_an_engine_failure(tmp_path: Path
     run_dir = next((tmp_path / "runs").iterdir())
     assert (run_dir / "01_es_happy_madrid.error.txt").exists()
     assert (run_dir / "01_es_happy_madrid.md").exists()  # the transcript is kept for debugging
+
+
+def test_curated_samples_name_real_scenarios() -> None:
+    import yaml
+
+    from evals.samples import SAMPLES_FILE, Sample
+
+    samples = [Sample(**item) for item in yaml.safe_load(SAMPLES_FILE.read_text())]
+    assert 5 <= len(samples) <= 6  # BOARD V5
+    for sample in samples:
+        assert (SCENARIOS_DIR / f"{sample.scenario}.yaml").exists(), sample.scenario

@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-**Phase 2 engine tasks done (E10–E15)**, except the live LLM check, which is blocked on API credits (see Blocked).
+**E16 (eval findings routed by the lead, 9ece4dd), in progress:** opt-out misread on a declined question, surname replacing the first name, "de NL" as a location, flag notes losing the candidate's detail, plus display polish (title-case names, months, no-judging). Code fixes are tested with FakeLLM now; live re-verification waits on API credits.
 
 ## Done
 | Task | What changed | How to verify | Commit |

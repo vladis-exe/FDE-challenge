@@ -3,7 +3,7 @@
 Last updated: 2026-10-14
 
 ## Current task
-None in progress. **V4 and V5 wait for CP2**, as the kickoff orders. The V4 tooling (`evals/compare.py`) is ready, and the paid runs come once CP2 is declared and engine has fixed the read-back loop (see Notes), so the comparison measures the engine we ship. Plan: baseline (fast = Haiku 5.5) vs fast = Sonnet 5.5, 3 repeats each of the full suite (~$5 total), then the decision report.
+**V4 in progress** (CP2 declared by the lead, 2026-10-14). Running the full suite 3× per configuration: baseline (fast = Haiku 5.5, smart = Sonnet 5.5) vs fast = Sonnet 5.5. Runs are against the pre-Phase-2 engine at HEAD 8d4ad12; the read-back loop fix is folded into E12, so V8 re-runs after Phase 2. Then V5 (sample conversations) from these runs.
 
 ## Done
 | Task | What changed | How to verify | Commit |

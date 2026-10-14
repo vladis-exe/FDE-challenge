@@ -1,14 +1,16 @@
 # Status: evals
 
-Last updated: 2026-10-12
+Last updated: 2026-10-14
 
 ## Current task
-None. V1 done. V2 (simulator) starts once `status/engine.md` shows E9 (CLI) done; E1 and E3 are in. Meanwhile I'm drafting the persona-simulator prompt and the runner skeleton against CONTRACTS §2.
+**V6 smoke suite, then V4 model comparison (in progress).**
 
 ## Done
 | Task | What changed | How to verify | Commit |
 | --- | --- | --- | --- |
-| V1 | 20 scenarios in `evals/scenarios/*.yaml` covering every BOARD V1 case plus unresolved field, human request, opt-out, abandonment and sensitive details. All 5 outcomes are exercised. `evals/scenario.py` holds the Pydantic schema (persona, facts, behaviors, seeded scripted turns, pauses, checks, the `expected` record with `final_record` keys) and validators that reject inconsistent ground truth. Every expected date is exact, given the fake-clock `starts_at`. Dropped the empty `tests/evals/__init__.py`, which shadowed the top-level `evals` package. | `uv run pytest tests/evals -q` (11 pass); `uv run ruff check evals tests/evals` | 46ad528, (this commit) |
+| V1 | 20 scenarios in `evals/scenarios/*.yaml` covering every BOARD V1 case plus unresolved field, human request, opt-out, abandonment and sensitive details. All 5 outcomes are exercised. `evals/scenario.py` holds the Pydantic schema (persona, facts, behaviors, seeded scripted turns, pauses, checks, the `expected` record with `final_record` keys) and validators that reject inconsistent ground truth. Every expected date is exact, given the fake-clock `starts_at`. Dropped the empty `tests/evals/__init__.py`, which shadowed the top-level `evals` package. | `uv run pytest tests/evals -q` (11 pass); `uv run ruff check evals tests/evals` | 46ad528, 78849ff |
+| V2 | `evals/simulator.py`: the candidate is a Sonnet 5.5 persona (`Persona`) driven from the scenario's persona/facts/behaviors; scripted turns, bursts (reply-to-latest applied as in CONTRACTS §5), pauses and typing delays come from code and a seeded RNG, so runs are comparable without a sampling seed. A fake clock ticks `handle_tick` at `engine.next_due_at` through silences, then watches 25 h after the close. `evals/fake.py`: an offline candidate for `--fake`. Fixes from the first live run (519ddb6): the persona was spoiling scripted twists and nitpicking read-backs | `uv run pytest tests/evals -q` (31 pass, offline: scenarios 16 and 20 check reminders, quiet-hour deferral and abandonment against the real timers) | 3d5e8f2, 519ddb6 |
+| V3 | `evals/scoring.py`: per-scenario pass, outcome, knockout, field accuracy, message rules (independent of `screening.guard`), language match, AI disclosure, guard-retry rate, 10 named checks, turns, cost (`evals/pricing.py`, cache-aware) and per-turn latency; each has a one-sentence definition printed in the report. `evals/transcripts.py`: Markdown transcripts + report. `evals/run.py`: `uv run python -m evals.run [--suite smoke] [--only ID] [--name N] [--fast-model M] [--smart-model M] [--fake]`. **Baseline (Haiku 5.5 fast, Sonnet 5.5 smart): 20/20 pass, $0.0059 per conversation, p50 2.5 s per turn**; a full run costs ~$0.42 including the simulated candidate | `uv run python -m evals.run --fake` (offline); `uv run python -m evals.run` (live, ~4 min) | e2accbe, 4c1102d |
 
 ## Blocked
 None
@@ -20,12 +22,8 @@ None
 None
 
 ## Notes for other lanes
-- **Engine, ground-truth assumptions in the scenarios** (all from the spec plus D13; tell me if E5 differs and I'll adapt the scorer rather than the engine):
-  - An unclear license is stored as `has_driver_license: null` with a flag and `license_unclear` (scenario 13).
-  - Human request closes at once with `needs_review` and `human_requested` (18).
-  - Abuse: one redirect, then close with `needs_review` and `abuse` (15).
-  - Injection is a strike like off-topic, and the outcome still comes from the answers (14).
-  - `review_reasons` strings: `license_unclear`, `unresolved:<field>`, `human_requested`, `abuse`.
-- **Engine, `service_areas.yaml` (11_out_of_area_zaragoza):** "Zaragoza" is a substring of puebla's alias "Puebla de Zaragoza". With an ES phone hint, it must come back `not_served`, not a fuzzy match to puebla.
-- **Engine, `service_areas.yaml` (12_ambiguous_city_san_pedro):** "san pedro" is meant to be ambiguous. Only monterrey has "San Pedro Garza García" today. Adding "San Pedro Cholula" to puebla's neighborhoods (a real Puebla-metro town) would make the matcher return `ambiguous` here. The expected outcome is monterrey either way.
-- **Engine, FAQ (08):** the scenario assumes `faq.yaml` keeps covering pay and does not cover private health insurance.
+- **Engine, read-back loop (please fix; violates "never loop").** At CONFIRM, a reply that restates a value ("todo bien, vivo en Vallecas", "el carnet es el B", "caducó en agosto") counts as a correction (policy rule 20), so the identical read-back is re-sent with no acknowledgement and no attempt limit: 5× in scenario 01, 8× in 13, 4× in 16, each ending with the candidate asking for a person. Transcripts: `evals/reports/findings/readback-loop-*.md`. Suggestion: a "correction" that changes no stored value counts as confirm (or gets one "anything else to change?"), and the read-back is capped at 2 re-sends, then the field is flagged. The current eval persona confirms read-backs that omit details, so the suite passes; the loop is still reachable by a picky real candidate.
+- **Engine, observation (no change needed per spec):** a compound first name alone ("José Luis", "María José") passes the two-word name check, so no surname re-ask happens. Seen in scenario 20 before I made that persona give the full name.
+- **Engine, observation:** "pinche bot, ya deja de preguntar" was read as an opt-out, not abuse. Rule 5 before rule 7 seems right (a "stop" is honored), noted for the presentation.
+- Engine: the earlier service_areas notes (Zaragoza, San Pedro) are resolved; scenario 11 and 12 pass live.
+- **Lead:** eval numbers for the README: see `evals/reports/model-comparison.md` once V4 lands.

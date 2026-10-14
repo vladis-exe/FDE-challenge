@@ -4,6 +4,10 @@ The conversations come from `apps/dashboard/fixtures/demo_conversations.json`, w
 from an eval run (`--from-run evals/runs/<dir>`): the real engine and LLM talking to simulated
 candidates. Every state, record, event and message is the engine's own output; only the
 identifiers, phone numbers and timestamps are rewritten.
+
+The fixture must come from an engine at the current state schema (CONTRACTS v4:
+`schema_version` 2, fields per vacancy). An older one is refused rather than migrated:
+it's demo data, so the fix is a fresh eval run, not a conversion.
 """
 
 import json
@@ -25,6 +29,7 @@ FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "demo_conversations
 SPREAD = timedelta(days=7)
 # Every fourth demo candidate came through the web chat; the rest applied on WhatsApp.
 WEB_EVERY = 4
+SCHEMA_VERSION = 2
 
 
 class Command(BaseCommand):
@@ -48,6 +53,13 @@ class Command(BaseCommand):
         if Conversation.objects.exists() and not reset:
             raise CommandError("the database already has conversations; pass --reset to replace")
         conversations = json.loads(fixture.read_text(encoding="utf-8"))
+        old = {item["state"].get("schema_version", 1) for item in conversations} - {SCHEMA_VERSION}
+        if old:
+            raise CommandError(
+                f"{fixture.name} was built from an engine at schema_version {sorted(old)}, "
+                f"not {SCHEMA_VERSION}; rebuild it from a current eval run: "
+                "seed_demo --from-run evals/runs/<dir>"
+            )
         now = timezone.now()
         with transaction.atomic():
             if reset:
@@ -109,18 +121,19 @@ def load_conversation(item: dict, index: int, total: int, now: datetime) -> Conv
         return datetime.fromisoformat(at) + shift
 
     state = item["state"]
-    country = (state["profile"]["location"]["value"] or {}).get("country") or state["country_hint"]
+    fields = state["profile"]["fields"]
+    location = item["record"]["fields"].get("location") or {}
+    country = location.get("country") or state["country_hint"]
     web = index % WEB_EVERY == WEB_EVERY - 1
     phone = None if web else _phone(country, index)
     channel = Conversation.Channel.WEB if web else Conversation.Channel.WHATSAPP
 
     conversation_id = uuid.uuid4()
-    name = state["profile"]["full_name"]
     candidate = Candidate.objects.create(
-        phone=phone, name=name["value"] if name["status"] == "accepted" else ""
+        phone=phone, name=item["record"]["fields"].get("full_name") or ""
     )
     conversation = Conversation.objects.create(
-        id=conversation_id, candidate=candidate, channel=channel
+        id=conversation_id, candidate=candidate, channel=channel, vacancy_id=state["vacancy_id"]
     )
 
     messages = Message.objects.bulk_create(
@@ -145,7 +158,7 @@ def load_conversation(item: dict, index: int, total: int, now: datetime) -> Conv
     # The simulator numbers candidate messages m1, m2, …; point provenance at our rows.
     inbound = [m for m in messages if m.direction == Message.Direction.IN]
     ids = {f"m{n}": str(m.pk) for n, m in enumerate(inbound, start=1)}
-    for field in state["profile"].values():
+    for field in fields.values():
         field["source_message_id"] = ids.get(field["source_message_id"])
     for line in state["transcript_tail"]:
         line["message_id"] = ids.get(line["message_id"])
@@ -157,11 +170,11 @@ def load_conversation(item: dict, index: int, total: int, now: datetime) -> Conv
     state["channel"] = str(channel)
 
     finished = state["status"] != Conversation.Status.IN_PROGRESS
-    location = state["profile"]["location"]["value"] or {}
     Conversation.objects.filter(pk=conversation_id).update(
         state=state,
         status=state["status"],
         stage=state["stage"],
+        preference_score=state["preference_score"],
         language=state["language"],
         country=location.get("country") or state["country_hint"] or "",
         city=location.get("city") or "",

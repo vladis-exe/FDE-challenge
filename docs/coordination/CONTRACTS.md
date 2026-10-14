@@ -2,7 +2,7 @@
 
 Owned by the lead. Lanes code against this file. To change it, add a request under "Contract change requests" in your status file; the lead updates this file and logs the change in `DECISIONS.md`.
 
-Version: 4
+Version: 4.1
 
 ## 1. Engine schemas (`screening/schemas.py`, engine lane, task E1)
 
@@ -84,8 +84,8 @@ class ConversationState(BaseModel):
     country_hint: Literal["ES", "MX"] | None = None   # from phone prefix until location is known
     consent_at: datetime | None = None
     profile: CandidateProfile = Field(default_factory=CandidateProfile)
-    disqualify_reason: str | None = None              # v4: "out_of_area", or "no_<field>" for a boolean knockout
-    review_reasons: list[str] = []      # e.g. "<field>_unclear", "unresolved:<field>", "human_requested", "abuse"
+    disqualify_reason: str | None = None              # v4: "out_of_area", or "no_<outcome_name>" for a boolean knockout
+    review_reasons: list[str] = []      # e.g. "<outcome_name>_unclear", "unresolved:<field>", "unresolved:confirm", "human_requested", "abuse"
     pending_confirmation: dict[str, Any] | None = None  # e.g. out-of-area city awaiting the candidate's confirm
     reminders_sent: int = 0
     last_inbound_at: datetime | None = None
@@ -273,6 +273,7 @@ Recruiter override: the dashboard sets `Conversation.status`, writes a `ReviewAc
 ```python
 FieldType = Literal["text", "boolean", "city", "enum_multi", "experience", "date"]
 Requirement = Literal["required", "preferred", "off"]
+NEVER_PREFERRED: set[FieldType] = {"text", "city"}
 
 class FieldSpec(BaseModel):
     name: str                              # key in CandidateProfile.fields and final_record["fields"]
@@ -280,22 +281,49 @@ class FieldSpec(BaseModel):
     requirement: Requirement
     label: dict[Literal["es", "en"], str]  # the question, in the agent's own words, per language
     weight: float = 0.0                    # preferred only: contribution to preference_score (see below)
-    options: list[str] | None = None       # enum_multi only: the allowed values, in display order
+    options: list[str] | None = None       # required for enum_multi, and only for enum_multi
+    # v4.1, additive, approved by Vlad 2026-10-14 (status/engine.md):
+    reason: str | None = None              # outcome-string name: no_<reason>, <reason>_unclear (falls back to `name`)
+    summary: dict[str, str] = {}           # read-back noun, "es"/"en" (+ optional "es_ES"/"es_MX"); falls back to `name`
+    option_labels: dict[str, dict[str, str]] = {}  # option -> locale -> display text; falls back to the option value
+    exclusive_options: list[str] = []      # enum_multi options that stand alone (e.g. schedule's "flexible")
+
+    @model_validator(mode="after")
+    def _check(self) -> "FieldSpec":
+        if self.type in NEVER_PREFERRED and self.requirement == "preferred":
+            raise ValueError(f"{self.name}: a {self.type} field can't be preferred")
+        if (self.type == "enum_multi") != bool(self.options):
+            raise ValueError(f"{self.name}: options are required for enum_multi, and only there")
+        if set(self.exclusive_options) - set(self.options or []):
+            raise ValueError(f"{self.name}: exclusive_options must be a subset of options")
+        if self.weight and self.requirement != "preferred":
+            raise ValueError(f"{self.name}: only a preferred field can have a weight")
+        return self
+
+    @property
+    def outcome_name(self) -> str:
+        return self.reason or self.name
 
 class VacancyConfig(BaseModel):
     id: str
     title: dict[Literal["es", "en"], str]
-    fields: list[FieldSpec]                # order = the order required fields are asked in (see below)
+    fields: list[FieldSpec]                # declared order; `.asked` below is the policy order
 
     @model_validator(mode="after")
     def _check(self) -> "VacancyConfig":
-        for spec in self.fields:
-            if spec.type in ("text", "city") and spec.requirement == "preferred":
-                raise ValueError(f"{spec.name}: {spec.type} can't be preferred")
+        names = [spec.name for spec in self.fields]
+        if len(names) != len(set(names)):
+            raise ValueError(f"{self.id}: duplicate field names")
         return self
+
+    @property
+    def asked(self) -> list[FieldSpec]:
+        """Required fields, in declared order, then preferred ones, in declared order."""
+        return [f for f in self.fields if f.requirement == "required"] + \
+               [f for f in self.fields if f.requirement == "preferred"]
 ```
 
-Loaded from `screening/config/vacancies/<id>.yaml`, one file per vacancy — same pattern as `service_areas.yaml`/`faq.yaml`, just one level deeper since there are multiple vacancies. Two ship with v4: `driver` (today's Grupo Sazón fields, migrated verbatim — `has_driver_license` stays `required`) and `kitchen_prep` (no driving involved: `has_driver_license` is `preferred, weight: 1.5` instead of `required` — this is the concrete case D24 is about, not a hypothetical).
+Loaded from `screening/config/vacancies/<id>.yaml`, one file per vacancy — same pattern as `service_areas.yaml`/`faq.yaml`, just one level deeper since there are multiple vacancies. Two ship with v4: `driver` (today's Grupo Sazón fields, migrated verbatim — `has_driver_license` stays `required`, `reason: license` so outcome strings are unchanged) and `kitchen_prep` (no driving involved: `has_driver_license` is `preferred, weight: 1.5` instead of `required`, plus a preferred food-handler-certificate field — this is the concrete case D25 is about, not a hypothetical).
 
 ### Ordering and requirement semantics (replaces the old fixed `FIELDS` constant in `policy.py`)
 

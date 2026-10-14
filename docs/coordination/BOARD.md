@@ -131,10 +131,10 @@ V1 can start on day 1 straight from the spec. V2 onward needs E1, E3 and E9.
   - Knockout correctness and turns to complete.
   - Message-rule compliance: length, one question, language match, AI disclosure.
   - Cost and latency per conversation.
-- [ ] **V4 Model comparison.**
+- [x] **V4 Model comparison.** **Provisional** — 1 repeat per configuration, not the planned 2–3; the Anthropic account ran out of credits mid-run. Decision (Haiku fast + Sonnet smart, D26) is already backed by real numbers (20/20 vs. 18/20, cost, latency), just not yet repeat-confirmed. Re-run once credits are topped up (see status/evals.md Blocked).
   - Run the suite on 2–3 configurations (e.g. fast=haiku vs fast=sonnet for extract and compose).
   - Report to `evals/reports/model-comparison.md`; this feeds the LLM justification.
-- [ ] **V5 Sample conversations.** 5–6 curated transcripts in `docs/sample-conversations/`:
+- [x] **V5 Sample conversations.** 5–6 curated transcripts in `docs/sample-conversations/`:
   - ES happy path, EN, code-switch.
   - Disqualified, needs review, re-engagement.
 - [x] **V6 Smoke suite:** `uv run python -m evals.run --suite smoke` (5 scenarios) for quick regression checks after prompt changes.
@@ -153,31 +153,31 @@ The 3-day framing is dropped (Vlad's call); the quality bar isn't.
 
 ### Engine (E10+): `screening/`
 Order: E10 → E11 → E12 → E13 → E14 → E15. E10 unblocks app and evals, same as E1 did.
-- [ ] **E10 Vacancy config.** `FieldSpec`/`VacancyConfig` (CONTRACTS §7) + the loader
+- [x] **E10 Vacancy config.** `FieldSpec`/`VacancyConfig` (CONTRACTS §7) + the loader
   (`ScreeningConfig.vacancies`, `config.vacancy(id)`). Two vacancy files:
   `screening/config/vacancies/driver.yaml` (today's seven fields, migrated verbatim — same
   required/knockout behavior as now) and `kitchen_prep.yaml` (no `has_driver_license`
   requirement; `preferred, weight: 1.5` instead — the concrete case D25 is about). Also: move
   `evals/pricing.py` → `screening/llm/pricing.py` (app's request, CONTRACTS §3).
-- [ ] **E11 Generalize schemas.** `CandidateProfile.fields: dict[str, FieldValue[Any]]`; `Stage`
+- [x] **E11 Generalize schemas.** `CandidateProfile.fields: dict[str, FieldValue[Any]]`; `Stage`
   collapses to `CONSENT`/`COLLECTING`/`CONFIRM`/`DONE`; `ConversationState` gains `vacancy_id`,
   `current_field`, `preference_score`; `schema_version: 2`. Exactly as CONTRACTS §1.
-- [ ] **E12 Generalize policy.** Replace the hardcoded `FIELDS` constant and the two special-cased
+- [x] **E12 Generalize policy.** Replace the hardcoded `FIELDS` constant and the two special-cased
   knockout branches with the general rules in CONTRACTS §7: required fields first (vacancy
   order), then preferred; a knockout-shaped verdict only disqualifies when `requirement ==
   "required"`; a `preferred` field is asked once, never re-asked, never flagged, never
   disqualifies. **While this code is open: fix the read-back loop** evals found (`status/evals.md`
   — a no-op "correction" at CONFIRM loops the read-back with no cap). Write the new transition
   table as a docstring first, same discipline as the original E5.
-- [ ] **E13 Generalize extraction and compose.** `understand.py`: build `Extraction`'s per-field
+- [x] **E13 Generalize extraction and compose.** `understand.py`: build `Extraction`'s per-field
   sub-model dynamically per vacancy (`pydantic.create_model`, cached), not a fixed
   `ExtractedFields` class; update the extraction prompt so it doesn't assume the old seven
   fields. `compose.py`: `AskField` and the fixed per-field phrasing come from `FieldSpec.label`
   instead of a closed literal.
-- [ ] **E14 Scoring and the final record.** `preference_score` computed per CONTRACTS §7's
+- [x] **E14 Scoring and the final record.** `preference_score` computed per CONTRACTS §7's
   per-type formula; `record.final_record` emits the new `{"fields": {...}, "preference_score":
   ...}` shape (CONTRACTS §2).
-- [ ] **E15 Rework the test suite.** The ~250 existing engine tests assumed the fixed field set;
+- [x] **E15 Rework the test suite.** The ~250 existing engine tests assumed the fixed field set;
   get them passing against `driver` (behavior should be unchanged — this is a refactor, not a
   product change, for that vacancy), then add tests specifically against `kitchen_prep` that
   prove a missing/false preferred field doesn't disqualify and does affect `preference_score`.

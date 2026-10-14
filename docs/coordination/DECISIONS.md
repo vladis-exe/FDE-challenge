@@ -90,8 +90,15 @@ With the original scope shipped (CP1–CP3 substantially done: engine, app, eval
 ## D26 [evals] Haiku 5.5 runs the conversation; Sonnet 5.5 writes the summary
 Measured in V4 (`evals/reports/model-comparison.md`): the full 20-scenario suite with the fast tier (extract and compose) on Haiku 5.5 vs Sonnet 5.5, smart tier (summary) on Sonnet in both. Haiku: 20/20 scenarios, 100% outcomes and fields, $0.0059 per conversation, 2.5 s median per message. Sonnet: 18/20 (it twice stored only the surname after a surname re-ask), $0.0377, 3.0 s. Code makes every decision (D3), so the model's job is reading messy messages and phrasing replies, and Haiku already scores at the ceiling of these scenarios. Sonnet stays on the summary: one call per conversation, read by a recruiter, and not yet scored by the eval. Trade-off: the evidence is one repeat per configuration (the API credits ran out before repeats 2–3), so the report is marked provisional. The next test is Haiku for the summary too, which would cut cost to about $0.002 per conversation but needs a summary-quality check first.
 
-## D26 [engine] A read-back restatement is a confirmation, and read-back rounds are capped
+## D28 [engine] A read-back restatement is a confirmation, and read-back rounds are capped
+(Renumbered from engine's own D26 — collided with evals' D26, both lanes appended on the same day without seeing each other's entry yet. Content unchanged.)
+
 Evals found the identical read-back re-sent up to 8 times when a candidate restated a correct value. Now a message at the read-back that changes no stored value counts as "yes, that's right"; a bare "no" or a real correction is one round, and past `max_attempts_per_field` rounds the screening ends as needs_review (`unresolved:confirm`) instead of looping. The round counter lives in `pending_confirmation` (`{"type": "readback", "rounds": n}`), which already means "awaiting the candidate's confirmation", so no contract field was added.
 
-## D27 [engine] The extraction schema is built per vacancy
+## D29 [engine] The extraction schema is built per vacancy
+(Renumbered from engine's own D27, for the same reason as D28 above. Content unchanged.)
+
 `Extraction.fields` is a Pydantic model generated from the vacancy's FieldSpecs (`create_model`, cached), so constrained decoding can only return this job's fields, and enum fields only their own options. A generic "any field" dict would let the model invent keys that code then has to reject. The prompt describes reading rules by field type, not by field name, so a new vacancy needs no prompt edit; it stays byte-stable per vacancy, so prompt caching still applies.
+
+## D30 [lead] CONTRACTS v4.1: four additive FieldSpec keys
+Engine requested, and Vlad approved directly in the engine session (2026-10-14): `reason` (outcome-string name, so `driver`'s `no_license`/`license_unclear` stay unchanged under the generic code), `summary` (the read-back noun per locale, replacing a hardcoded label table), `option_labels` (enum_multi display text per option/locale), `exclusive_options` (enum_multi options that stand alone, e.g. `flexible` — previously hardcoded). All four default to empty/`None`, so no existing vacancy file needs to change. Writing this up after the fact, since the approval happened directly between Vlad and the engine session rather than routed through lead — the contract doc is now caught up to what's actually built (CONTRACTS §7, `screening/config/vacancy.py`).

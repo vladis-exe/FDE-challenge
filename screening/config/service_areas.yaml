@@ -2,6 +2,9 @@
 # The city matcher maps a city's name, any alias or any neighborhood to its key.
 # Matching ignores case and accents, so list each spelling once. A name shared by
 # two cities ("San Pedro") is listed under both and makes the matcher ask which.
+# `regions` are the state or province a city is in. Someone who answers with a
+# region alone ("vivo en Jalisco") is offered that region's cities: they are never
+# treated as out of the area, because the region may well include one we serve.
 
 ES:
   timezone: Europe/Madrid
@@ -10,26 +13,32 @@ ES:
       name: Madrid
       aliases: [mad]
       neighborhoods: [Malasaña, Chamberí, Lavapiés, Salamanca, Retiro, Vallecas, Carabanchel, Chamartín, Tetuán, Usera, Moncloa, Arganzuela, Latina]
+      regions: [Comunidad de Madrid]
     - key: barcelona
       name: Barcelona
       aliases: [bcn, barna]
       neighborhoods: [Gràcia, Eixample, Sants, Poblenou, Raval, Born, Barceloneta, Sant Andreu, Sant Martí, Horta, Les Corts, Sarrià, Nou Barris]
+      regions: [Cataluña, Catalunya]
     - key: valencia
       name: Valencia
       aliases: [vlc, València]
       neighborhoods: [Ruzafa, Russafa, El Carmen, Benimaclet, Cabanyal, Campanar, Patraix]
+      regions: [Comunidad Valenciana, Comunitat Valenciana]
     - key: sevilla
       name: Sevilla
       aliases: [Seville, svq]
       neighborhoods: [Triana, Nervión, Macarena, Los Remedios, Alameda, Bellavista]
+      regions: [Andalucía]
     - key: malaga
       name: Málaga
       aliases: [agp]
       neighborhoods: [El Palo, Teatinos, Huelin, Pedregalejo, La Trinidad, Soho]
+      regions: [Andalucía]
     - key: bilbao
       name: Bilbao
       aliases: [Bilbo, bio]
       neighborhoods: [Deusto, Indautxu, Abando, Santutxu, Casco Viejo, Rekalde]
+      regions: [País Vasco, Euskadi, Bizkaia, Vizcaya]
 
 MX:
   timezone: America/Mexico_City
@@ -38,14 +47,17 @@ MX:
       name: Ciudad de México
       aliases: [CDMX, DF, Distrito Federal, Mexico City, Ciudad de Mexico, Chilangolandia]
       neighborhoods: [Coyoacán, Roma, Roma Norte, Condesa, Polanco, Iztapalapa, Tlalpan, Narvarte, Del Valle, Santa Fe, Azcapotzalco, Gustavo A. Madero, Xochimilco, Benito Juárez, Cuauhtémoc]
+      regions: [Estado de México, Edomex]
     - key: guadalajara
       name: Guadalajara
       aliases: [GDL, Guanatos]
       neighborhoods: [Zapopan, Tlaquepaque, San Pedro Tlaquepaque, San Pedro, Chapalita, Providencia, Tonalá, Americana]
+      regions: [Jalisco]
     - key: monterrey
       name: Monterrey
       aliases: [MTY, Monterey]
       neighborhoods: [San Pedro Garza García, San Pedro, San Nicolás de los Garza, Guadalupe, Apodaca, Cumbres, Mitras]
+      regions: [Nuevo León, NL]
     - key: puebla
       name: Puebla
       aliases: [Puebla de Zaragoza, pue]

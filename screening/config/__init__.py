@@ -40,6 +40,7 @@ class City(BaseModel):
     name: str  # display name
     aliases: list[str] = []
     neighborhoods: list[str] = []
+    regions: list[str] = []  # the state/province it is in: a region alone is not a city
 
 
 class CountryArea(BaseModel):

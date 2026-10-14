@@ -35,7 +35,7 @@ class CityMatch:
 
 
 def match_city(text: str, config: ScreeningConfig) -> CityMatch:
-    index, locations = _index(config)
+    index, regions, locations = _index(config)
     words = normalize(text).split()
     grams = [
         " ".join(words[start : start + size])
@@ -43,9 +43,16 @@ def match_city(text: str, config: ScreeningConfig) -> CityMatch:
         for start in range(len(words) - size + 1)
     ]
 
-    matched = [gram for gram in grams if gram in index]
+    matched = [gram for gram in grams if gram in index or gram in regions]
     longest = [gram for gram in matched if not any(_inside(gram, other) for other in matched)]
-    exact = list(dict.fromkeys(key for gram in longest for key in index[gram]))
+    exact = list(dict.fromkeys(key for gram in longest for key in index.get(gram, [])))
+    if not exact:
+        # Only a region ("Nuevo León"): offer its cities, never call it out of the area.
+        in_region = list(dict.fromkeys(key for gram in longest for key in regions.get(gram, [])))
+        if in_region:
+            return CityMatch(
+                "ambiguous", options=[locations[key] for key in in_region[:MAX_OPTIONS]]
+            )
     if len(exact) == 1:
         return CityMatch("matched", location=locations[exact[0]])
     if exact:
@@ -74,8 +81,11 @@ def _inside(gram: str, other: str) -> bool:
     return gram != other and f" {gram} " in f" {other} "
 
 
-def _index(config: ScreeningConfig) -> tuple[dict[str, list[str]], dict[str, Location]]:
-    """Normalized name, alias and neighborhood -> city keys; city key -> Location.
+def _index(
+    config: ScreeningConfig,
+) -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, Location]]:
+    """Normalized name, alias and neighborhood -> city keys; region -> city keys;
+    city key -> Location.
 
     A term may belong to several cities (two metros can share a neighborhood name).
 
@@ -83,6 +93,7 @@ def _index(config: ScreeningConfig) -> tuple[dict[str, list[str]], dict[str, Loc
     that would go stale if config changed.
     """
     index: dict[str, list[str]] = {}
+    regions: dict[str, list[str]] = {}
     locations: dict[str, Location] = {}
     for country, area in config.service_areas.items():
         for city in area.cities:
@@ -91,4 +102,6 @@ def _index(config: ScreeningConfig) -> tuple[dict[str, list[str]], dict[str, Loc
                 keys = index.setdefault(normalize(term), [])
                 if city.key not in keys:
                     keys.append(city.key)
-    return index, locations
+            for region in city.regions:
+                regions.setdefault(normalize(region), []).append(city.key)
+    return index, regions, locations

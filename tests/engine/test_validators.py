@@ -286,3 +286,33 @@ def test_date_kind_without_a_date_is_reasked():
         StartDateAnswer(kind="date"), today=date(2026, 10, 12), max_days=183
     )
     assert verdict.outcome == "reask"
+
+
+# Regions (a state or province is not a city: never treat it as out of the area)
+
+
+@pytest.mark.parametrize(
+    "text, cities",
+    [
+        ("vivo en Nuevo León", {"monterrey"}),
+        ("NL", {"monterrey"}),
+        ("en Jalisco", {"guadalajara"}),
+        ("Andalucía", {"sevilla", "malaga"}),
+        ("Comunidad de Madrid", {"madrid"}),
+        ("Euskadi", {"bilbao"}),
+    ],
+)
+def test_a_region_offers_its_served_cities(config, text, cities):
+    result = match_city(text, config)
+    assert result.kind == "ambiguous", result
+    assert {option.city for option in result.options} == cities
+
+
+def test_a_city_named_with_its_region_is_the_city(config):
+    result = match_city("Monterrey, Nuevo León", config)
+    assert result.kind == "matched"
+    assert result.location.city == "monterrey"
+
+
+def test_a_region_with_no_served_city_is_still_not_served(config):
+    assert match_city("Aragón", config).kind == "not_served"

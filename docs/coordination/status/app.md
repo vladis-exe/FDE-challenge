@@ -31,7 +31,9 @@ None: **all Phase 2 app tasks (A10–A12) are done.** Still open: the live Whats
 
 ## Requests (to other lanes or the lead)
 - **lead:** please add `WHATSAPP_VACANCY=driver` to `.env.example`. It's optional: it picks the job for candidates who message the WhatsApp number first, with no form or link (one number = one job ad). It's read in `config/settings.py`.
-- **lead (heads-up for L4/demo):** your local `db.sqlite3` and any deployed DB hold v3 conversations, which the v4 dashboard can't read. Run `uv run python manage.py migrate && uv run python manage.py seed_demo --reset`. `--reset` deletes **all** candidates first, so use it only on demo/dev databases. (CONTRACTS §7 says to regenerate dev data, not migrate it.)
+- **Local dev DB reseeded on v4 (2026-10-14, Vlad asked for it).** `db.sqlite3` (the `DATABASE_URL` in `.env`) had 8 v3 test conversations, which the v4 dashboard can't read. Ran `migrate` (applied 0002, 0003), then `seed_demo --reset`: it now holds the 24 V8 screenings (20 driver, 4 kitchen_prep). Logins are kept (`vlad`, `demo-recruiter`), and `recruiter` was added. Its password is a newly generated `DEMO_RECRUITER_PASSWORD` in the untracked `.env` (none was set before), so `seed_demo --reset` reproduces the same login. A backup of the old file is in the app session's scratchpad (`db.sqlite3.before-v4-reseed`), temporary and not in the repo.
+- **lead (heads-up for L4/demo):** any deployed DB still holds v3 conversations and needs the same: `python manage.py migrate && python manage.py seed_demo --reset`. `--reset` deletes **all** candidates first, so use it only on demo/dev databases. (CONTRACTS §7 says to regenerate dev data, not migrate it.)
+- **`sazon-pg-test` container: still running, needs Vlad.** `docker rm -f sazon-pg-test` fails with "could not kill container: permission denied" (the daemon refuses, probably AppArmor/snap), and `sudo` needs a password. Vlad: `sudo docker rm -f sazon-pg-test` (or restart Docker). Harmless meanwhile; it only holds port 55432, which the Postgres app tests use.
 
 ## Contract change requests
 None (the `next_due_at` proposal landed as CONTRACTS v3, thanks).

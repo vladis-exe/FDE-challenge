@@ -2,6 +2,7 @@
 
 import csv
 import json
+from datetime import timedelta
 from uuid import UUID
 
 from django import forms
@@ -11,10 +12,11 @@ from django.core.paginator import Paginator
 from django.db.models import Count, QuerySet
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.candidates.models import Conversation, ReviewAction
-from apps.dashboard import presenters, services
+from apps.dashboard import analytics, presenters, services
 from screening.schemas import Availability, ConversationState, Schedule
 
 PAGE_SIZE = 50
@@ -154,3 +156,20 @@ def export_csv(request: HttpRequest) -> HttpResponse:
             }
         )
     return response
+
+
+PERIODS = {"7": "Last 7 days", "30": "Last 30 days", "all": "All time"}
+
+
+@login_required
+@require_GET
+def analytics_view(request: HttpRequest) -> HttpResponse:
+    period = request.GET.get("period", "30")
+    if period not in PERIODS:
+        period = "30"
+    since = None if period == "all" else timezone.now() - timedelta(days=int(period))
+    return render(
+        request,
+        "dashboard/analytics.html",
+        {"report": analytics.build(since), "period": period, "periods": PERIODS},
+    )

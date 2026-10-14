@@ -1,0 +1,11 @@
+{% if bars %}
+<ul class="bars">
+  {% for bar in bars %}
+  <li title="{{ bar.label }}: {{ bar.count }} ({% widthratio bar.share 1 100 %}%)">
+    <span class="bars__label">{{ bar.label }}</span>
+    <span class="bars__track"><span class="bars__fill" style="width: {% widthratio bar.share 1 100 %}%"></span></span>
+    <span class="bars__value"><b>{{ bar.count }}</b> {% widthratio bar.share 1 100 %}%</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}<p class="sub">None in this period.</p>{% endif %}

@@ -1,0 +1,51 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Analytics · Grupo Sazón{% endblock %}
+{% load humanize %}
+{% block content %}
+<form class="filters__row analytics__period" method="get">
+  <h1 class="page-title">Screening analytics</h1>
+  <label>Period
+    <select name="period" onchange="this.form.submit()">
+      {% for value, label in periods.items %}<option value="{{ value }}" {% if value == period %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <noscript><button type="submit">Apply</button></noscript>
+</form>
+
+<section class="tiles">
+  <div class="tile"><span class="tile__label">Conversations started</span><span class="tile__value">{{ report.started }}</span></div>
+  <div class="tile"><span class="tile__label">Screenings finished</span><span class="tile__value">{{ report.finished }}</span>
+    <span class="tile__sub">{% if report.started %}{% widthratio report.finished report.started 100 %}% completion{% else %}—{% endif %}</span></div>
+  <div class="tile"><span class="tile__label">Qualified</span><span class="tile__value">{{ report.qualified }}</span>
+    <span class="tile__sub">{% if report.finished %}{% widthratio report.qualified report.finished 100 %}% of finished{% else %}—{% endif %}</span></div>
+  <div class="tile"><span class="tile__label">Median time to complete</span>
+    <span class="tile__value">{{ report.median_time_label }}</span>
+    <span class="tile__sub">target under 5 min</span></div>
+  <div class="tile"><span class="tile__label">Replied after a reminder</span>
+    <span class="tile__value">{% if report.reminded %}{% widthratio report.replied_after_reminder report.reminded 100 %}%{% else %}—{% endif %}</span>
+    <span class="tile__sub">{{ report.replied_after_reminder }} of {{ report.reminded }} reminded</span></div>
+  <div class="tile"><span class="tile__label">LLM cost per conversation</span>
+    <span class="tile__value">{% if report.cost_per_conversation is not None %}${{ report.cost_per_conversation|floatformat:4 }}{% else %}—{% endif %}</span>
+    <span class="tile__sub">${{ report.llm_cost_total|floatformat:4 }} total</span></div>
+</section>
+
+<div class="analytics">
+  <section class="card"><h2>Funnel: reached each step</h2>{% include "dashboard/_bars.html" with bars=report.funnel %}</section>
+  <section class="card"><h2>Outcomes</h2>{% include "dashboard/_bars.html" with bars=report.outcomes %}</section>
+  <section class="card"><h2>Disqualify reasons</h2>{% include "dashboard/_bars.html" with bars=report.disqualify_reasons %}</section>
+  <section class="card"><h2>Abandoned at question</h2>{% include "dashboard/_bars.html" with bars=report.abandoned_at %}</section>
+  <section class="card analytics__wide">
+    <h2>LLM usage by purpose</h2>
+    {% if report.llm %}
+    <table class="grid grid--compact">
+      <thead><tr><th>Purpose</th><th class="num">Calls</th><th class="num">Input tokens</th><th class="num">Output tokens</th><th class="num">Median latency</th><th class="num">Cost</th></tr></thead>
+      <tbody>
+      {% for line in report.llm %}
+        <tr><td><code>{{ line.purpose }}</code></td><td class="num">{{ line.calls }}</td><td class="num">{{ line.input_tokens|intcomma }}</td><td class="num">{{ line.output_tokens|intcomma }}</td><td class="num">{{ line.median_latency_ms|intcomma }} ms</td><td class="num">${{ line.cost|floatformat:4 }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="sub">No LLM calls in this period.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

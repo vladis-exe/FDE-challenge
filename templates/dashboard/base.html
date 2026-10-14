@@ -8,6 +8,7 @@
   <a class="brand" href="{% url 'dashboard_queue' %}"><span class="brand__mark">S</span> Grupo Sazón <span class="brand__sub">Recruiting</span></a>
   <nav>
     <a href="{% url 'dashboard_queue' %}" {% if request.resolver_match.url_name == 'dashboard_queue' %}aria-current="page"{% endif %}>Queue</a>
+    <a href="{% url 'dashboard_analytics' %}" {% if request.resolver_match.url_name == 'dashboard_analytics' %}aria-current="page"{% endif %}>Analytics</a>
     {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
   </nav>
   <form method="post" action="{% url 'logout' %}" class="topbar__user">

@@ -127,7 +127,8 @@ def main(argv: list[str] | None = None) -> int:
         f"p50 {summary.latency_p50_ms} ms"
         + (f" · crashed: {', '.join(crashed)}" if crashed else "")
     )
-    return 0
+    # Non-zero when anything failed, so a smoke run can gate a prompt change.
+    return 0 if summary.passed == summary.scenarios and not crashed else 1
 
 
 def _run_one(

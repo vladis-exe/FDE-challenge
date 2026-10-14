@@ -45,7 +45,15 @@ def match_city(text: str, config: ScreeningConfig) -> CityMatch:
 
     matched = [gram for gram in grams if gram in index or gram in regions]
     longest = [gram for gram in matched if not any(_inside(gram, other) for other in matched)]
-    exact = list(dict.fromkeys(key for gram in longest for key in index.get(gram, [])))
+    city_grams = [gram for gram in longest if gram in index]
+    # Names that agree ("San Pedro, Monterrey", "Gràcia, Barcelona") mean the city they
+    # share; names that disagree ("entre Madrid y Barcelona") leave every option open.
+    shared = (
+        [key for key in index[city_grams[0]] if all(key in index[g] for g in city_grams)]
+        if city_grams
+        else []
+    )
+    exact = shared or list(dict.fromkeys(key for gram in city_grams for key in index[gram]))
     if not exact:
         # Only a region ("Nuevo León"): offer its cities, never call it out of the area.
         in_region = list(dict.fromkeys(key for gram in longest for key in regions.get(gram, [])))

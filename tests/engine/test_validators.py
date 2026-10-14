@@ -316,3 +316,11 @@ def test_a_city_named_with_its_region_is_the_city(config):
 
 def test_a_region_with_no_served_city_is_still_not_served(config):
     assert match_city("Aragón", config).kind == "not_served"
+
+
+@pytest.mark.parametrize("text", ["San Pedro, Monterrey", "en san pedro, monterrey"])
+def test_names_that_agree_on_one_city_pick_that_city(config, text):
+    """Live run: after "Guadalajara o Monterrey?", the extractor returned "San Pedro, Monterrey"."""
+    result = match_city(text, config)
+    assert result.kind == "matched"
+    assert result.location.city == "monterrey"

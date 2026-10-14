@@ -16,7 +16,7 @@ How to read a message:
 - Fill every field the message gives, not just the one Alex asked about. People often answer several things at once.
 - Leave a field null when the message doesn't give it. Never guess, and never copy a value from earlier in the conversation.
 - Use the recent conversation only to understand short replies. "sí" after "¿Tienes carnet de conducir?" answers that yes/no field with "yes". "la segunda" after Alex offered two cities means the second city.
-- Emoji count as answers when the meaning is clear: 👍 or ✅ is yes, 👎 or ❌ is no.
+- Emoji and slang count as answers when the meaning is clear: 👍, ✅, "simón", "sale", "va", "sip", "ajá" are yes; 👎, ❌, "nel", "nop" are no.
 - Never put health, immigration status, religion or other sensitive personal details into any field, even if the candidate mentions them.
 
 How to fill each kind of field:

@@ -19,7 +19,7 @@ Owned by the lead; only the lead ticks boxes. Lanes report progress in `status/<
   - Evals report and model comparison done. **Not yet** — V4 (model comparison) and V5 (sample conversations) were waiting on this CP2 declaration; unblocked now.
   - App deployed. **Not yet** — Dockerfile/compose ready and smoke-tested against Postgres; an actual Railway deploy hasn't happened (L4).
   - README complete. **First pass done** (L5); needs the V4 numbers once they land.
-  - The afternoon is for sample conversations, the demo video and presentation notes. **Not started** (V5, L6).
+  - The afternoon is for sample conversations, the demo video and presentation notes. **Done** (V5, L6) except the demo video itself, which is Vlad's to record on presentation day, not something to pre-produce.
 
 ## Lead (L)
 - [x] **L1 Bootstrap. Must be done before any lane starts.**
@@ -43,11 +43,11 @@ Owned by the lead; only the lead ticks boxes. Lanes report progress in `status/<
   - How to run the CLI, web chat, WhatsApp, the worker, tests and evals.
   - LLM choice with its justification (from V4), and key trade-offs (from DECISIONS).
   - What's next: voice, ATS integration, scaling to 10K/week.
-- [ ] **L6 `docs/presentation-notes.md`:**
+- [x] **L6 `docs/presentation-notes.md`:**
   - Demo script and a demo-day checklist (seed data, fallback recording).
   - Architecture talking points and trade-offs.
   - The 10K/week answer, and "what I'd do with more time".
-- [ ] **L7 (if time) bonus docs:** `docs/deployment.md` (production architecture) and `docs/ats-integration.md` (API sketch).
+- [x] **L7 (if time) bonus docs:** `docs/deployment.md` (production architecture) and `docs/ats-integration.md` (API sketch).
 
 ## Engine (E): `screening/`
 Order: E1 → E3 → E2 → E4 → E6a → E5 → E9 (CP1) → E7 → E8 → E6b.

@@ -259,5 +259,7 @@ and the WhatsApp investigation (D35) — is done, live-verified, or conclusively
 | `docs/process-design.md` | The product spec, including "Vacancies and preference scoring". |
 | `docs/code-tour.md` | A traced, line-level walkthrough of one message through the engine (pre-Phase-2 shapes; still accurate in mechanics). |
 | `docs/sample-conversations/` | 6 curated, real transcripts — includes engine stumbles, not just the happy path. |
+| `docs/presentation-notes.md` | Demo script, demo-day checklist, talking points, the 10K/week and "more time" answers. |
+| `docs/deployment.md`, `docs/ats-integration.md` | A Railway deploy walkthrough and an ATS-integration sketch — bonus docs, written against what already exists rather than invented. |
 | `docs/coordination/` | How this was built: `BOARD.md` (tasks), `CONTRACTS.md` (interfaces, v4.1), `DECISIONS.md` (the why, 34 entries), `status/` (lane logs). |
 | `tests/engine`, `tests/app`, `tests/evals` | Tests, one tree per lane. |

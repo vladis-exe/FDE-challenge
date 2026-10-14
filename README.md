@@ -22,10 +22,13 @@ not just unit-tested — see `docs/coordination/BOARD.md` for the checkpoint evi
 | **App** (Django) | Done — project, worker, both channels, dashboard, analytics, Docker, demo data for both jobs. |
 | **Evals** (`evals/`) | Done — scenarios, simulator, scorers, a model-comparison report, a live run on the generalized engine, curated samples. |
 
-**What's actually left:** the live WhatsApp sandbox check (needs Twilio's Account SID + Auth
-Token from Vlad — a partial credential already in `.env` isn't the right type, see Setup), an
-actual Railway deployment (L4), and the presentation notes (L6). Everything else in the original
-task board is done.
+**What's actually left:** an actual Railway deployment (L4) and the presentation notes (L6).
+Everything else in the original task board is done — including the WhatsApp sandbox
+investigation, which turned out not to be a code gap: real Twilio credentials, a working
+tunnel, a webhook that correctly rejects unsigned requests, and Twilio's own message log
+(checked directly via their API) all confirm the sandbox's "when a message comes in" webhook
+simply can't be set on a free-tier account — it redirects straight to an upgrade page (D35).
+The webhook's correctness rests on its tests, not a live demo, unless that account is upgraded.
 
 ## Architecture
 
@@ -126,13 +129,14 @@ a detail page (fields in asking order, required then preferred, each preferred f
 weight and whether it scored), CSV export, and `/dashboard/analytics/` (funnel, outcomes, cost
 and latency by purpose, a per-job breakdown).
 
-**WhatsApp:** built (`/webhooks/twilio/whatsapp/`, Twilio signature validation, idempotent on
-`MessageSid`) but not live-tested against the real sandbox yet — that needs a Twilio
-**Account SID + Auth Token** (`.env`'s `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`), which is a
-different credential type from a Twilio **API Key** (SID starting `SK`); an API key can send
-messages but can't sign incoming webhooks, so it can't stand in here. `/apply/` is the
-agent-initiated form (phonenumbers-parsed, E.164); candidates who message the number first with
-no link or form screen for `WHATSAPP_VACANCY` (env, default `driver`).
+**WhatsApp:** built and tested (`/webhooks/twilio/whatsapp/`, Twilio signature validation —
+needs the real **Account SID + Auth Token**, `.env`'s `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`,
+not a Twilio **API Key** which can send messages but can't sign incoming webhooks — and
+idempotency on `MessageSid`). **Not live-demoable on a free Twilio account**: its WhatsApp
+sandbox doesn't allow a custom webhook at all on that tier (confirmed directly via Twilio's
+own API, D35) — this surfaced when testing it live, not something to work around here.
+`/apply/` is the agent-initiated form (phonenumbers-parsed, E.164); candidates who message the
+number first with no link or form screen for `WHATSAPP_VACANCY` (env, default `driver`).
 
 **Tests:**
 
@@ -227,11 +231,11 @@ most worth knowing:
 
 ## What's next
 
-**To actually finish:** the live WhatsApp sandbox check (needs Vlad's Twilio Account SID + Auth
-Token — see Running It), an actual Railway deployment (L4), and the presentation notes (L6).
-Optional, budget-permitting: 2 more V4 repeats to firm up the provisional model-comparison
-numbers. Everything else on the original board — engine, app, evals, both Phase 1 and the
-vacancy generalization — is done and live-verified.
+**To actually finish:** an actual Railway deployment (L4) and the presentation notes (L6). The
+2 extra V4 repeats were deliberately skipped (not forgotten) — the decision they'd confirm is
+already clear, and they'd cost most of the remaining demo budget to double-check it. Everything
+else on the original board — engine, app, evals, both Phase 1 and the vacancy generalization,
+and the WhatsApp investigation (D35) — is done, live-verified, or conclusively closed.
 
 **Production, with more time:**
 - **Voice:** same engine — it's channel-agnostic already (`Channel.WEB`/`WHATSAPP`/`SIM`) — with

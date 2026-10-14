@@ -18,90 +18,96 @@ A candidate who stops answering at 20:34 and comes back the next morning. Nuria 
 ¡Hola! Soy Alex, el asistente virtual (IA) de Grupo Sazón 👋 Son 7 preguntas rápidas sobre el puesto de repartidor, unos 3 minutos. Tus datos solo se usan para esta candidatura: https://gruposazon.example/privacidad. ¿Empezamos?
 
 > **Candidate** · 20:31  
-> hola! si dale, empezamos
+> hola! si venga, empezamos
 
 **Alex** · 20:31  
-¡Genial, vamos! Para empezar, ¿me dices tu nombre y apellido?
+Genial, empecemos. ¿Me dices tu nombre y apellido completos, por favor?
 
 > **Candidate** · 20:32  
 > nuria vidal roca
 
 **Alex** · 20:32  
-Perfecto, anotado. Nuria, ¿tienes el carnet de conducir en vigor?
+Gracias, Nuria, anotado. ¿Tienes carnet de conducir en vigor, sí o no?
 
 > **Candidate** · 20:32  
-> sí, el carnet B
+> sí, carnet B
 
 **Alex** · 20:32  
-Genial, gracias por confirmarlo. ¿En qué ciudad vives y en qué barrio?
+Anotado, gracias. ¿En qué ciudad vives y en qué barrio?
 
 > **Candidate** · 20:33  
-> vivo en barcelona, en sants
+> en barcelona, en sants
 
 **Alex** · 20:33  
-Gracias, Barcelona y Sants anotados. ¿Buscas jornada completa, media jornada, fines de semana o una combinación?
+Anotado, Barcelona y Sants. ¿Buscas jornada completa, media jornada, fines de semana o una combinación de esas opciones?
 
 > **Candidate** · 20:34  
-> media jornada, part time
+> media jornada
 
 **Alex** · 20:34  
-Genial, media jornada anotada. ¿Qué turnos te encajan mejor: mañanas, tardes, noches o flexible?
+Anotado, media jornada. ¿Qué turnos te van mejor: mañanas, tardes, noches o algo flexible?
 
 > **Candidate** · 20:34  
 > mañanas
 
 **Alex** · 20:34  
-¡Genial, mañanas anotadas! ¿Has hecho reparto antes con Glovo, Uber Eats, Just Eat, Rappi o DiDi Food, y cuánto tiempo?
+Anotado, mañanas. ¿Has trabajado antes en reparto, con Glovo, Uber Eats o Just Eat, y cuánto tiempo?
 
 **Alex** · 20:49 *(reminder)*  
-¿Sigues por ahí, nuria? Cuando puedas, contéstame y seguimos donde lo dejamos 🙂
+¿Sigues por ahí, Nuria? Cuando puedas, contéstame y seguimos donde lo dejamos 🙂
 
 *Friday 23 October 2026*
 
 **Alex** · 09:00 *(reminder)*  
-Hola, nuria, te queda muy poco para terminar tu candidatura de repartidor. ¿Seguimos?
+Hola, Nuria, te queda muy poco para terminar tu candidatura. ¿Seguimos?
 
 > **Candidate** · 09:35  
-> perdona me quedé dormida. no, nunca he hecho reparto, no tengo experiencia
+> perdona me quedé dormida. no, nunca he trabajado en reparto
 
 **Alex** · 09:35  
-Sin problema, no pasa nada si no tienes experiencia. ¿Cuándo podrías empezar?
+Gracias por contestar, Nuria, no pasa nada. ¿Cuándo podrías empezar?
 
 > **Candidate** · 09:36  
 > mañana mismo
 
 **Alex** · 09:36  
-¡Gracias, nuria! Repasemos: nuria vidal roca, carnet de conducir: sí, Barcelona, media jornada, mañanas, sin experiencia en reparto, empiezas el sábado 24 de octubre. ¿Está todo bien?
+¡Gracias, Nuria! Repasemos: Nuria Vidal Roca, carnet de conducir: sí, Barcelona, media jornada, mañanas, sin experiencia en reparto, empiezas el sábado 24 de octubre. ¿Está todo bien?
 
 > **Candidate** · 09:36  
-> sí todo bien
+> sí, todo bien
 
 **Alex** · 09:36 *(close)*  
-¡Listo, nuria! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!
+¡Listo, Nuria! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!
 
 ## What the recruiter gets
 
-> Candidata calificada: Nuria Vidal Roca, de Barcelona, tiene carnet de conducir y no presenta marcas ni motivos de revisión. Busca media jornada (part time) en turno de mañana, no tiene experiencia previa en reparto y dice poder empezar "mañana mismo", que el registro fija como el sábado 24 de octubre de 2026. Durante la conversación tardó en responder tras dos recordatorios de Alex y se disculpó por ello; después confirmó todos los datos del resumen sin correcciones.
+> Nuria Vidal Roca queda como calificada para la vacante de repartidora (driver), sin motivos de revisión ni descalificación. Tiene carnet de conducir, vive en Barcelona, busca media jornada en turno de mañana, no tiene experiencia previa en reparto y dijo que puede empezar "mañana mismo", que quedó registrado como el 24 de octubre de 2026 y que ella confirmó en el resumen. No hay extras opcionales (preference_score 0). Como detalle, tardó en responder a mitad de la conversación (explicó que se había quedado dormida) y luego continuó con normalidad.
 
 ```json
 {
   "conversation_id": "eval-16_silence_late_reply_barcelona",
+  "vacancy_id": "driver",
   "status": "qualified",
   "language": "es",
-  "full_name": "nuria vidal roca",
-  "has_driver_license": true,
-  "country": "ES",
-  "city": "barcelona",
-  "availability": [
-    "part_time"
-  ],
-  "preferred_schedule": [
-    "morning"
-  ],
-  "delivery_experience": [],
-  "start_date": "2026-10-24",
+  "fields": {
+    "full_name": "nuria vidal roca",
+    "has_driver_license": true,
+    "location": {
+      "country": "ES",
+      "city": "barcelona"
+    },
+    "availability": [
+      "part_time"
+    ],
+    "schedule": [
+      "morning"
+    ],
+    "experience": [],
+    "start_date": "2026-10-24"
+  },
   "flags": [],
   "disqualify_reason": null,
-  "review_reasons": []
+  "review_reasons": [],
+  "preference_score": 0
 }
 ```

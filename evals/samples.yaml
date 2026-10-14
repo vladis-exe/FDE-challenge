@@ -21,35 +21,32 @@
   title: "English: a British candidate in Valencia"
   context: >
     An English-speaking candidate, screened entirely in English. Tom answers the city
-    question with only his neighborhood, "russafa", and his experience is on Deliveroo, a
-    platform that isn't on the list.
+    question with only his neighborhood, in its Spanish spelling ("ruzafa"), and his
+    experience is on Deliveroo, a platform that isn't on the list.
   notes:
-    - Alex switches to English from the candidate's first reply, and adds "carnet de
-      conducir" next to "driver's license" so the Spanish term is clear.
-    - '"russafa" alone resolves to Valencia: neighborhoods are aliases in the service-area
+    - Alex switches to English from the candidate's first reply and stays there.
+    - '"ruzafa" alone resolves to Valencia: neighborhoods are aliases in the service-area
       config.'
-    - Deliveroo is stored as `other`, with the 3 years kept; the platform list is closed so
-      recruiters can filter on it.
+    - Deliveroo is stored as `other` with the 3 years kept (the platform list is closed so
+      recruiters can filter on it), and the recruiter summary says it was Deliveroo.
 
 - file: 03-spanglish-and-message-bursts.md
   scenario: 04_code_switch_monterrey
   title: "Mexico: Spanglish, a side question and a burst of messages"
   context: >
     A Monterrey candidate who mixes Spanish and English and sends three messages in a row
-    before Alex can answer. Brandon also asks about the vehicle mid-flow and gives his
-    neighborhood ("colonia mitras").
+    before Alex can answer. Brandon also asks about the hours mid-flow, and answers the
+    license question with where it's from ("sí, de NL").
   notes:
-    - The vehicle question is answered from the FAQ's `vehicle` entry, so Alex says
-      nothing the client hasn't approved. Then it re-asks the pending question.
-    - '**One stumble, reported to the engine lane:** "simón, de NL" (where his license was
-      issued) was read as his location, so Alex said it isn''t hiring in Nuevo León and
-      asked about the license again. He had to repeat it ("ya te dije bro"); then the
-      screening moved on with Monterrey and the license both recorded.'
+    - The side question is answered from the FAQ's `hours` entry, so Alex says nothing the
+      client hasn't approved. Then it re-asks the pending question.
+    - '"sí, de NL" is a yes to the license question, not a location: Nuevo León is where the
+      license was issued.'
     - '"full time bro" / "y el horario me da igual" / "flexible pues" arrive within a
       minute. Every message updates the record, but only the last one gets a reply. The two
-      replies marked *not delivered* were dropped, so Alex never asks something already
-      answered.'
-    - Mexican vocabulary throughout ("licencia de manejo", "colonia").
+      replies marked *not delivered* were dropped, so the next question Brandon actually
+      sees is the experience one, asked once.'
+    - Mexican vocabulary throughout ("licencia de manejo", "colonia", "tiempo completo").
 
 - file: 04-disqualified-after-a-prompt-injection.md
   scenario: 14_prompt_injection_valencia
@@ -76,10 +73,9 @@
     - Alex doesn't judge the license. It says a recruiter will look at it and carries on,
       so the recruiter gets a complete profile, not a half-finished one.
     - The read-back says "lo revisará un reclutador" for the license instead of a yes or no.
-    - The record leaves `has_driver_license` empty, flags it ("license expired") and sets
-      the review reason `license_unclear`. The summary tells the recruiter what to ask first.
-    - '**One gap, reported to the engine lane:** the renewal appointment he mentioned isn''t
-      in the flag note, so the recruiter has to ask again.'
+    - The record leaves `has_driver_license` empty and flags it with the candidate's detail
+      ("caducó en agosto, cita para renovarlo en 2 semanas"), with the review reason
+      `license_unclear`. The summary tells the recruiter what to confirm first.
 
 - file: 06-re-engagement-overnight.md
   scenario: 16_silence_late_reply_barcelona

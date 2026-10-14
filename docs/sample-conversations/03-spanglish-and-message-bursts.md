@@ -1,15 +1,15 @@
 # Mexico: Spanglish, a side question and a burst of messages
 
-*Mexico · outcome `qualified` · 10 candidate messages · eval scenario `04_code_switch_monterrey`*
+*Mexico · outcome `qualified` · 9 candidate messages · eval scenario `04_code_switch_monterrey`*
 
-A Monterrey candidate who mixes Spanish and English and sends three messages in a row before Alex can answer. Brandon also asks about the vehicle mid-flow and gives his neighborhood ("colonia mitras").
+A Monterrey candidate who mixes Spanish and English and sends three messages in a row before Alex can answer. Brandon also asks about the hours mid-flow, and answers the license question with where it's from ("sí, de NL").
 
 **What to notice**
 
-- The vehicle question is answered from the FAQ's `vehicle` entry, so Alex says nothing the client hasn't approved. Then it re-asks the pending question.
-- **One stumble, reported to the engine lane:** "simón, de NL" (where his license was issued) was read as his location, so Alex said it isn't hiring in Nuevo León and asked about the license again. He had to repeat it ("ya te dije bro"); then the screening moved on with Monterrey and the license both recorded.
-- "full time bro" / "y el horario me da igual" / "flexible pues" arrive within a minute. Every message updates the record, but only the last one gets a reply. The two replies marked *not delivered* were dropped, so Alex never asks something already answered.
-- Mexican vocabulary throughout ("licencia de manejo", "colonia").
+- The side question is answered from the FAQ's `hours` entry, so Alex says nothing the client hasn't approved. Then it re-asks the pending question.
+- "sí, de NL" is a yes to the license question, not a location: Nuevo León is where the license was issued.
+- "full time bro" / "y el horario me da igual" / "flexible pues" arrive within a minute. Every message updates the record, but only the last one gets a reply. The two replies marked *not delivered* were dropped, so the next question Brandon actually sees is the experience one, asked once.
+- Mexican vocabulary throughout ("licencia de manejo", "colonia", "tiempo completo").
 
 ## Conversation
 
@@ -19,105 +19,105 @@ A Monterrey candidate who mixes Spanish and English and sends three messages in 
 ¡Hola! Soy Alex, el asistente virtual (IA) de Grupo Sazón 👋 Son 7 preguntas rápidas sobre el puesto de repartidor, unos 3 minutos. Tus datos solo se usan para esta candidatura: https://gruposazon.example/privacidad. ¿Empezamos?
 
 > **Candidate** · 13:21  
-> simón, dale
+> simón vamos
 
 **Alex** · 13:21  
-¡Qué bien! Para empezar, ¿me dices tu nombre y apellido?
+Genial, vamos entonces. ¿Me compartes tu nombre y apellido completos?
 
 > **Candidate** · 13:22  
 > brandon garza treviño
 
 **Alex** · 13:22  
-¡Gracias, Brandon! ¿Tienes licencia de manejo vigente?
+Gracias, Brandon Garza Treviño, anotado. ¿Tienes licencia de manejo vigente, sí o no?
 
 > **Candidate** · 13:23  
-> oye y es de moto o de carro el chamba?
+> oye y es de tiempo completo la chamba?
 
 **Alex** · 13:23  
-Lo que sí necesitas es licencia de manejo en vigor; un reclutador te confirmará lo del vehículo. ¿Tienes licencia de manejo vigente?
+Sí, hay turnos de mañana, tarde y noche, en tiempo completo, medio tiempo o solo fines de semana. ¿Tienes licencia de manejo vigente, sí o no?
 
 > **Candidate** · 13:24  
-> simón, de NL
+> sí, de NL
 
 **Alex** · 13:24  
-Gracias por decirlo. Por ahora no estamos contratando en Nuevo León, así que ¿confirmas que ese es el lugar donde trabajarías o me dices otra ciudad?
+Anotado, gracias por confirmarlo. ¿En qué ciudad vives y en qué colonia o barrio?
 
 > **Candidate** · 13:25  
-> vivo en monterrey colonia mitras ahi mero buscaba chambear
+> monterrey colonia mitras
 
 **Alex** · 13:25  
-Perfecto, anotado: Monterrey. ¿Tienes licencia de manejo vigente?
+Anotado, Monterrey. ¿Buscas tiempo completo, medio tiempo, fines de semana o una combinación?
 
 > **Candidate** · 13:25  
-> ya te dije bro, si tengo license de NL
-
-**Alex** · 13:25  
-Perfecto, con licencia vigente avanzamos. ¿Buscas jornada completa, media jornada, fines de semana o una combinación?
-
-> **Candidate** · 13:26  
 > full time bro
 
-**Alex** · 13:26 *(not delivered: a newer message was waiting)*  
-Genial, full time anotado. ¿Qué turnos te acomodan: mañanas, tardes, noches o horario flexible?
+**Alex** · 13:25 *(not delivered: a newer message was waiting)*  
+Anotado, tiempo completo. ¿Qué turnos te acomodan: mañanas, tardes, noches o flexible?
 
-> **Candidate** · 13:26  
+> **Candidate** · 13:25  
 > y el horario me da igual
 
-**Alex** · 13:26 *(not delivered: a newer message was waiting)*  
-Entendido, horario flexible anotado. ¿Has hecho trabajo de reparto antes, como con Rappi o DiDi Food?
+**Alex** · 13:25 *(not delivered: a newer message was waiting)*  
+Anotado, horario flexible. ¿Has trabajado antes en reparto con apps como Uber Eats, Rappi o DiDi Food, y por cuánto tiempo?
 
 > **Candidate** · 13:26  
 > flexible pues, whatever works
 
 **Alex** · 13:26  
-Entendido, horario flexible. ¿Has hecho trabajo de reparto antes, como con Rappi o DiDi Food, y por cuánto tiempo?
+¿Has hecho entregas antes con apps como Uber Eats, Rappi o DiDi Food, y por cuánto tiempo?
+
+> **Candidate** · 13:26  
+> simón, 2 años en Uber Eats en Houston
+
+**Alex** · 13:26  
+Anotado, dos años en Uber Eats. ¿Desde cuándo podrías empezar?
 
 > **Candidate** · 13:27  
-> sí, 2 años en uber eats en houston
+> el lunes que entra bro
 
 **Alex** · 13:27  
-Genial, dos años con Uber Eats es buena base para el reparto. ¿Desde cuándo podrías empezar?
+¡Gracias, Brandon! Repasemos: Brandon Garza Treviño, licencia de manejo: sí, Monterrey, tiempo completo, horario flexible, Uber Eats 2 años, empiezas el lunes 26 de octubre. ¿Está todo bien?
 
 > **Candidate** · 13:28  
-> el lunes que viene
-
-**Alex** · 13:28  
-¡Gracias, brandon! Repasemos: brandon garza treviño, licencia de manejo: sí, Monterrey, tiempo completo, horario flexible, Uber Eats 2 años, empiezas el lunes 26 de octubre. ¿Está todo bien?
-
-> **Candidate** · 13:29  
 > simon todo bien 👍
 
-**Alex** · 13:29 *(close)*  
-¡Listo, brandon! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!
+**Alex** · 13:28 *(close)*  
+¡Listo, Brandon! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!
 
 ## What the recruiter gets
 
-> Calificado: Brandon Garza Treviño cuenta con licencia de manejo, está en Monterrey y no hay motivos de descarte ni de revisión en el registro. Tiene disponibilidad de tiempo completo, horario flexible y 2 años de experiencia en Uber Eats (según dijo, en Houston), con fecha de inicio el 26 de octubre de 2026. Alex tuvo que repetir la pregunta sobre horario y sobre experiencia, pero el candidato confirmó el resumen final sin correcciones, y no hizo preguntas pendientes.
+> Brandon Garza Treviño queda como calificado para la vacante de repartidor (driver); no hay motivos de descalificación ni de revisión. Cuenta con licencia de manejo, vive en Monterrey, tiene disponibilidad de tiempo completo con horario flexible y 2 años de experiencia en Uber Eats, y puede empezar el 26 de octubre de 2026. Conviene confirmar que su experiencia fue en Houston, no en México, y que Alex tuvo que repetir la pregunta de experiencia porque el candidato respondió primero sobre el horario; al final confirmó todos sus datos.
 
 ```json
 {
   "conversation_id": "eval-04_code_switch_monterrey",
+  "vacancy_id": "driver",
   "status": "qualified",
   "language": "es",
-  "full_name": "brandon garza treviño",
-  "has_driver_license": true,
-  "country": "MX",
-  "city": "monterrey",
-  "availability": [
-    "full_time"
-  ],
-  "preferred_schedule": [
-    "flexible"
-  ],
-  "delivery_experience": [
-    {
-      "platform": "uber_eats",
-      "years": 2.0
-    }
-  ],
-  "start_date": "2026-10-26",
+  "fields": {
+    "full_name": "brandon garza treviño",
+    "has_driver_license": true,
+    "location": {
+      "country": "MX",
+      "city": "monterrey"
+    },
+    "availability": [
+      "full_time"
+    ],
+    "schedule": [
+      "flexible"
+    ],
+    "experience": [
+      {
+        "platform": "uber_eats",
+        "years": 2.0
+      }
+    ],
+    "start_date": "2026-10-26"
+  },
   "flags": [],
   "disqualify_reason": null,
-  "review_reasons": []
+  "review_reasons": [],
+  "preference_score": 0
 }
 ```

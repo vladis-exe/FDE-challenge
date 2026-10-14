@@ -2,13 +2,13 @@
 
 *Spain · outcome `qualified` · 9 candidate messages · eval scenario `03_en_happy_valencia`*
 
-An English-speaking candidate, screened entirely in English. Tom answers the city question with only his neighborhood, "russafa", and his experience is on Deliveroo, a platform that isn't on the list.
+An English-speaking candidate, screened entirely in English. Tom answers the city question with only his neighborhood, in its Spanish spelling ("ruzafa"), and his experience is on Deliveroo, a platform that isn't on the list.
 
 **What to notice**
 
-- Alex switches to English from the candidate's first reply, and adds "carnet de conducir" next to "driver's license" so the Spanish term is clear.
-- "russafa" alone resolves to Valencia: neighborhoods are aliases in the service-area config.
-- Deliveroo is stored as `other`, with the 3 years kept; the platform list is closed so recruiters can filter on it.
+- Alex switches to English from the candidate's first reply and stays there.
+- "ruzafa" alone resolves to Valencia: neighborhoods are aliases in the service-area config.
+- Deliveroo is stored as `other` with the 3 years kept (the platform list is closed so recruiters can filter on it), and the recruiter summary says it was Deliveroo.
 
 ## Conversation
 
@@ -18,46 +18,46 @@ An English-speaking candidate, screened entirely in English. Tom answers the cit
 Hi! I'm Alex, Grupo Sazón's virtual assistant (AI) 👋 It's 7 quick questions about the delivery driver job, about 3 minutes. Your details are only used for this application: https://gruposazon.example/privacidad. Shall we start?
 
 > **Candidate** · 10:16  
-> yeah go for it
+> yeah sure go ahead
 
 **Alex** · 10:16  
-Great, let's go! What's your first name and surname?
+Great, let's go! Could you tell me your full name, first name and surname?
 
 > **Candidate** · 10:17  
 > Tom Whitaker
 
 **Alex** · 10:17  
-Thanks, Tom Whitaker, noted. Do you have a valid driver's license (carnet de conducir)?
+Noted, Tom, thanks! Do you have a valid driving license?
 
 > **Candidate** · 10:17  
 > yeah got a spanish one now
 
 **Alex** · 10:17  
-Great, thanks for confirming that! Which city do you live in, and what neighborhood?
+Thanks for that, Tom! Which city are you based in, and what's your neighborhood?
 
 > **Candidate** · 10:18  
-> russafa
+> ruzafa
 
 **Alex** · 10:18  
-Got it, Valencia and Russafa, thanks! Are you looking for full-time, part-time, weekends, or a mix?
+Got it, Ruzafa in Valencia, noted! Are you looking for full-time, part-time, weekends, or a mix of those?
 
 > **Candidate** · 10:19  
 > part time and weekends
 
 **Alex** · 10:19  
-Got it, part-time and weekends works. Which shifts suit you best: mornings, afternoons, evenings, or flexible?
+Got it, part-time and weekends noted. Which shifts suit you best: mornings, afternoons, evenings, or flexible?
 
 > **Candidate** · 10:19  
 > afternoons and evenins
 
 **Alex** · 10:19  
-Got it, afternoons and evenings noted. Have you done delivery work before, like Glovo or Uber Eats, and for how long?
+Got it, afternoons and evenings noted. Have you done delivery work before, like Glovo, Uber Eats or Just Eat, and for how long?
 
 > **Candidate** · 10:20  
-> yeah 3 years on deliveroo in bristol before i moved
+> yeah 3 years on deliveroo in bristol before i moved here
 
 **Alex** · 10:20  
-Thanks for sharing that, Tom. When could you realistically start?
+Got it, Tom, 3 years on Deliveroo in Bristol noted! When could you start?
 
 > **Candidate** · 10:21  
 > monday 2 november
@@ -73,34 +73,40 @@ All done, Tom! A Grupo Sazón recruiter will message you in the next few days to
 
 ## What the recruiter gets
 
-> Tom Whitaker aparece como calificado: tiene carnet de conducir y vive en Valencia (menciona el barrio de Russafa). Busca trabajo a tiempo parcial y fines de semana, con preferencia por las tardes y las noches, y podría empezar el 2 de noviembre de 2026. Tiene 3 años de experiencia en reparto con Deliveroo en Bristol, registrada como otra plataforma. No hay campos marcados ni motivos de revisión, y la conversación transcurrió sin incidencias; confirmó sus datos al final.
+> Tom Whitaker queda como calificado para la vacante de conductor, sin banderas ni motivos de revisión. Vive en Valencia (barrio de Ruzafa) y busca trabajo a tiempo parcial y fines de semana, en turnos de tarde y noche; puede empezar el 2 de noviembre de 2026. Tiene carnet de conducir y 3 años de experiencia en Deliveroo (Bristol), registrada como otra plataforma. No hubo preguntas sin respuesta ni incidencias en la conversación, y el candidato confirmó que sus datos eran correctos.
 
 ```json
 {
   "conversation_id": "eval-03_en_happy_valencia",
+  "vacancy_id": "driver",
   "status": "qualified",
   "language": "en",
-  "full_name": "Tom Whitaker",
-  "has_driver_license": true,
-  "country": "ES",
-  "city": "valencia",
-  "availability": [
-    "part_time",
-    "weekends"
-  ],
-  "preferred_schedule": [
-    "afternoon",
-    "evening"
-  ],
-  "delivery_experience": [
-    {
-      "platform": "other",
-      "years": 3.0
-    }
-  ],
-  "start_date": "2026-11-02",
+  "fields": {
+    "full_name": "Tom Whitaker",
+    "has_driver_license": true,
+    "location": {
+      "country": "ES",
+      "city": "valencia"
+    },
+    "availability": [
+      "part_time",
+      "weekends"
+    ],
+    "schedule": [
+      "afternoon",
+      "evening"
+    ],
+    "experience": [
+      {
+        "platform": "other",
+        "years": 3.0
+      }
+    ],
+    "start_date": "2026-11-02"
+  },
   "flags": [],
   "disqualify_reason": null,
-  "review_reasons": []
+  "review_reasons": [],
+  "preference_score": 0
 }
 ```

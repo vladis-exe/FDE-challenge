@@ -13,6 +13,8 @@ from typing import Annotated, Literal
 import yaml
 from pydantic import BaseModel, BeforeValidator, Field, model_validator
 
+from screening.config.vacancy import FieldSpec, VacancyConfig
+
 CONFIG_DIR = Path(__file__).parent
 
 Country = Literal["ES", "MX"]
@@ -77,6 +79,7 @@ class ScreeningConfig(BaseModel):
     transcript_tail_size: int = 12
     message_limits: MessageLimits = Field(default_factory=MessageLimits)
     time_scale: float = 1.0  # DEMO_TIME_SCALE already applied to the durations above
+    vacancies: dict[str, VacancyConfig] = {}  # by id, from vacancies/<id>.yaml
 
     @model_validator(mode="after")
     def _check_timings(self) -> "ScreeningConfig":
@@ -89,9 +92,15 @@ class ScreeningConfig(BaseModel):
     def timezone_for(self, country: Country) -> str:
         return self.service_areas[country].timezone
 
+    def vacancy(self, vacancy_id: str) -> VacancyConfig:
+        if vacancy_id not in self.vacancies:
+            valid = ", ".join(sorted(self.vacancies))
+            raise KeyError(f"unknown vacancy {vacancy_id!r}; valid ids: {valid}")
+        return self.vacancies[vacancy_id]
+
 
 def load_config(path: Path | None = None) -> ScreeningConfig:
-    """Load the three YAML files from `path` (a directory; defaults to this package).
+    """Load the YAML files from `path` (a directory; defaults to this package).
 
     DEMO_TIME_SCALE compresses the reminder and abandonment timings: 60 turns 15 min
     into 15 s. Quiet hours are wall-clock rules and are not scaled.
@@ -101,8 +110,15 @@ def load_config(path: Path | None = None) -> ScreeningConfig:
     areas = _read_yaml(directory / "service_areas.yaml")
     faq = _read_yaml(directory / "faq.yaml")
 
+    vacancies = {}
+    for file in sorted((directory / "vacancies").glob("*.yaml")):
+        vacancy = VacancyConfig.model_validate(_read_yaml(file))
+        if vacancy.id != file.stem:
+            raise ValueError(f"{file.name}: id {vacancy.id!r} must match the file name")
+        vacancies[vacancy.id] = vacancy
+
     config = ScreeningConfig.model_validate(
-        {**settings, "service_areas": areas, "faq": faq["entries"]}
+        {**settings, "service_areas": areas, "faq": faq["entries"], "vacancies": vacancies}
     )
     scale = float(os.environ.get("DEMO_TIME_SCALE") or 1)
     if scale <= 0:
@@ -114,6 +130,9 @@ def load_config(path: Path | None = None) -> ScreeningConfig:
             "time_scale": scale,
         }
     )
+
+
+__all__ = ["FieldSpec", "ScreeningConfig", "VacancyConfig", "load_config"]
 
 
 def _read_yaml(path: Path) -> dict:

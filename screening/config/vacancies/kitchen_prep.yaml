@@ -1,0 +1,82 @@
+# Kitchen prep assistant (ayudante de cocina): no driving involved.
+# The license is asked only after every required field, can never disqualify, and
+# breaks ties: a candidate who has one ranks above an otherwise equal one who
+# doesn't (DECISIONS D25). Same for the food handler certificate, at a lower weight.
+
+id: kitchen_prep
+title:
+  es: Ayudante de cocina
+  en: Kitchen prep assistant
+
+fields:
+  - name: full_name
+    type: text
+    requirement: required
+    label:
+      es: nombre y apellido
+      en: first name and surname
+
+  - name: location
+    type: city
+    requirement: required
+    label:
+      es: en qué ciudad vive, y el barrio
+      en: which city they live in, and the neighborhood
+
+  - name: availability
+    type: enum_multi
+    requirement: required
+    options: [full_time, part_time, weekends]
+    label:
+      es: si busca jornada completa, media jornada o fines de semana (se pueden combinar)
+      en: whether they want full-time, part-time or weekends (combinations are fine)
+    option_labels:
+      full_time: {es_ES: jornada completa, es_MX: tiempo completo, en: full-time}
+      part_time: {es_ES: media jornada, es_MX: medio tiempo, en: part-time}
+      weekends: {es: fines de semana, en: weekends}
+
+  - name: schedule
+    type: enum_multi
+    requirement: required
+    options: [morning, afternoon, evening, flexible]
+    exclusive_options: [flexible]
+    label:
+      es: qué turnos le van bien, mañanas, tardes, noches o flexible
+      en: which shifts suit them, mornings, afternoons, evenings or flexible
+    option_labels:
+      morning: {es: mañanas, en: mornings}
+      afternoon: {es: tardes, en: afternoons}
+      evening: {es: noches, en: evenings}
+      flexible: {es: horario flexible, en: flexible hours}
+
+  - name: start_date
+    type: date
+    requirement: required
+    label:
+      es: cuándo podría empezar
+      en: when they could start
+
+  - name: has_driver_license
+    type: boolean
+    requirement: preferred
+    weight: 1.5  # useful for covering an occasional delivery shift
+    reason: license
+    label:
+      es: si tiene carnet de conducir (no es obligatorio para este puesto)
+      en: whether they have a driver's license (not required for this job)
+    summary:
+      es_ES: carnet de conducir
+      es_MX: licencia de manejo
+      en: driver's license
+
+  - name: food_handler_certificate
+    type: boolean
+    requirement: preferred
+    weight: 1.0
+    label:
+      es: si tiene el carnet de manipulador de alimentos (no es obligatorio)
+      en: whether they have a food handler certificate (not required)
+    summary:
+      es_ES: carnet de manipulador de alimentos
+      es_MX: curso de manejo higiénico de alimentos
+      en: food handler certificate

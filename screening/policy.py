@@ -1,17 +1,19 @@
 """Policy: the screening state machine. Pure code, no LLM calls.
 
-`decide(state, extraction, message)` takes the conversation state and what the
-LLM read in the candidate's message (an Extraction), and returns the new state,
+`decide(state, extraction, message, config)` takes the conversation state and what
+the LLM read in the candidate's message (an Extraction), and returns the new state,
 the events, and what to reply: a fixed message, or a ReplyPlan for the LLM to
 phrase. Every eligibility decision, stage change and outcome is made here, from
 validated values only, so nothing a candidate writes to the model can change an
 outcome (DECISIONS D3).
 
-Stages follow the spec order:
-    CONSENT → NAME → LICENSE → LOCATION → AVAILABILITY → SCHEDULE → EXPERIENCE
-    → START_DATE → CONFIRM → DONE
-The stage is always "the first field still missing"; any message may fill any
-field, so a candidate who answers several questions at once skips ahead.
+The fields come from the conversation's vacancy (CONTRACTS §7). Stages:
+    CONSENT -> COLLECTING (state.current_field says which) -> CONFIRM -> DONE
+The field asked next is always the first required field still missing, in the
+vacancy's order; then each preferred field once. Any message may fill any field,
+so a candidate who answers several questions at once skips ahead. Required fields
+come first by rule: a knockout must never wait behind a question that can't
+disqualify, so an ineligible candidate finishes in a few messages.
 
 Transition table. Rules are checked top to bottom; the first match wins.
 
@@ -36,46 +38,60 @@ Transition table. Rules are checked top to bottom; the first match wins.
 10   consent = yes, or a field given   consent_at = now; apply fields (16)  next ask
 11   anything else                     nothing changes                      FAQ if asked +
                                                                             ask consent
-     OUT-OF-AREA CONFIRMATION PENDING
+     OUT-OF-AREA CONFIRMATION PENDING (a required city field)
 12   a served city                     pending cleared, city accepted       next ask
 13   the same unserved city again,     status -> disqualified               close: out_of_area
      or confirm                        (out_of_area)                        (waitlist sentence)
 14   another unserved city             pending = that city                  ask out_of_area
-15   deny, no city                     pending cleared, location attempt    ask location
-                                       used
+15   deny, no city                     pending cleared, city attempt used   ask the city
 --   anything else                     nothing changes                      FAQ if asked +
                                                                             ask out_of_area
-     COLLECTING FIELDS (NAME ... START_DATE, and corrections at CONFIRM)
-16   each field given, in spec order:
+     COLLECTING, and corrections at CONFIRM
+16   each field given, in the vacancy's order:
 16a    valid                           stored with source message id;       acknowledged
                                        field_accepted / field_corrected
-16b    license = no                    status -> disqualified (no_license)  close: no_license
-16c    license expired, in progress    flagged with a note,                 acknowledged
-       or foreign                      reason license_unclear
+16b    knockout value (boolean "no")   required: status -> disqualified     close: knockout
+                                       (no_<reason>); preferred: stored     (preferred:
+                                       as a plain value, never disqualifies acknowledged)
+16c    unclear boolean (expired,       flagged with a note,                 acknowledged
+       in progress, foreign)           reason <reason>_unclear
 16d    city not served                 pending_confirmation = that city     ask out_of_area
 16e    city ambiguous                  attempt used                         ask city_choice
-16f    invalid, the field asked for    attempt used; once past the max:     re-ask with reason
-                                       flagged, reason unresolved:<field>
+16f    invalid, the field asked for    required: attempt used; once past    re-ask with reason
+                                       the max: flagged, unresolved:<field>
+                                       preferred: left missing, not asked   (next ask)
+                                       again, no flag
 16g    invalid, another field          ignored; it is asked in turn         -
-17   an answer with no field in it     attempt used on the field asked for  re-ask
-18   then: a field still missing       stage -> first missing field         FAQ if asked + ask it
-19   then: nothing missing             stage -> CONFIRM                     fixed: read-back
-     CONFIRM (read-back sent)
-20   fields given (a correction)       apply as in 16, then 18 or 19        read-back again
-21   confirm                           status -> needs_review if a field    close: completed
-                                       is flagged or a reason exists,
+17   an answer with no field in it     as 16f for the field asked for       re-ask / next ask
+18   then: a field still to ask        current_field -> that field          FAQ if asked + ask it
+19   then: nothing left to ask         stage -> CONFIRM                     fixed: read-back
+     CONFIRM (read-back sent; pending_confirmation counts the rounds)
+20   fields given that change a value  apply as in 16, then 18 or 19        read-back again
+                                                                            (one more round)
+21   confirm, or fields given that     status -> needs_review if a field    close: completed
+     change nothing (a restatement)    is flagged or a reason exists,
                                        else qualified
-22   deny, no field given              nothing changes                      ask what to change
+22   deny, nothing changed             nothing changes                      ask what to change
+                                                                            (one more round)
 23   anything else                     nothing changes                      FAQ if asked +
                                                                             ask confirm
+24   a round would pass the max        status -> needs_review               close: completed
+     (20 or 22)                        (reason unresolved:confirm)
 
 Details:
-- An "attempt" is one re-ask. A field gets at most `max_attempts_per_field` (2)
-  re-asks; the next failure flags it and the conversation moves on. Questions and
-  small talk never use an attempt, so the agent can't loop and can't punish
-  someone for asking about the job.
+- An "attempt" is one re-ask. A required field gets at most
+  `max_attempts_per_field` (2) re-asks; the next failure flags it and the
+  conversation moves on. A preferred field is asked exactly once (its `attempts`
+  is set to 1 to record that), and never flagged. Questions and small talk never
+  use an attempt, so the agent can't loop and can't punish someone for asking
+  about the job. The read-back has the same cap (rows 20, 22, 24): a candidate
+  restating a correct value used to get the same read-back again, forever.
 - A first name alone is kept, and the surname is asked once; a one-word reply
   then completes it ("Laura" + "Pérez").
+- A city field's accepted country becomes `country_hint`, so vocabulary and time
+  zones follow where the candidate actually is.
+- The preference score is recomputed after every turn, from accepted preferred
+  fields only (screening.scoring). It never changes a status.
 - FAQ answers come only from faq.yaml (by the faq_id the LLM picked); an
   uncovered question gets "a recruiter will confirm".
 - Any outcome other than in_progress also sets stage = DONE. Closes are sent as

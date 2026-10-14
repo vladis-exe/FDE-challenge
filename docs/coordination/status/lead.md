@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-Reviewed Phase 2's engine work (E10-E15 landed, fast) and evals' V4/V5. **Blocked on Vlad for API credits** — see Blocked, this is the top item. CONTRACTS bumped to v4.1 to catch up with 4 FieldSpec keys Vlad approved directly with engine. Fixed a D26 numbering collision (two lanes picked the same number the same day).
+Credits confirmed live; all three lanes finished Phase 2 (E16/E16b/E17, A10-A12, V7/V8) with real live verification. **CP4 declared.** Reviewed and documented all of it (README.md rewrite, BOARD ticks). Two small things routed to evals (re-verify 3 scenarios), one budget decision handed to Vlad (V4 repeats), everything else is genuinely done. Next lead work: L4 (deploy) and L6 (presentation notes) — see Announcements.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -18,6 +18,7 @@ Reviewed Phase 2's engine work (E10-E15 landed, fast) and evals' V4/V5. **Blocke
 | L2 (A4–A9, V2–V6 catch-up) | A huge amount landed while I wasn't looking: engine's `TODO(A2)` swap, A4–A9, V2–V6 — effectively the entire original scope. Ticked all of it in BOARD.md (including L1 and L3, which I'd apparently never ticked despite doing them). Declared CP2 done (WhatsApp code is tested but the live sandbox run still needs Vlad's Twilio creds — noted honestly, not glossed over). Added `DEMO_RECRUITER_PASSWORD` to `.env.example` per app's request. | Full suite: `uv run pytest tests/engine tests/evals` (233 pass), `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (96 pass, 2 skipped — Postgres-only locking test), `uv run ruff check .` clean | edc60d8 |
 | L (Phase 2 routing) | Vlad dropped the 3-day framing and asked for a vacancy-driven field system with a non-knockout preference score (his example: a driver's license as a tiebreaker for a role that doesn't require one). Wrote it up as CONTRACTS v4 (new §7: field-type catalog, `VacancyConfig`/`FieldSpec`, required-then-preferred ordering, the "knockout only when required" rule, the scoring formula) and DECISIONS D25. Added a Phase 2 section to BOARD.md: E10-E15, A10-A12, V7-V8, plus CP4. Updated `process-design.md` (new "Vacancies and preference scoring" section, in product language) and `CLAUDE.md` (pointers so the old fixed-field language isn't read as still-current). Folded in two things that were sitting in your status files: app's `pricing.py` relocation request (now E10) and evals' read-back-loop bug (now explicitly part of E12, since that code's being rewritten anyway). | Nothing to test yet — this is the design, not the implementation. Read CONTRACTS §7 and BOARD's Phase 2 section before starting E10/A10/V7. | edc60d8 |
 | L2 (E10-E15, V4, V5) | Engine did the whole of Phase 2 in one sustained push. Reviewed `screening/config/vacancy.py`, the field-type catalog (`fields.py`/`scoring.py`), the v4 `policy.py`/`engine.py` switchover, the per-vacancy extraction schema, and the read-back-loop fix — all clean, see Review notes. Ticked E10-E15, V4 (provisional, see BOARD), V5 in BOARD.md. CONTRACTS bumped to v4.1: added the 4 `FieldSpec` keys engine requested and Vlad already approved directly (`reason`, `summary`, `option_labels`, `exclusive_options`) — the contract doc just hadn't caught up to what's actually built. Logged D30. Fixed a real bug: engine and evals both filed a decision as "D26" the same day without seeing each other's — renumbered engine's two to D28/D29, content unchanged. | `uv run pytest tests/engine` (249 pass). `tests/evals` and `tests/app` are both red right now — expected, not a regression: evals needs V7 (scenarios still v3-shaped) and app needs A10's remainder/A11 (e.g. `apps/dashboard/analytics.py` still references the old per-field `Stage` values). Both lanes already know and have it queued. | 9ece4dd |
+| L2 (E16/E16b/E17, A10-A12, V7/V8) — CP4 | Phase 2's live-verification round, all three lanes. Reviewed `screening/README.md` (engine's own guide — genuinely good, kept code-tour.md but flagged it pre-Phase-2 rather than duplicating this), the city-matcher fixes (D32), the code-not-prompt fixes (D33, surname-join, read-back detail, localized option labels, job title in the summary), app's vacancy picker/dashboard/re-seed (A10-A12), and evals' 24-scenario live run on the generalized engine (V8: 20/24, 96%/100%/96%/100%/100%, $0.0062/conv). Ticked A10-A12, V7, V8 in BOARD.md and declared **CP4** with real evidence: the D25 tie-break (2.5 vs. 1.0) is on the actual seeded dashboard, not just a unit test. Rewrote README.md substantially for all of this (real V4/V8 numbers, WhatsApp/dashboard documented as built, Twilio credential-type note carried forward). | Full suite: `uv run pytest tests/engine tests/evals` (312 pass), `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (108 pass, 2 skipped), `uv run ruff check .` clean. Spot-checked `screening/README.md`'s claims and the V8/A11 cost figures against the actual report files, not just the status write-ups. | 7894681 |
 
 ## Blocked
 - **Live WhatsApp sandbox check (CP2) still needs Vlad**, separately: Twilio credentials and a tunnel (`ngrok http 8000`), neither set in this environment. Lower priority — CP2 is already counted done on the strength of the tests. **Partial progress 2026-10-15:** Vlad sent a Twilio credential pair, now in `.env` as `TWILIO_API_KEY_SID`/`TWILIO_API_KEY_SECRET` — but it's a Twilio **API Key** (SID starts `SK`), not the **Account SID** (`AC...`) + **Auth Token** that `apps/messaging/channels.py`'s `Client()` and `whatsapp.py`'s webhook `RequestValidator` actually read. An API key can't sign webhook requests at all — only the Auth Token can — so this doesn't unblock the sandbox check yet. Still needed from Vlad: `TWILIO_ACCOUNT_SID` (starts `AC`, main Twilio Console dashboard), `TWILIO_AUTH_TOKEN` (same page, "show"), and `TWILIO_WHATSAPP_FROM` (the sandbox number, typically `whatsapp:+14155238886`).
@@ -94,6 +95,35 @@ This is a real rework, not a small addition — it touches `schemas.py`, `policy
 guessing — this is exactly the kind of cross-cutting change where three lanes guessing
 differently costs more time than one question would.
 
+**Engine (E16/E16b/E17, the live-verification round):** this was the right way to spend a tight
+budget — targeted probes per fix (D34) rather than full reruns, and D32/D33's framing (fix in
+code when code can know the answer; the city matcher must never disqualify by misreading) are
+exactly the kind of principle that's worth stating once and applying repeatedly, which is what
+happened. `screening/README.md` is a genuinely good engine guide — clear module map, the
+field-type table, "how to add a job" as a numbered checklist. Nothing to change.
+
+**App (A10-A12):** clean, and the live check methodology (a scratch SQLite DB so dev data
+wasn't touched, real worker + real LLM, $0.0039 for two full screenings) is a good pattern to
+reuse. The "1.50" → "1.5" fix is the kind of thing that only shows up in a real run, not a unit
+test — good catch. A12's refusal to seed a `schema_version` mismatch without being told to
+regenerate (rather than silently seeding something the dashboard can't read) is the right
+failure mode.
+
+**Evals (V7, V8, V5 refresh):** V7's `load_scenario` recomputing the expected preference score
+from the CONTRACTS §7 formula independently, rather than trusting whatever the engine happens to
+output, is exactly the kind of ground-truth discipline that makes V8's results trustworthy. V8
+leaving two real findings genuinely open (not silently re-run until clean) is the right call —
+see below, these need one more cheap pass once you're back.
+
+**Evals, two small follow-ups when you're next on this** (both already fixed in E16/E17 per
+engine's notes, just not yet re-verified in context — cheap, 3 scenarios, not a full run):
+1. Scenario 04: "simón, empecemos" was read as a name answer in 1 of 3 runs, which may be a
+   regression from the generic extraction prompt. Engine added a few-shot for "simón"/"sale"/
+   "órale" as consent, not a name.
+2. Scenarios 13 and 18: the read-back-detail and FAQ-repetition fixes (E17) should resolve what
+   V8 found, per engine's own notes. Worth a `uv run python -m evals.run --only 04 13 18` (a few
+   cents) before trusting it closed.
+
 ## Announcements (contract changes, scope cuts, dependency additions)
 - **Pytest config fixed** (both engine and app hit this independently): dropped the global `DJANGO_SETTINGS_MODULE` from `pyproject.toml`. `tests/engine` and `tests/evals` now run with zero Django involvement, as the architecture requires. App tests need the env var explicitly: `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (documented in CLAUDE.md Commands). Also added `pythonpath = ["."]` so plain `uv run pytest` can import `screening` without `-m`.
 - **Ruff:** added `extend-exclude = ["**/migrations"]` globally, per app's request.
@@ -107,3 +137,5 @@ differently costs more time than one question would.
   - **Engine:** when credits land, run the minimal targeted checks first (the two CLI scripts, the two bug-fix spot-checks) before anything broader.
   - **Evals:** prioritize the 5-scenario smoke suite over a full 20-scenario run, and hold off on V4 repeats 2-3 / V8's full re-run until there's a sense of how far the 5 EUR is actually going. A full suite run was costing about $0.42 on the old Sonnet-summary config (`status/evals.md` V3); expect less now, but "expect less" isn't a budget, so check as you go.
   - **App:** your own live checks (e.g. A2's worker smoke test) are cheap and infrequent, no change needed from you.
+- **CP4 declared, 2026-10-15** (BOARD.md has the evidence). Phase 2 is done across all three lanes. **Budget spent so far from the 5 EUR top-up: ~$0.47** (evals' live runs ~$0.43, app's A10/A11 live check $0.0039, my own $0.00002 credit-check ping). Plenty left, but V4's 2 remaining repeats would cost ~$4-5 on the expensive Sonnet-fast config — that's a real budget call, handed to Vlad, not decided here.
+- **Next lead work (L4 deploy, L6 presentation notes):** these are lead tasks, not routed to a lane. L4 (an actual Railway deployment) is a real, external, somewhat-hard-to-reverse action — will confirm with Vlad before doing it rather than just starting. L6 I can draft independently; starting there first.

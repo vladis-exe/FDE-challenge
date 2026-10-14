@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-None. Phase 2 and E16 are live-verified (2026-10-14, after the credits top-up). Open for new findings.
+**E17, in progress:** findings from A11's and V8's live runs: Mexican wording for option questions, the job title (not the id) in the summary, "simón" read as a name, the read-back showing a flagged field's detail, no word-for-word FAQ repeats. Then an engine README (`screening/README.md`) and DECISIONS entries for the recent trade-offs.
 
 ## Done
 | Task | What changed | How to verify | Commit |

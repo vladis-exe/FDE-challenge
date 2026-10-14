@@ -148,6 +148,10 @@ def _run_one(
     zone = config.timezone_for(scenario.country)
     (run_dir / f"{scenario.id}.json").write_text(_dump({"run": run, "score": result}))
     (run_dir / f"{scenario.id}.md").write_text(transcript_md(scenario, run, result, zone))
+    if run.error:
+        # The simulated candidate's own API call failed (rate limit, credits): the engine
+        # wasn't tested, so this is a crash, kept out of the scores, not an engine failure.
+        raise RuntimeError(run.error)
     print(f"  {scenario.id}: {'PASS' if result.passed else 'FAIL'} ({result.status})")
     return result
 

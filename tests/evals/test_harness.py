@@ -203,3 +203,20 @@ def test_after_a_knockout_unreached_fields_may_be_empty_but_not_wrong(config) ->
     assert score(scenario, empty, config).passed
     wrong = run.model_copy(update={"record": {**run.record, "full_name": "Otro Nombre"}})
     assert not score(scenario, wrong, config).passed
+
+
+def test_a_simulator_api_failure_is_a_crash_not_an_engine_failure(tmp_path: Path, monkeypatch):
+    from screening.llm import LLMError
+
+    class Broken(FactsCandidate):
+        def reply(self, lines, directive, stage, now):
+            raise LLMError("simulate: credit balance is too low")
+
+    monkeypatch.setattr(run_module, "EVALS_DIR", tmp_path)
+    monkeypatch.setattr(run_module, "FactsCandidate", Broken)
+    monkeypatch.delenv("DEMO_TIME_SCALE", raising=False)
+    ids = ["01_es_happy_madrid", "20_abandoned_monterrey"]
+    assert run_module.main(["--fake", "--only", *ids]) == 1
+    run_dir = next((tmp_path / "runs").iterdir())
+    assert (run_dir / "01_es_happy_madrid.error.txt").exists()
+    assert (run_dir / "01_es_happy_madrid.md").exists()  # the transcript is kept for debugging

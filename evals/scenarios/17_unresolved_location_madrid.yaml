@@ -12,13 +12,13 @@ persona: >
 facts:
   name: Javier Moreno Gil
   license: Carnet B.
-  location: Refuses to say. Only says "por la zona sur" and that he will tell a recruiter.
+  location: Won't say. Deflects with "por ahí", "zona sur", "eso da igual no?".
   availability: Full time.
   schedule: Afternoons.
   experience: 1 year on Glovo.
   start_date: Next Monday.
 behaviors:
-  - Never names a city or neighborhood, whatever the agent offers.
+  - Never names a city or neighborhood, whatever the agent offers, and never asks for a person.
   - Answers every other question normally.
 script:
   - when: {stage: location}

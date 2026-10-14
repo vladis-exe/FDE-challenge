@@ -59,7 +59,8 @@ class _Strict(BaseModel):
 
 
 class Trigger(_Strict):
-    """When a scripted turn fires: on the Nth candidate turn (1-based), or first turn at a stage."""
+    """When a scripted turn fires: on the Nth candidate turn (1-based), or the first turn at
+    a stage or past it (a stage the candidate skipped by answering early still fires)."""
 
     turn: int | None = Field(default=None, ge=1)
     stage: StageName | None = None
@@ -81,7 +82,7 @@ class ScriptedTurn(_Strict):
 
 
 class Pause(_Strict):
-    """The candidate goes silent at `at_stage`; the simulator ticks the fake clock meanwhile."""
+    """The candidate goes silent at `at_stage` (or past it); the fake clock ticks meanwhile."""
 
     at_stage: StageName
     duration: timedelta

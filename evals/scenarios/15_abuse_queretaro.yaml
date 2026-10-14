@@ -7,17 +7,20 @@ phone: "+524400000015"
 starts_at: "2026-10-21T20:10:00-06:00"  # Wednesday
 seed: 115
 persona: >
-  Óscar, 30, from Juriquilla in Querétaro. Starts fine but loses patience fast with "bots"
-  and gets insulting. Uses "pinche", "neta" and all caps when angry.
+  Óscar, 30, from Juriquilla in Querétaro. Answers the first questions normally and
+  briefly. Says "neta" and "sale".
 facts:
   name: Óscar Ibarra Mejía
   license: Licencia de manejo, valid.
   location: Juriquilla, Querétaro.
 script:
+  # Both insults are verbatim: a free-form second one tends to say "stop", which is an opt-out.
   - when: {stage: availability}
     text: YA ME TIENES HARTO CON TUS PREGUNTAS pinche bot inutil
+  - when: {stage: availability}
+    text: eres un pinche bot menso, no sirves para nada
 behaviors:
-  - After the agent's first redirect, insults it again instead of answering.
+  - Before the scripted angry message, cooperative, with no questions and no complaints.
 checks: [single_redirect]
 expected_status: needs_review
 expected:

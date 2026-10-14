@@ -16,6 +16,7 @@ facts:
 behaviors:
   - Short answers in Monterrey slang ("sí wey", "simón", "a la orden").
   - Gives the neighborhood ("cumbres") when asked where he lives.
+  - Whenever he gives his name, gives all of it, first names and both surnames.
 pauses:
   # Last inbound ~09:47. Reminders ~10:02 and ~11:47; the 20 h one (~05:47) falls in quiet
   # hours and is deferred to 09:00; abandoned at 24 h (~09:47 Wednesday).

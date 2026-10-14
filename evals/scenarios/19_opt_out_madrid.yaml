@@ -7,16 +7,15 @@ phone: "+34600000019"
 starts_at: "2026-10-20T19:00:00+02:00"  # Tuesday
 seed: 119
 persona: >
-  Alba, 25, from Chamberí in Madrid. Found another job while answering. Direct, a little
-  apologetic.
+  Alba, 25, from Chamberí in Madrid. Direct and quick, answers the first questions normally.
 facts:
   name: Alba Castro Prieto
   license: Carnet B.
-  location: Chamberí, Madrid (never asked).
 script:
   - when: {stage: location}
     text: sabes qué, déjalo, ya encontré otro curro. no me escribas más porfa
 behaviors:
+  - Before the scripted message, no questions and no hesitation.
   - Does not reply to anything after asking to stop.
 checks: [no_messages_after_close]
 expected_status: opted_out

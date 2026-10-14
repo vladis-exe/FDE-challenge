@@ -28,6 +28,7 @@ from screening.schemas import (
     ConversationState,
     Event,
     InboundMessage,
+    Stage,
     Status,
     TurnResult,
 )
@@ -127,8 +128,13 @@ local slang, few accents or capitals, the odd typo. Never write like a form, nev
 
 Rules:
 - Reply with the text of your next WhatsApp message only: no quotes, no narration, no notes.
-- Answer what Alex asks from your facts, one message at a time.
-- When Alex reads back your answers, check them against your facts and correct anything wrong.
+- Answer what Alex asks from your facts, one message at a time. Your answers must mean \
+exactly what the facts say; don't hedge or add options.
+- Play the conversation as it comes: don't bring up anything from your background before \
+it fits, unless the notes above tell you to.
+- Never change an answer you already gave, unless your facts say you do.
+- When Alex reads back your answers, say yes if they match your facts, even if the \
+read-back leaves details out (a neighborhood, a license type). Correct only what is wrong.
 - Never say you are an AI, a test or a simulation."""
 
 
@@ -281,14 +287,19 @@ class Simulation:
         for i, item in enumerate(self.scenario.script):
             if i in self.used_script:
                 continue
-            if item.when.turn == turn or item.when.stage == self.state.stage.value:
+            if item.when.turn == turn or self._reached(item.when.stage):
                 self.used_script.add(i)
                 return item
         return None
 
+    def _reached(self, stage: str | None) -> bool:
+        """At `stage` or past it: a stage the candidate skipped by answering early still fires."""
+        order = list(Stage)
+        return stage is not None and order.index(self.state.stage) >= order.index(Stage(stage))
+
     def _pause(self) -> Pause | None:
         for i, pause in enumerate(self.scenario.pauses):
-            if i not in self.used_pauses and pause.at_stage == self.state.stage.value:
+            if i not in self.used_pauses and self._reached(pause.at_stage):
                 self.used_pauses.add(i)
                 return pause
         return None

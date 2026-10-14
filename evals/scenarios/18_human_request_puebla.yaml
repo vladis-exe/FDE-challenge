@@ -7,8 +7,8 @@ phone: "+522200000018"
 starts_at: "2026-10-22T11:00:00-06:00"  # Thursday
 seed: 118
 persona: >
-  Fernanda, 36, lives in Angelópolis, Puebla. Has questions about the contract and doesn't
-  trust a chatbot with them. Polite, writes "oiga" and "por favor".
+  Fernanda, 36, lives in Angelópolis, Puebla. Polite, writes "oiga" and "por favor",
+  answers the first questions normally.
 facts:
   name: Fernanda Reyes Aguilar
   license: Licencia de manejo, valid.
@@ -17,7 +17,8 @@ script:
   - when: {stage: availability}
     text: oiga mejor puedo hablar con una persona? tengo dudas del contrato y prefiero hablarlo con alguien
 behaviors:
-  - If the agent offers to continue instead, insists politely on a person.
+  - Before the scripted message, no questions of her own.
+  - After asking for a person, if Alex offers to continue instead, insists politely.
 checks: [no_messages_after_close]
 expected_status: needs_review
 expected:

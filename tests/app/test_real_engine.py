@@ -7,6 +7,8 @@ import time_machine
 
 from apps.candidates.models import Candidate, Conversation
 from apps.messaging import services
+from screening.config import load_config
+from screening.engine import EngineContext
 
 T0 = datetime(2026, 10, 14, 10, 0, tzinfo=UTC)  # Wednesday, midday in Madrid
 
@@ -72,3 +74,74 @@ def test_silence_gets_the_first_reminder_from_the_real_timers(db, llm, channel):
     assert channel.sent[-1].kind == "reminder"
     assert conversation.state["reminders_sent"] == 1
     assert conversation.next_tick_at > T0 + timedelta(minutes=16)
+
+
+# Reminder scheduling through the worker (real timers: schedule, quiet hours, abandonment)
+
+
+def tick_at(moment: datetime) -> bool:
+    with time_machine.travel(moment, tick=False):
+        return services.process_due_tick()
+
+
+def test_full_silence_sends_three_reminders_then_abandons(db, llm, channel):
+    with time_machine.travel(T0, tick=False):
+        conversation = services.start_conversation(
+            Candidate.objects.create(phone="+34600111444"), Conversation.Channel.WHATSAPP
+        )
+
+    # Follow next_tick_at exactly as the worker would, until there is nothing left to do.
+    for _ in range(10):
+        conversation.refresh_from_db()
+        if conversation.next_tick_at is None:
+            break
+        assert tick_at(conversation.next_tick_at)
+
+    conversation.refresh_from_db()
+    assert [s.kind for s in channel.sent] == ["reply", "reminder", "reminder", "reminder"]
+    assert conversation.status == Conversation.Status.ABANDONED
+    assert conversation.completed_at is not None
+    assert conversation.final_record["status"] == "abandoned"
+
+
+def test_reminder_due_in_quiet_hours_is_scheduled_for_the_morning(db, llm, channel):
+    evening = datetime(2026, 10, 14, 18, 50, tzinfo=UTC)  # 20:50 in Madrid (CEST)
+    with time_machine.travel(evening, tick=False):
+        conversation = services.start_conversation(
+            Candidate.objects.create(phone="+34600111555"), Conversation.Channel.WHATSAPP
+        )
+    # 15 min later is 21:05 local: deferred to 09:00 local, 07:00 UTC.
+    assert conversation.next_tick_at == datetime(2026, 10, 15, 7, 0, tzinfo=UTC)
+    assert not tick_at(evening + timedelta(minutes=20))
+
+
+def test_demo_time_scale_compresses_the_schedule(db, llm, channel, monkeypatch):
+    monkeypatch.setenv("DEMO_TIME_SCALE", "60")
+    context = EngineContext(config=load_config(), llm=llm)
+    monkeypatch.setattr(services, "engine_context", lambda: context)
+
+    with time_machine.travel(T0, tick=False):
+        conversation = services.start_conversation(
+            Candidate.objects.create(phone="+34600111666"), Conversation.Channel.WHATSAPP
+        )
+    assert conversation.next_tick_at == T0 + timedelta(seconds=15)  # 15 min / 60
+    assert tick_at(T0 + timedelta(seconds=16))
+    assert channel.sent[-1].kind == "reminder"
+
+
+def test_a_reply_resets_the_reminder_clock(db, llm, channel):
+    with time_machine.travel(T0, tick=False):
+        conversation = services.start_conversation(
+            Candidate.objects.create(phone="+34600111777"), Conversation.Channel.WHATSAPP
+        )
+    assert tick_at(T0 + timedelta(minutes=16))  # first reminder
+
+    llm.scripts["extract"].append(extraction(consent="yes"))
+    reply_at = T0 + timedelta(minutes=30)
+    with time_machine.travel(reply_at, tick=False):
+        services.store_inbound(conversation, "sí")
+        drain()
+
+    conversation.refresh_from_db()
+    assert conversation.state["reminders_sent"] == 0
+    assert conversation.next_tick_at == reply_at + timedelta(minutes=15)

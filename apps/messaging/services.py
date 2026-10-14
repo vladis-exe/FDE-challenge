@@ -1,6 +1,7 @@
 """The processing pipeline (CONTRACTS §5): store inbound, run engine turns, persist, then send.
 
-Reliability rules this module guarantees (each one has a test in tests/app/test_worker.py):
+Reliability rules this module guarantees (each has a test in tests/app/test_worker.py; the
+cross-worker locking of rule 1 is tested on Postgres in tests/app/test_postgres_locking.py):
 1. Per-conversation ordering: a conversation's inbound messages go through the engine one at a
    time, oldest first. The conversation row stays locked for the whole turn, so no other worker
    can process the same conversation at the same time.

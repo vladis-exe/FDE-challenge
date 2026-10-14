@@ -8,7 +8,6 @@ from django.core.management import CommandError, call_command
 from django.utils import timezone
 
 from apps.candidates.models import Candidate, Conversation
-from apps.dashboard.management.commands.seed_demo import FIXTURE
 from apps.messaging.models import Message
 from evals.scenario import SCENARIOS_DIR, load_scenario
 from evals.simulator import simulate
@@ -116,11 +115,27 @@ def test_generates_and_prints_a_password_when_none_is_given(db, monkeypatch, v4_
     assert get_user_model().objects.get(username="recruiter").check_password(password)
 
 
-def test_refuses_a_fixture_from_an_older_engine(db):
-    """The shipped fixture predates CONTRACTS v4 until A12 rebuilds it from a live run."""
+def test_refuses_a_fixture_from_an_older_engine(db, tmp_path, v4_fixture):
+    items = json.loads(v4_fixture.read_text(encoding="utf-8"))
+    items[0]["state"]["schema_version"] = 1
+    old = tmp_path / "old.json"
+    old.write_text(json.dumps(items))
     with pytest.raises(CommandError, match="schema_version"):
-        seed("--fixture", str(FIXTURE), "--password", "x")
+        seed("--fixture", str(old), "--password", "x")
     assert not Conversation.objects.exists()
+
+
+def test_shipped_fixture_covers_both_jobs_and_every_outcome(db):
+    seed("--password", "x")
+    assert set(Conversation.objects.values_list("vacancy_id", flat=True)) == {
+        "driver",
+        "kitchen_prep",
+    }
+    statuses = set(Conversation.objects.values_list("status", flat=True))
+    assert {"qualified", "needs_review", "disqualified", "abandoned", "opted_out"} <= statuses
+    # The D25 tie-break is visible in the demo: qualified kitchen hires with different scores.
+    scores = Conversation.objects.filter(vacancy_id="kitchen_prep", status="qualified")
+    assert len(set(scores.values_list("preference_score", flat=True))) > 1
 
 
 def test_fixture_is_rebuilt_from_an_eval_run(tmp_path, v4_fixture):

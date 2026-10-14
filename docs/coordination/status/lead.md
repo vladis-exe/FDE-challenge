@@ -1,9 +1,9 @@
 # Status: lead
 
-Last updated: 2026-10-12
+Last updated: 2026-10-14
 
 ## Current task
-L2 continuous review loop, waiting on the next lane commit. CP1 verified (see BOARD.md).
+L2 continuous review loop. Wrote L5 (README). No lane has committed anything since 3a45a40 — all three sessions appear idle; Vlad is nudging them.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -13,6 +13,7 @@ L2 continuous review loop, waiting on the next lane commit. CP1 verified (see BO
 | L2 (E3) | Reviewed `AnthropicClient`/`FakeLLM`. Approved the cache-token contract request: CONTRACTS §3 `LLMUsage` bumped to v2 with `cache_read_tokens`/`cache_write_tokens` (default 0). Ticked E3 in BOARD.md. Logged D14. | `uv run pytest tests/engine -q` (29 pass) | b9a8d62 |
 | L2 (E2, E4, V1) | Reviewed validators, the Extraction schema/prompt, and the 20 eval scenarios. Ticked E2, E4, V1 in BOARD.md. | `uv run pytest tests/engine tests/evals -q` (109 pass) | 67ae027 |
 | L2 (E6a, E5, E9, E7, E8, E6b, A2, A3) | Caught up on a full day of lane work. Ticked all of it in BOARD.md. CONTRACTS bumped to v3: added `next_due_at` to §2 and clarified the LLM-failure bookkeeping rule (both per engine's requests below). Logged D23. Verified CP1 end to end (BOARD.md). | `uv run pytest tests/engine tests/evals` (212 pass), `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (39 pass), `uv run ruff check .` (clean, nothing uncommitted anywhere) | 64095cf |
+| L5 | `README.md`: overview, Mermaid architecture diagram, 5-command setup, how to run the CLI/web chat/tests (WhatsApp and the dashboard documented as not-yet-built, honestly), LLM choice + measured numbers from live probes, a curated top-6 from DECISIONS.md, a 10K/week and ATS-integration answer. Flagged as a first pass: the LLM-justification section needs real numbers once V4 (model comparison) lands. Also found, by manually testing CP1 myself: `apps/messaging/services.py` still imports the stub engine (`TODO(A2): screening.engine once E5 lands`, never actioned) — the web chat is mechanically correct but Alex's replies there are still placeholder text. CLI already uses the real engine. | Commands in the README run as written: `uv run python -m screening.cli --fake --script ...`, `uv run pytest tests/engine tests/evals` (212 pass), app tests (39 pass), `uv run ruff check .` clean | (pending) |
 
 ## Blocked
 None
@@ -49,6 +50,8 @@ Your cache-token request: approved, CONTRACTS is now v2 (see Announcements). Ple
 **Engine (E5 through E6b, all of it):** reviewed `policy.py`/`engine.py` against the transition table and CONTRACTS §2, `cli.py`, `timers.py`, `record.py`/`summary.py`, and `guard.py`. All clean, well-tested (212 pass incl. evals), and the live-probe numbers in your status entries are exactly the kind of evidence the presentation needs — keep writing them that way. Two things resolved, see Announcements: `next_due_at` is now in CONTRACTS §2, and the LLM-failure bookkeeping question is answered (your reading was right, the contract text was just underspecified — fixed, not changed).
 
 **App (A2, A3):** clean. D15–D17 (lock held across the LLM call, IMMEDIATE+WAL on SQLite, errors consume the message rather than retry) are all sound calls for this scale and well-argued in DECISIONS.md. A3's web chat is still on the stub engine per CONTRACTS' explicit CP1 allowance ("stub or real engine") — go ahead and switch to the real one now that E5 is in; should be close to a drop-in given you built A2 against the exact CONTRACTS §2 signatures.
+
+**App, repeating this since it's now a day old and un-actioned:** `apps/messaging/services.py` line 29 still has `from apps.messaging import stub_engine as engine  # TODO(A2): screening.engine once E5 lands`. E5 landed in c8052a5. This is the one thing stopping the web chat from being a real demo — please pick it up next.
 
 ## Announcements (contract changes, scope cuts, dependency additions)
 - **Pytest config fixed** (both engine and app hit this independently): dropped the global `DJANGO_SETTINGS_MODULE` from `pyproject.toml`. `tests/engine` and `tests/evals` now run with zero Django involvement, as the architecture requires. App tests need the env var explicitly: `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (documented in CLAUDE.md Commands). Also added `pythonpath = ["."]` so plain `uv run pytest` can import `screening` without `-m`.

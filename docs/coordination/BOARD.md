@@ -35,7 +35,7 @@ Owned by the lead; only the lead ticks boxes. Lanes report progress in `status/<
   - Railway with web, worker and Postgres services, plus env vars.
   - Twilio sandbox webhook pointed at the deployed URL.
   - A smoke test on the deployed URL.
-- [ ] **L5 README:**
+- [x] **L5 README:** (first pass — LLM justification section needs a pass once V4 lands)
   - Overview and an architecture diagram (Mermaid).
   - Setup in 5 commands or fewer.
   - How to run the CLI, web chat, WhatsApp, the worker, tests and evals.

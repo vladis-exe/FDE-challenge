@@ -3,7 +3,7 @@
 Last updated: 2026-10-14
 
 ## Current task
-L2 continuous review loop. Wrote L5 (README). No lane has committed anything since 3a45a40 — all three sessions appear idle; Vlad is nudging them.
+L2 continuous review loop. Wrote L5 (README) and a deep-dive walkthrough doc. All three lanes are active again (app mid-edit on the engine swap, evals adding `evals/simulator.py`/`pricing.py` for V2) — will review once they commit.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -14,6 +14,7 @@ L2 continuous review loop. Wrote L5 (README). No lane has committed anything sin
 | L2 (E2, E4, V1) | Reviewed validators, the Extraction schema/prompt, and the 20 eval scenarios. Ticked E2, E4, V1 in BOARD.md. | `uv run pytest tests/engine tests/evals -q` (109 pass) | 67ae027 |
 | L2 (E6a, E5, E9, E7, E8, E6b, A2, A3) | Caught up on a full day of lane work. Ticked all of it in BOARD.md. CONTRACTS bumped to v3: added `next_due_at` to §2 and clarified the LLM-failure bookkeeping rule (both per engine's requests below). Logged D23. Verified CP1 end to end (BOARD.md). | `uv run pytest tests/engine tests/evals` (212 pass), `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (39 pass), `uv run ruff check .` (clean, nothing uncommitted anywhere) | 64095cf |
 | L5 | `README.md`: overview, Mermaid architecture diagram, 5-command setup, how to run the CLI/web chat/tests (WhatsApp and the dashboard documented as not-yet-built, honestly), LLM choice + measured numbers from live probes, a curated top-6 from DECISIONS.md, a 10K/week and ATS-integration answer. Flagged as a first pass: the LLM-justification section needs real numbers once V4 (model comparison) lands. Also found, by manually testing CP1 myself: `apps/messaging/services.py` still imports the stub engine (`TODO(A2): screening.engine once E5 lands`, never actioned) — the web chat is mechanically correct but Alex's replies there are still placeholder text. CLI already uses the real engine. | Commands in the README run as written: `uv run python -m screening.cli --fake --script ...`, `uv run pytest tests/engine tests/evals` (212 pass), app tests (39 pass), `uv run ruff check .` clean | cd3a6f1 |
+| Docs | `docs/code-tour.md`: traced one message through every real function it touches (`handle_message` → `extract` → `policy.decide` → `compose_reply`/guard → `_persist_turn`), with exact line references, verified against the actual code (not from memory). Separate from the README — this one's for Vlad to defend any line of it live, not for a stranger skimming the repo. | Spot-checked several claims against source directly (e.g. `policy.py:510`, `:475`) | 16fe455 |
 
 ## Blocked
 None

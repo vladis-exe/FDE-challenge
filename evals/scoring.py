@@ -95,6 +95,7 @@ class ScenarioScore(BaseModel):
     cost_usd: float
     llm_calls: int
     tokens: dict[str, int]
+    simulator_tokens: dict[str, int]  # the simulated candidate's own calls, priced by the runner
     unpriced_models: list[str]
     latency_ms: list[int]
     duration_min: float  # fake-clock minutes from the opening to the outcome
@@ -163,6 +164,7 @@ def score(scenario: Scenario, run: SimResult, config: ScreeningConfig) -> Scenar
             key: sum(c.get(f"{key}_tokens", 0) for c in calls)
             for key in ("input", "output", "cache_read", "cache_write")
         },
+        simulator_tokens=run.simulator_tokens,
         unpriced_models=sorted({c["model"] for c in calls} - PRICES.keys()),
         latency_ms=[line.latency_ms for line in run.lines if line.latency_ms is not None],
         duration_min=round(

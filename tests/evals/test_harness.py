@@ -160,6 +160,7 @@ def test_cli_writes_a_named_report(tmp_path: Path, monkeypatch) -> None:
     assert run_module.main(["--fake", "--only", "20_abandoned_monterrey", "--name", "t"]) == 0
     report = (tmp_path / "reports" / "t.md").read_text()
     assert "Scenarios passed | 1/1" in report
+    assert "| Run spend | $0.000 (simulated candidate $0.000) |" in report
     assert "(t/20_abandoned_monterrey.md)" in report
     assert (tmp_path / "reports" / "t" / "20_abandoned_monterrey.md").exists()
     assert len(list((tmp_path / "runs").glob("*/scores.json"))) == 1

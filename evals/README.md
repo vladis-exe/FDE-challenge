@@ -34,5 +34,6 @@ exits non-zero if any scenario fails.
    scenario, `scores.json` and `report.md`. With `--name`, the report and its transcripts
    are also written to `reports/`, to commit.
 
-The candidate's own LLM cost is not counted in cost per conversation; it adds ~$0.015 per
-scenario to the bill.
+The candidate's own LLM cost is not counted in cost per conversation (that is the engine's
+cost, the number that matters in production). The report's "Run spend" row and the last
+line the command prints add it in, so you can see what each run actually cost.

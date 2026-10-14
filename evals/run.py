@@ -31,6 +31,7 @@ from screening.cli import fake_llm
 from screening.config import ScreeningConfig, load_config
 from screening.engine import EngineContext
 from screening.llm import AnthropicClient, LLMClient
+from screening.llm.pricing import call_cost
 
 EVALS_DIR = Path(__file__).parent
 SIM_MODEL = "claude-sonnet-5-5"  # the simulated candidate: smart tier, fixed across configs
@@ -108,11 +109,18 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     summary = summarize(scores)
+    simulator_usd = sum(
+        call_cost({"model": settings.sim_model, **{f"{k}_tokens": v for k, v in t.items()}})
+        for t in (s.simulator_tokens for s in scores)
+    )
+    spend = {"engine_usd": summary.cost_total_usd, "simulator_usd": simulator_usd}
     (run_dir / "scores.json").write_text(
-        _dump({"models": models, "summary": summary, "scores": scores, "crashed": crashed})
+        _dump({"models": models, "summary": summary, "scores": scores, "crashed": crashed, **spend})
     )
     title = f"Eval report: {args.name}" if args.name else f"Eval run {stamp}"
-    report = report_md(title, models, summary, scores, links=".", crashed=crashed)
+    report = report_md(
+        title, models, summary, scores, links=".", crashed=crashed, simulator_usd=simulator_usd
+    )
     (run_dir / "report.md").write_text(report)
     if args.name:
         published = EVALS_DIR / "reports" / args.name
@@ -121,12 +129,21 @@ def main(argv: list[str] | None = None) -> int:
         for path in run_dir.glob("*.md"):
             if path.name != "report.md":
                 shutil.copy(path, published / path.name)
-        named = report_md(title, models, summary, scores, links=args.name, crashed=crashed)
+        named = report_md(
+            title,
+            models,
+            summary,
+            scores,
+            links=args.name,
+            crashed=crashed,
+            simulator_usd=simulator_usd,
+        )
         (EVALS_DIR / "reports" / f"{args.name}.md").write_text(named)
     print(
         f"passed {summary.passed}/{summary.scenarios} · outcome {summary.outcome:.0%} · "
         f"fields {summary.fields:.0%} · ${summary.cost_mean_usd:.4f}/conversation · "
-        f"p50 {summary.latency_p50_ms} ms"
+        f"p50 {summary.latency_p50_ms} ms · "
+        f"run spend ${summary.cost_total_usd + simulator_usd:.3f}"
         + (f" · crashed: {', '.join(crashed)}" if crashed else "")
     )
     # Non-zero when anything failed, so a smoke run can gate a prompt change.

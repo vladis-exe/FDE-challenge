@@ -63,6 +63,7 @@ def report_md(
     *,
     links: str,  # directory, relative to the report, that holds the transcripts
     crashed: list[str],
+    simulator_usd: float = 0.0,
 ) -> str:
     pct = _pct
     out = [
@@ -85,6 +86,9 @@ def report_md(
         f"| Turns (mean) | {summary.turns_mean:.1f} | {DEFINITIONS['turns']} |",
         f"| Cost per conversation | ${summary.cost_mean_usd:.4f} "
         f"(total ${summary.cost_total_usd:.3f}) | {DEFINITIONS['cost']} |",
+        f"| Run spend | ${summary.cost_total_usd + simulator_usd:.3f} "
+        f"(simulated candidate ${simulator_usd:.3f}) | What this run cost in API calls, "
+        "engine and simulated candidate together. |",
         f"| Latency p50 / p95 | {_ms(summary.latency_p50_ms)} / {_ms(summary.latency_p95_ms)} "
         f"| {DEFINITIONS['latency']} |",
         "",

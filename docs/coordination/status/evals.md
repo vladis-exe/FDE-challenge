@@ -3,7 +3,9 @@
 Last updated: 2026-10-14
 
 ## Current task
-None in progress. **V7 done** (offline). **V8 is blocked on API credits**, like the V4 repeats: both need live runs. When credits are back, in order: the V8 full live run on the v4 engine (24 scenarios), then V4 repeats 2–3.
+None in progress: everything left needs live runs, and the account is still out of credits (re-checked 2026-10-14 ~21:03 local; the smoke run crashed cleanly, $0 spent). Since the last update: each run now prints and reports its **total spend**, engine and simulated candidate together, so the 5 EUR can be tracked run by run.
+
+**Plan once credits land, per the lead's budget note:** (1) the 6-scenario smoke suite on the v4 engine, `uv run python -m evals.run --suite smoke --name v8-smoke` (~$0.10), then (2) decide on the full V8 run (~$0.50) and the V4 repeats from what (1) actually cost. **About the `LLM_MODEL_SMART=haiku` override:** it changes the engine's summary model, but not the simulated candidate, because `evals.run` passes `--sim-model` (default Sonnet 5.5) explicitly. I'm keeping the Sonnet candidate for the smoke run: it's about $0.09 of the ~$0.10, and a weaker candidate risks false failures whose reruns would cost more. `--sim-model claude-haiku-5-5` is there if the lead wants it cheaper anyway.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -17,7 +19,7 @@ None in progress. **V7 done** (offline). **V8 is blocked on API credits**, like 
 | V7 | Scenarios on CONTRACTS v4. Every scenario names its `vacancy` (default `driver`); `expected` is the v4 record shape (`fields: {...}`, absent = missing or flagged, plus `preference_score`); scripted turns and pauses fire at a **step** (`consent`, a field name, `confirm`), since `Stage` collapsed. `load_scenario` checks the ground truth against the real config: field names, value shape per field type, served cities, the start-date window, every required field when qualified, and the preference score **recomputed from the CONTRACTS §7 formula** (not the engine's code). The scorer compares fields of any vacancy by value shape. New check `preferred_asked_once`. 4 new `kitchen_prep` scenarios: 21 (no license and a vague certificate answer, still qualified, score 0), 22/23 (a tie-break pair that differs only in the license answer: 2.5 vs 1.0; a test proves only that preferred field differs), 24 (a required city still knocks out via the generic path). 21 joins the smoke suite (6 scenarios). The 20 driver scenarios were migrated by script and only reshaped: no ground truth changed | `uv run pytest tests/evals` (43 pass); `uv run python -m evals.run --fake` runs all 24 through the harness offline (the keyword stub can't parse most answers, so offline scores mean little) | 5352d30 |
 
 ## Blocked
-- **V8 (live run on the v4 engine): the Anthropic account is still out of credits** (re-checked 2026-10-14 ~17:28 local). Needs Vlad to top up. Then: `uv run python -m evals.run --name v8-v4-engine` (24 scenarios, ~$0.50).
+- **V8 (live run on the v4 engine): the Anthropic account is still out of credits** (re-checked 2026-10-14 ~21:03 local). Needs Vlad to top up. Then: `uv run python -m evals.run --name v8-v4-engine` (24 scenarios, ~$0.50).
 - **V4 repeats 2 and 3: the Anthropic account is out of credits** ("Your credit balance is too low", 2026-10-14 ~14:50 local). Repeat 1 of each configuration completed. `evals/reports/model-comparison.md` is written from them and marked provisional. Needs Vlad to top up; then run the commands at the end of that report and update the table.
 
 ## Requests (to other lanes or the lead)

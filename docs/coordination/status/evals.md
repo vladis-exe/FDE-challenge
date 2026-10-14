@@ -3,7 +3,7 @@
 Last updated: 2026-10-14
 
 ## Current task
-**V6 smoke suite, then V4 model comparison (in progress).**
+None in progress. **V4 and V5 wait for CP2**, as the kickoff orders. The V4 tooling (`evals/compare.py`) is ready, and the paid runs come once CP2 is declared and engine has fixed the read-back loop (see Notes), so the comparison measures the engine we ship. Plan: baseline (fast = Haiku 5.5) vs fast = Sonnet 5.5, 3 repeats each of the full suite (~$5 total), then the decision report.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -11,6 +11,7 @@ Last updated: 2026-10-14
 | V1 | 20 scenarios in `evals/scenarios/*.yaml` covering every BOARD V1 case plus unresolved field, human request, opt-out, abandonment and sensitive details. All 5 outcomes are exercised. `evals/scenario.py` holds the Pydantic schema (persona, facts, behaviors, seeded scripted turns, pauses, checks, the `expected` record with `final_record` keys) and validators that reject inconsistent ground truth. Every expected date is exact, given the fake-clock `starts_at`. Dropped the empty `tests/evals/__init__.py`, which shadowed the top-level `evals` package. | `uv run pytest tests/evals -q` (11 pass); `uv run ruff check evals tests/evals` | 46ad528, 78849ff |
 | V2 | `evals/simulator.py`: the candidate is a Sonnet 5.5 persona (`Persona`) driven from the scenario's persona/facts/behaviors; scripted turns, bursts (reply-to-latest applied as in CONTRACTS §5), pauses and typing delays come from code and a seeded RNG, so runs are comparable without a sampling seed. A fake clock ticks `handle_tick` at `engine.next_due_at` through silences, then watches 25 h after the close. `evals/fake.py`: an offline candidate for `--fake`. Fixes from the first live run (519ddb6): the persona was spoiling scripted twists and nitpicking read-backs | `uv run pytest tests/evals -q` (31 pass, offline: scenarios 16 and 20 check reminders, quiet-hour deferral and abandonment against the real timers) | 3d5e8f2, 519ddb6 |
 | V3 | `evals/scoring.py`: per-scenario pass, outcome, knockout, field accuracy, message rules (independent of `screening.guard`), language match, AI disclosure, guard-retry rate, 10 named checks, turns, cost (`evals/pricing.py`, cache-aware) and per-turn latency; each has a one-sentence definition printed in the report. `evals/transcripts.py`: Markdown transcripts + report. `evals/run.py`: `uv run python -m evals.run [--suite smoke] [--only ID] [--name N] [--fast-model M] [--smart-model M] [--fake]`. **Baseline (Haiku 5.5 fast, Sonnet 5.5 smart): 20/20 pass, $0.0059 per conversation, p50 2.5 s per turn**; a full run costs ~$0.42 including the simulated candidate | `uv run python -m evals.run --fake` (offline); `uv run python -m evals.run` (live, ~4 min) | e2accbe, 4c1102d |
+| V6 | `uv run python -m evals.run --suite smoke`: 5 scenarios (ES and EN happy paths, no license, expired license, night silence), ~45 s, ~$0.10, exit code 1 on any failure so it can gate a prompt change. `evals/README.md` documents the harness | `uv run python -m evals.run --suite smoke` → 5/5 | 92cc163 |
 
 ## Blocked
 None

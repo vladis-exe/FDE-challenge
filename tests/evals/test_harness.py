@@ -160,3 +160,18 @@ def test_cli_writes_a_named_report(tmp_path: Path, monkeypatch) -> None:
     assert "(t/20_abandoned_monterrey.md)" in report
     assert (tmp_path / "reports" / "t" / "20_abandoned_monterrey.md").exists()
     assert len(list((tmp_path / "runs").glob("*/scores.json"))) == 1
+
+
+def test_compare_flags_failures_across_repeats(tmp_path: Path, monkeypatch, capsys) -> None:
+    from evals import compare
+
+    monkeypatch.setattr(run_module, "EVALS_DIR", tmp_path)
+    monkeypatch.delenv("DEMO_TIME_SCALE", raising=False)
+    ids = ["20_abandoned_monterrey", "16_silence_late_reply_barcelona"]  # fake: pass, fail
+    for repeat in ("a", "b"):
+        run_module.main(["--fake", "--only", *ids, "--name", repeat])
+    dirs = sorted((tmp_path / "runs").iterdir())
+    assert compare.main(["--config", f"fake={dirs[0]},{dirs[1]}"]) == 0
+    out = capsys.readouterr().out
+    assert "| **fake** |" in out and "50% (50% / 50%)" in out
+    assert "| fake | none | 16_silence_late_reply_barcelona |" in out

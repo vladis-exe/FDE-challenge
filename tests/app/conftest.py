@@ -1,6 +1,9 @@
 import pytest
 
 from apps.messaging import channels, services
+from screening.config import load_config
+from screening.engine import EngineContext
+from screening.llm import FakeLLM
 from tests.app.fakes import FakeChannel, FakeEngine
 
 
@@ -12,6 +15,15 @@ def plain_static_storage(settings, tmp_path):
         **settings.STORAGES,
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }
+
+
+@pytest.fixture(autouse=True)
+def fake_llm(monkeypatch) -> FakeLLM:
+    """Every app test gets a scripted LLM; the real AnthropicClient is never built."""
+    llm = FakeLLM()
+    context = EngineContext(config=load_config(), llm=llm)
+    monkeypatch.setattr(services, "engine_context", lambda: context)
+    return llm
 
 
 @pytest.fixture

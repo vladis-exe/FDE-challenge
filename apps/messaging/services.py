@@ -26,10 +26,12 @@ from django.utils import timezone
 
 from apps.candidates.models import Candidate, Conversation
 from apps.messaging import channels
-from apps.messaging import stub_engine as engine  # TODO(A2): screening.engine once E5 lands
 from apps.messaging.models import Event, Message
-from apps.messaging.stub_engine import EngineContext, final_record  # TODO(A2): screening.*
-from screening.config import ScreeningConfig, load_config
+from screening import engine
+from screening.config import load_config
+from screening.engine import EngineContext
+from screening.llm import AnthropicClient
+from screening.record import final_record
 from screening.schemas import (
     Channel,
     ConversationState,
@@ -42,14 +44,15 @@ from screening.schemas import (
 
 log = logging.getLogger(__name__)
 
-# How long to wait before re-ticking a conversation whose tick did nothing (e.g. a reminder
-# deferred by quiet hours), in unscaled time.
+# `next_due_at` already skips quiet hours, so a tick that does nothing should not happen. If it
+# does, wait this long (unscaled) before trying again rather than re-ticking in a hot loop.
 TICK_RETRY = timedelta(minutes=1)
 
 
 @cache
 def engine_context() -> EngineContext:
-    return EngineContext(config=load_config())
+    # Built on first use, so importing this module (tests, migrations) never needs an API key.
+    return EngineContext(config=load_config(), llm=AnthropicClient())
 
 
 def start_conversation(
@@ -180,7 +183,7 @@ def process_due_tick() -> bool:
                 with transaction.atomic():
                     outbound = _persist_turn(conversation, result, now=now)
             if conversation.next_tick_at and conversation.next_tick_at <= now:
-                # Still due: the engine had nothing to do yet (e.g. quiet hours). No hot loop.
+                # Still due although the engine had nothing to do: back off, don't spin.
                 Conversation.objects.filter(pk=conversation.pk).update(next_tick_at=retry_at)
         except Exception as exc:
             log.exception("tick failed for conversation %s", conversation.pk)
@@ -189,21 +192,6 @@ def process_due_tick() -> bool:
             _record_worker_error(conversation, exc, now)
     _send(outbound)
     return True
-
-
-def next_tick_at(state: ConversationState, config: ScreeningConfig) -> datetime | None:
-    """When `handle_tick` next has work: the next reminder, then abandonment.
-
-    Counted from the candidate's last message, or from our last message if they never replied
-    (agent-initiated WhatsApp conversations). Quiet hours are left to the engine: a deferred
-    reminder comes back as an unchanged tick and is retried after TICK_RETRY.
-    """
-    anchor = state.last_inbound_at or state.last_outbound_at
-    if state.status != Status.IN_PROGRESS or anchor is None:
-        return None
-    if state.reminders_sent < len(config.reminder_schedule):
-        return anchor + config.reminder_schedule[state.reminders_sent]
-    return anchor + config.abandon_after
 
 
 def _persist_turn(
@@ -232,7 +220,7 @@ def _persist_turn(
     else:
         conversation.completed_at = conversation.completed_at or now
         conversation.final_record = final_record(state)
-    conversation.next_tick_at = next_tick_at(state, engine_context().config)
+    conversation.next_tick_at = engine.next_due_at(state, config=engine_context().config)
     conversation.save()
 
     name = state.profile.full_name

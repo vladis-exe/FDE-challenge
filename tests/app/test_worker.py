@@ -9,8 +9,7 @@ from django.utils import timezone
 from apps.candidates.models import Candidate, Conversation
 from apps.messaging import services
 from apps.messaging.models import Event, Message
-from screening.config import load_config
-from screening.schemas import Channel, ConversationState, Status
+from screening.schemas import Status
 
 
 @pytest.fixture
@@ -230,31 +229,3 @@ def test_finished_conversations_are_never_ticked(conversation, engine, channel):
     Conversation.objects.filter(pk=conversation.pk).update(status=Status.QUALIFIED)
     make_due(conversation)
     assert not services.process_due_tick()
-
-
-class TestNextTickAt:
-    config = load_config()
-    now = timezone.now()
-
-    def state(self, **fields) -> ConversationState:
-        return ConversationState(conversation_id="c", channel=Channel.WEB, **fields)
-
-    def test_follows_the_reminder_schedule_from_the_last_inbound(self):
-        schedule = self.config.reminder_schedule
-        for sent, delay in enumerate(schedule):
-            state = self.state(last_inbound_at=self.now, reminders_sent=sent)
-            assert services.next_tick_at(state, self.config) == self.now + delay
-
-    def test_abandonment_after_the_last_reminder(self):
-        sent = len(self.config.reminder_schedule)
-        state = self.state(last_inbound_at=self.now, reminders_sent=sent)
-        assert services.next_tick_at(state, self.config) == self.now + self.config.abandon_after
-
-    def test_counts_from_our_message_when_candidate_never_replied(self):
-        state = self.state(last_outbound_at=self.now)
-        expected = self.now + self.config.reminder_schedule[0]
-        assert services.next_tick_at(state, self.config) == expected
-
-    def test_none_when_finished(self):
-        state = self.state(last_inbound_at=self.now, status=Status.DISQUALIFIED)
-        assert services.next_tick_at(state, self.config) is None

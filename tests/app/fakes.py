@@ -2,7 +2,7 @@
 
 import itertools
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db import transaction
 
@@ -66,6 +66,12 @@ class FakeEngine:
                 Event(type="field_accepted", at=message.received_at, data={"n": len(self.seen)})
             ],
         )
+
+    def next_due_at(self, state: ConversationState, *, config) -> datetime | None:
+        anchor = state.last_inbound_at or state.last_outbound_at
+        if state.status != Status.IN_PROGRESS or anchor is None:
+            return None
+        return anchor + timedelta(minutes=15 * (state.reminders_sent + 1))
 
     def handle_tick(self, state: ConversationState, *, now: datetime, ctx) -> TurnResult:
         if not self.remind:

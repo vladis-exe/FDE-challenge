@@ -15,7 +15,9 @@ from screening.schemas import Status
 @pytest.fixture
 def conversation(db, engine, channel) -> Conversation:
     candidate = Candidate.objects.create(phone="+34600111222")
-    conversation = services.start_conversation(candidate, Conversation.Channel.WHATSAPP)
+    conversation = services.start_conversation(
+        candidate, Conversation.Channel.WHATSAPP, vacancy_id="driver"
+    )
     channel.sent.clear()
     return conversation
 
@@ -39,7 +41,7 @@ def replies(conversation: Conversation) -> list[Message]:
 def test_start_persists_opening_message_state_and_events(db, engine, channel):
     candidate = Candidate.objects.create()
     conversation = services.start_conversation(
-        candidate, Conversation.Channel.WEB, language="en", country="MX"
+        candidate, Conversation.Channel.WEB, vacancy_id="driver", language="en", country="MX"
     )
     conversation.refresh_from_db()
     assert conversation.language == "en"
@@ -69,7 +71,9 @@ def test_messages_are_processed_one_at_a_time_oldest_first(conversation, engine)
 
 
 def test_oldest_waiting_message_across_conversations_goes_first(conversation, engine, channel):
-    other = services.start_conversation(Candidate.objects.create(), Conversation.Channel.WEB)
+    other = services.start_conversation(
+        Candidate.objects.create(), Conversation.Channel.WEB, vacancy_id="driver"
+    )
     services.store_inbound(conversation, "first")
     services.store_inbound(other, "second")
     services.store_inbound(conversation, "third")
@@ -123,7 +127,9 @@ def test_inbound_without_sid_is_always_stored(conversation):
 
 @pytest.mark.django_db(transaction=True)
 def test_send_happens_after_the_turn_is_committed(engine, channel):
-    conversation = services.start_conversation(Candidate.objects.create(), Conversation.Channel.WEB)
+    conversation = services.start_conversation(
+        Candidate.objects.create(), Conversation.Channel.WEB, vacancy_id="driver"
+    )
     services.store_inbound(conversation, "hola")
     drain()
 
@@ -142,7 +148,8 @@ def test_turn_writes_state_mirror_events_and_outbound_together(conversation, eng
     assert message.processed_at is not None
     assert conversation.status == Conversation.Status.QUALIFIED
     assert conversation.summary == "Qualified."
-    assert conversation.final_record == {"status": "qualified"}
+    assert conversation.final_record["status"] == "qualified"
+    assert conversation.final_record["vacancy_id"] == conversation.vacancy_id == "driver"
     assert conversation.completed_at is not None
     assert conversation.next_tick_at is None
     assert conversation.events.filter(type="field_accepted").exists()

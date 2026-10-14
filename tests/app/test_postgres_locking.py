@@ -64,8 +64,12 @@ def run_workers(count: int) -> list[bool]:
 
 
 def test_two_workers_take_different_conversations_in_parallel(slow_engine, channel):
-    a = services.start_conversation(Candidate.objects.create(), Conversation.Channel.WEB)
-    b = services.start_conversation(Candidate.objects.create(), Conversation.Channel.WEB)
+    a = services.start_conversation(
+        Candidate.objects.create(), Conversation.Channel.WEB, vacancy_id="driver"
+    )
+    b = services.start_conversation(
+        Candidate.objects.create(), Conversation.Channel.WEB, vacancy_id="driver"
+    )
     services.store_inbound(a, "a1")
     services.store_inbound(a, "a2")
     services.store_inbound(b, "b1")
@@ -82,7 +86,9 @@ def test_two_workers_take_different_conversations_in_parallel(slow_engine, chann
 
 
 def test_one_conversation_is_never_processed_by_two_workers_at_once(slow_engine, channel):
-    a = services.start_conversation(Candidate.objects.create(), Conversation.Channel.WEB)
+    a = services.start_conversation(
+        Candidate.objects.create(), Conversation.Channel.WEB, vacancy_id="driver"
+    )
     for text in ["uno", "dos", "tres"]:
         services.store_inbound(a, text)
 

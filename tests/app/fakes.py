@@ -28,10 +28,20 @@ class FakeEngine:
         self.remind = True
 
     def new_conversation(
-        self, conversation_id: str, channel: Channel, *, phone, language, now: datetime
+        self,
+        conversation_id: str,
+        channel: Channel,
+        *,
+        vacancy_id: str,
+        phone,
+        language,
+        now: datetime,
     ) -> ConversationState:
         return ConversationState(
-            conversation_id=conversation_id, channel=channel, language=language or "es"
+            conversation_id=conversation_id,
+            channel=channel,
+            vacancy_id=vacancy_id,
+            language=language or "es",
         )
 
     def start(self, state: ConversationState, *, now: datetime, ctx) -> TurnResult:

@@ -36,7 +36,6 @@ from screening.record import final_record
 from screening.schemas import (
     Channel,
     ConversationState,
-    FieldStatus,
     InboundMessage,
     OutboundMessage,
     Status,
@@ -56,18 +55,34 @@ def engine_context() -> EngineContext:
     return EngineContext(config=load_config(), llm=AnthropicClient())
 
 
+def vacancy_choices(language: str = "es") -> list[tuple[str, str]]:
+    """(id, title) for every configured vacancy, for the entry-point pickers."""
+    vacancies = engine_context().config.vacancies.values()
+    return [(vacancy.id, vacancy.title[language]) for vacancy in vacancies]
+
+
 def start_conversation(
     candidate: Candidate,
     channel: Conversation.Channel,
     *,
+    vacancy_id: str,
     language: str | None = None,
     country: str | None = None,
 ) -> Conversation:
-    """Create a conversation and send the opening message (AI disclosure + consent question)."""
+    """Create a conversation and send the opening message (AI disclosure + consent question).
+
+    An unknown `vacancy_id` raises KeyError before anything is stored; the views only offer
+    ids from `vacancy_choices()`, so a candidate never gets that far.
+    """
     now = timezone.now()
-    conversation = Conversation(candidate=candidate, channel=channel)
+    conversation = Conversation(candidate=candidate, channel=channel, vacancy_id=vacancy_id)
     state = engine.new_conversation(
-        str(conversation.id), Channel(channel), phone=candidate.phone, language=language, now=now
+        str(conversation.id),
+        Channel(channel),
+        vacancy_id=vacancy_id,
+        phone=candidate.phone,
+        language=language,
+        now=now,
     )
     if country:
         state.country_hint = country
@@ -205,13 +220,16 @@ def _persist_turn(
 ) -> list[Message]:
     """Write one turn's results. Call inside a transaction. Returns the messages to send."""
     state = result.state
-    location = state.profile.location.value
+    record = final_record(state)
+    location = record["fields"].get("location") or {}
     conversation.state = state.model_dump(mode="json")
+    conversation.vacancy_id = state.vacancy_id
     conversation.status = state.status
     conversation.stage = state.stage
     conversation.language = state.language
-    conversation.country = location.country if location else (state.country_hint or "")
-    conversation.city = location.city if location else ""
+    conversation.country = location.get("country") or state.country_hint or ""
+    conversation.city = location.get("city") or ""
+    conversation.preference_score = state.preference_score
     conversation.last_inbound_at = state.last_inbound_at
     conversation.summary = state.summary or ""
     if state.status == Status.IN_PROGRESS:
@@ -220,13 +238,13 @@ def _persist_turn(
         conversation.final_record = None
     else:
         conversation.completed_at = conversation.completed_at or now
-        conversation.final_record = final_record(state)
+        conversation.final_record = record
     conversation.next_tick_at = engine.next_due_at(state, config=engine_context().config)
     conversation.save()
 
-    name = state.profile.full_name
-    if name.status == FieldStatus.ACCEPTED and name.value != conversation.candidate.name:
-        conversation.candidate.name = name.value
+    name = record["fields"].get("full_name")
+    if name and name != conversation.candidate.name:
+        conversation.candidate.name = name
         conversation.candidate.save(update_fields=["name"])
 
     if inbound is not None:

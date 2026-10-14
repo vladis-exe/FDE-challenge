@@ -30,7 +30,6 @@ def fake_llm(monkeypatch) -> FakeLLM:
 def engine(monkeypatch) -> FakeEngine:
     fake = FakeEngine()
     monkeypatch.setattr(services, "engine", fake)
-    monkeypatch.setattr(services, "final_record", lambda state: {"status": state.status})
     return fake
 
 

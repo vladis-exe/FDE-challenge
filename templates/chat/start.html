@@ -1,17 +1,25 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Repartidor/a · Grupo Sazón{% endblock %}
+{% block title %}Empleo · Grupo Sazón{% endblock %}
 {% block head %}<link rel="stylesheet" href="{% static 'css/chat.css' %}">{% endblock %}
 {% block body_class %}chat-body{% endblock %}
 {% block body %}
 <main class="phone job-ad">
   <div class="job-ad__hero">
-    <span class="job-ad__tag">Empleo · Delivery</span>
-    <h1>Repartidor/a en Grupo Sazón</h1>
-    <p>Horarios flexibles en 45 restaurantes de España y México. Responde 7 preguntas rápidas por chat con Alex, nuestro asistente virtual, y un reclutador te contactará.</p>
+    <span class="job-ad__tag">Empleo · Grupo Sazón</span>
+    <h1>Trabaja en Grupo Sazón</h1>
+    <p>45 restaurantes en España y México. Responde unas preguntas rápidas por chat con Alex, nuestro asistente virtual, y un reclutador te contactará.</p>
   </div>
   <form method="post" class="job-ad__form">
     {% csrf_token %}
+    <fieldset>
+      <legend>Puesto · Job</legend>
+      <div class="choice-row">
+        {% for radio in form.vacancy %}
+          <label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
     <fieldset>
       <legend>¿Dónde quieres trabajar?</legend>
       <div class="choice-row">
@@ -28,7 +36,7 @@
         {% endfor %}
       </div>
     </fieldset>
-    {% if form.errors %}<p class="form-error">Elige país e idioma · Pick a country and language.</p>{% endif %}
+    {% if form.errors %}<p class="form-error">Elige puesto, país e idioma · Pick a job, country and language.</p>{% endif %}
     <button type="submit" class="btn-primary">Chatear con Alex</button>
     <p class="fineprint">Simulación del enlace de un anuncio de empleo. Alex es una IA.</p>
   </form>

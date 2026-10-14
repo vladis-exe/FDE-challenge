@@ -13,7 +13,9 @@ HTMX = {"HTTP_HX_REQUEST": "true"}
 
 @pytest.fixture
 def chat(client, db, engine, channel) -> Conversation:
-    response = client.post(reverse("chat_start"), {"country": "MX", "language": "en"})
+    response = client.post(
+        reverse("chat_start"), {"vacancy": "kitchen_prep", "country": "MX", "language": "en"}
+    )
     assert response.status_code == 302
     return Conversation.objects.get()
 
@@ -26,11 +28,19 @@ def test_job_ad_page_renders(client, db):
     # Real inputs, not <option>s: the picker must post a value when clicked.
     assert body.count('type="radio" name="country"') == 2
     assert body.count('type="radio" name="language"') == 2
+    assert body.count('type="radio" name="vacancy"') == 2  # driver and kitchen_prep
+    assert "Ayudante de cocina" in body
+
+
+def test_job_ad_link_preselects_its_vacancy(client, db):
+    body = client.get(reverse("chat_start"), {"vacancy": "kitchen_prep"}).content.decode()
+    assert 'value="kitchen_prep" id="id_vacancy_1" required checked' in body
 
 
 def test_starting_a_chat_creates_a_web_conversation_with_the_opening_message(client, chat):
     assert chat.channel == Conversation.Channel.WEB
     assert (chat.language, chat.country) == ("en", "MX")
+    assert chat.vacancy_id == chat.state["vacancy_id"] == "kitchen_prep"
     assert chat.candidate.phone is None
 
     response = client.get(reverse("chat_thread", args=[chat.pk]))
@@ -38,8 +48,15 @@ def test_starting_a_chat_creates_a_web_conversation_with_the_opening_message(cli
     assert "Hola, soy Alex (IA)" in response.content.decode()
 
 
-def test_invalid_picker_shows_the_form_again(client, db):
-    response = client.post(reverse("chat_start"), {"country": "FR"})
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"vacancy": "driver", "country": "FR", "language": "es"},
+        {"vacancy": "astronaut", "country": "ES", "language": "es"},  # unknown: a form error
+    ],
+)
+def test_invalid_picker_shows_the_form_again(client, db, data):
+    response = client.post(reverse("chat_start"), data)
     assert response.status_code == 200
     assert not Conversation.objects.exists()
 

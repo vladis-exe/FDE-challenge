@@ -114,6 +114,9 @@ SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = env_bool("SECURE_COOKIES", default=
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "")
+# The vacancy a candidate screens for when they message the WhatsApp number first, with no
+# form or link to say which job: one number stands for one job ad.
+WHATSAPP_VACANCY = os.environ.get("WHATSAPP_VACANCY", "driver")
 
 LOGGING = {
     "version": 1,

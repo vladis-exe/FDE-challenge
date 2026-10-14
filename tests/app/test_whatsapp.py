@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from django.conf import settings
 from django.urls import reverse
 from twilio.request_validator import RequestValidator
 
@@ -76,6 +77,7 @@ def test_first_message_from_a_new_phone_opens_a_conversation_then_queues(
     conversation = Conversation.objects.get()
     assert conversation.channel == Conversation.Channel.WHATSAPP
     assert conversation.candidate.phone == "+34600111222"
+    assert conversation.vacancy_id == settings.WHATSAPP_VACANCY == "driver"
     assert [s.text for s in channel.sent] == ["Hola, soy Alex (IA)"]  # opening went out
     inbound = conversation.messages.get(direction="in")
     assert (inbound.text, inbound.processed_at) == ("vi el anuncio", None)
@@ -165,7 +167,13 @@ def test_whatsapp_channel_sends_through_twilio(db, monkeypatch):
 def test_apply_starts_an_agent_initiated_whatsapp_conversation(client, db, engine, channel):
     response = client.post(
         reverse("apply"),
-        {"name": "Laura Pérez", "country": "ES", "phone": "612 345 678", "language": "es"},
+        {
+            "vacancy": "kitchen_prep",
+            "name": "Laura Pérez",
+            "country": "ES",
+            "phone": "612 345 678",
+            "language": "es",
+        },
     )
     assert response.status_code == 200
     assert "Revisa tu WhatsApp" in response.content.decode()
@@ -174,16 +182,32 @@ def test_apply_starts_an_agent_initiated_whatsapp_conversation(client, db, engin
     assert conversation.candidate.phone == "+34612345678"
     assert conversation.candidate.name == "Laura Pérez"
     assert conversation.country == "ES"
+    assert conversation.vacancy_id == "kitchen_prep"
     assert [s.text for s in channel.sent] == ["Hola, soy Alex (IA)"]
 
 
 def test_applying_twice_resumes_instead_of_starting_over(client, db, engine, channel):
-    data = {"name": "Laura Pérez", "country": "MX", "phone": "55 1234 5678", "language": "es"}
+    data = {
+        "vacancy": "driver",
+        "name": "Laura Pérez",
+        "country": "MX",
+        "phone": "55 1234 5678",
+        "language": "es",
+    }
     client.post(reverse("apply"), data)
     response = client.post(reverse("apply"), data)
     assert "Ya tenemos tu solicitud" in response.content.decode()
     assert Conversation.objects.count() == 1
     assert len(channel.sent) == 1
+
+
+def test_applying_to_another_job_starts_a_second_screening(client, db, engine, channel):
+    data = {"name": "Laura Pérez", "country": "ES", "phone": "612 345 678", "language": "es"}
+    client.post(reverse("apply"), {**data, "vacancy": "driver"})
+    client.post(reverse("apply"), {**data, "vacancy": "kitchen_prep"})
+    vacancies = Conversation.objects.order_by("started_at").values_list("vacancy_id", flat=True)
+    assert list(vacancies) == ["driver", "kitchen_prep"]
+    assert len(channel.sent) == 2
 
 
 def test_apply_rejects_an_invalid_phone(client, db, engine):

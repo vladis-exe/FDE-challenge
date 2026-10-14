@@ -38,6 +38,7 @@ UI_TEXT = {
 
 
 class StartChatForm(forms.Form):
+    vacancy = forms.ChoiceField(widget=forms.RadioSelect)
     country = forms.ChoiceField(
         choices=[("ES", "España"), ("MX", "México")], widget=forms.RadioSelect
     )
@@ -45,17 +46,23 @@ class StartChatForm(forms.Form):
         choices=[("es", "Español"), ("en", "English")], widget=forms.RadioSelect, initial="es"
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vacancy"].choices = services.vacancy_choices()
+
 
 class SendForm(forms.Form):
     text = forms.CharField(max_length=2000)
 
 
 def chat_start(request: HttpRequest) -> HttpResponse:
-    form = StartChatForm(request.POST or None)
+    # One link per job ad in production (`/chat/?vacancy=driver`); the picker is a demo convenience.
+    form = StartChatForm(request.POST or None, initial={"vacancy": request.GET.get("vacancy")})
     if request.method == "POST" and form.is_valid():
         conversation = services.start_conversation(
             Candidate.objects.create(),
             Conversation.Channel.WEB,
+            vacancy_id=form.cleaned_data["vacancy"],
             language=form.cleaned_data["language"],
             country=form.cleaned_data["country"],
         )

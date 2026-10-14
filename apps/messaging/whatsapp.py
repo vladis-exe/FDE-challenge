@@ -77,7 +77,9 @@ def twilio_webhook(request: HttpRequest) -> HttpResponse:
     if conversation is None:
         # The candidate wrote first (e.g. from a job ad): open with the AI disclosure and
         # consent question, then their message is processed like any other.
-        conversation = services.start_conversation(candidate, Conversation.Channel.WHATSAPP)
+        conversation = services.start_conversation(
+            candidate, Conversation.Channel.WHATSAPP, vacancy_id=settings.WHATSAPP_VACANCY
+        )
 
     services.store_inbound(
         conversation,
@@ -91,10 +93,15 @@ def twilio_webhook(request: HttpRequest) -> HttpResponse:
 
 
 class ApplyForm(forms.Form):
+    vacancy = forms.ChoiceField(label="Puesto")
     name = forms.CharField(max_length=200, label="Nombre y apellidos")
     country = forms.ChoiceField(choices=[("ES", "España"), ("MX", "México")], label="País")
     phone = forms.CharField(max_length=32, label="Móvil (WhatsApp)")
     language = forms.ChoiceField(choices=[("es", "Español"), ("en", "English")], label="Idioma")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vacancy"].choices = services.vacancy_choices()
 
     def clean(self):
         data = super().clean()
@@ -114,17 +121,22 @@ class ApplyForm(forms.Form):
 
 def apply(request: HttpRequest) -> HttpResponse:
     """An application form; the agent then messages the candidate first on WhatsApp."""
-    form = ApplyForm(request.POST or None)
+    form = ApplyForm(request.POST or None, initial={"vacancy": request.GET.get("vacancy")})
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         candidate, _ = Candidate.objects.get_or_create(
             phone=data["phone"], defaults={"name": data["name"]}
         )
-        resumed = candidate.conversations.filter(channel=Conversation.Channel.WHATSAPP).exists()
+        # Re-applying to the same job resumes it; another job is a new screening, and the
+        # webhook routes the candidate's replies to that newest conversation.
+        resumed = candidate.conversations.filter(
+            channel=Conversation.Channel.WHATSAPP, vacancy_id=data["vacancy"]
+        ).exists()
         if not resumed:
             services.start_conversation(
                 candidate,
                 Conversation.Channel.WHATSAPP,
+                vacancy_id=data["vacancy"],
                 language=data["language"],
                 country=data["country"],
             )

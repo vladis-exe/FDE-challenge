@@ -9,6 +9,12 @@
       {% for value, label in periods.items %}<option value="{{ value }}" {% if value == period %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </label>
+  <label>Job
+    <select name="job" onchange="this.form.submit()">
+      <option value="">All jobs</option>
+      {% for value, label in jobs.items %}<option value="{{ value }}" {% if value == job %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
   <noscript><button type="submit">Apply</button></noscript>
 </form>
 
@@ -30,10 +36,11 @@
 </section>
 
 <div class="analytics">
-  <section class="card"><h2>Funnel: reached each step</h2>{% include "dashboard/_bars.html" with bars=report.funnel %}</section>
+  <section class="card"><h2>Funnel: reached each step{% if not job %} <span class="sub">· pick a job for the per-question steps</span>{% endif %}</h2>{% include "dashboard/_bars.html" with bars=report.funnel %}</section>
   <section class="card"><h2>Outcomes</h2>{% include "dashboard/_bars.html" with bars=report.outcomes %}</section>
   <section class="card"><h2>Disqualify reasons</h2>{% include "dashboard/_bars.html" with bars=report.disqualify_reasons %}</section>
   <section class="card"><h2>Abandoned at question</h2>{% include "dashboard/_bars.html" with bars=report.abandoned_at %}</section>
+  {% if not job %}<section class="card"><h2>Started by job</h2>{% include "dashboard/_bars.html" with bars=report.jobs %}</section>{% endif %}
   <section class="card analytics__wide">
     <h2>LLM usage by purpose</h2>
     {% if report.llm %}

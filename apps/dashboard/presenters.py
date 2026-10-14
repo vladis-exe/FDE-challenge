@@ -1,7 +1,8 @@
 """Turn engine state into what the recruiter sees. Read-only; no decisions are made here.
 
 Every view reads candidate data through `screening.record.final_record`, so the queue, the
-detail page and the CSV export always agree with the stored record.
+detail page and the CSV export always agree with the stored record. Which fields exist, and
+how each one is shown, comes from the conversation's vacancy config (CONTRACTS §7).
 """
 
 from dataclasses import dataclass
@@ -11,27 +12,13 @@ from typing import Any
 
 from apps.candidates.models import Conversation
 from apps.messaging.services import engine_context
+from screening.config import FieldSpec, VacancyConfig
 from screening.record import final_record
 from screening.schemas import ConversationState
+from screening.scoring import score_breakdown
 
-FIELD_LABELS = {
-    "full_name": "Name",
-    "has_driver_license": "Driver's license",
-    "location": "City",
-    "availability": "Availability",
-    "schedule": "Schedule",
-    "experience": "Experience",
-    "start_date": "Start date",
-}
-OPTION_LABELS = {
-    "full_time": "Full-time",
-    "part_time": "Part-time",
-    "weekends": "Weekends",
-    "morning": "Morning",
-    "afternoon": "Afternoon",
-    "evening": "Evening",
-    "flexible": "Flexible",
-}
+# Field names read better with a recruiter's word; any other field is titled from its name.
+FIELD_TITLES = {"full_name": "Name", "location": "City", "start_date": "Start date"}
 PLATFORM_LABELS = {
     "glovo": "Glovo",
     "uber_eats": "Uber Eats",
@@ -40,6 +27,31 @@ PLATFORM_LABELS = {
     "didi_food": "DiDi Food",
     "other": "Other",
 }
+STAGE_LABELS = {"consent": "Consent", "confirm": "Read-back", "done": "Done"}
+
+
+def vacancies() -> dict[str, VacancyConfig]:
+    return engine_context().config.vacancies
+
+
+def vacancy_title(vacancy_id: str) -> str:
+    vacancy = vacancies().get(vacancy_id)
+    return vacancy.title["en"] if vacancy else vacancy_id
+
+
+def field_title(name: str) -> str:
+    """ "has_driver_license" -> "Driver license"; the dashboard is in English."""
+    if name in FIELD_TITLES:
+        return FIELD_TITLES[name]
+    return name.removeprefix("has_").replace("_", " ").capitalize()
+
+
+def where(conversation: Conversation) -> str:
+    """The step an in-progress (or abandoned) screening is at, e.g. "City"."""
+    field = conversation.state.get("current_field")
+    if conversation.stage == "collecting" and field:
+        return field_title(field)
+    return STAGE_LABELS.get(conversation.stage, conversation.stage)
 
 
 @cache
@@ -60,6 +72,17 @@ def city_choices() -> list[tuple[str, str]]:
     ]
 
 
+def option_choices(field: str) -> list[tuple[str, str]]:
+    """Every option of the enum_multi field `field`, across vacancies, for a queue filter."""
+    choices: dict[str, str] = {}
+    for vacancy in vacancies().values():
+        for spec in vacancy.fields:
+            if spec.name == field and spec.options:
+                for option in spec.options:
+                    choices.setdefault(option, option_label(spec, option))
+    return list(choices.items())
+
+
 def record_for(conversation: Conversation) -> dict[str, Any]:
     """The stored final record, or the same shape built from the current state."""
     if conversation.final_record:
@@ -67,43 +90,67 @@ def record_for(conversation: Conversation) -> dict[str, Any]:
     return final_record(ConversationState.model_validate(conversation.state))
 
 
-def options(values: list[str] | None) -> str:
-    return ", ".join(OPTION_LABELS.get(value, value) for value in values or [])
+def option_label(spec: FieldSpec, option: str) -> str:
+    label = spec.option_labels.get(option, {}).get("en") or option.replace("_", " ")
+    return label[:1].upper() + label[1:]
 
 
-def experience(items: list[dict] | None) -> str:
-    if items is None:
+def display(spec: FieldSpec | None, value: Any) -> str:
+    """A field value as stored in JSON (record or state), as text for a recruiter."""
+    if value is None:
         return ""
-    if not items:
-        return "None"
-    return ", ".join(
-        f"{PLATFORM_LABELS.get(item['platform'], item['platform'])} {item['years']:g}y"
-        for item in items
-    )
+    kind = spec.type if spec else None
+    if kind == "boolean":
+        return "Yes" if value else "No"
+    if kind == "city":
+        return f"{city_names().get(value['city'], value['city'])}, {value['country']}"
+    if kind == "enum_multi":
+        return ", ".join(option_label(spec, option) for option in value)
+    if kind == "experience":
+        if not value:
+            return "None"
+        return ", ".join(
+            f"{PLATFORM_LABELS.get(item['platform'], item['platform'])} {item['years']:g}y"
+            for item in value
+        )
+    if kind == "date":
+        return date.fromisoformat(value).strftime("%a %d %b %Y")
+    return str(value)
+
+
+def _spec(vacancy: VacancyConfig | None, name: str) -> FieldSpec | None:
+    if vacancy is None:
+        return None
+    return next((spec for spec in vacancy.fields if spec.name == name), None)
 
 
 @dataclass
 class Row:
     conversation: Conversation
     name: str
+    vacancy: str
+    where: str
     city: str
     availability: str
     schedule: str
-    experience: str
     start_date: date | None
     flag_count: int
 
 
 def row(conversation: Conversation) -> Row:
     record = record_for(conversation)
+    fields = record["fields"]
+    vacancy = vacancies().get(conversation.vacancy_id)
+    start = fields.get("start_date")
     return Row(
         conversation=conversation,
-        name=conversation.candidate.name or record["full_name"] or "—",
-        city=city_names().get(record["city"] or conversation.city, ""),
-        availability=options(record["availability"]),
-        schedule=options(record["preferred_schedule"]),
-        experience=experience(record["delivery_experience"]),
-        start_date=date.fromisoformat(record["start_date"]) if record["start_date"] else None,
+        name=conversation.candidate.name or fields.get("full_name") or "—",
+        vacancy=vacancy_title(conversation.vacancy_id),
+        where=where(conversation) if conversation.status in ("in_progress", "abandoned") else "",
+        city=city_names().get(conversation.city, ""),
+        availability=display(_spec(vacancy, "availability"), fields.get("availability")),
+        schedule=display(_spec(vacancy, "schedule"), fields.get("schedule")),
+        start_date=date.fromisoformat(start) if start else None,
         flag_count=len(record["flags"]) + len(record["review_reasons"]),
     )
 
@@ -111,38 +158,32 @@ def row(conversation: Conversation) -> Row:
 @dataclass
 class FieldLine:
     label: str
+    requirement: str  # required / preferred
     value: str
     status: str  # missing / accepted / flagged
     note: str | None
     source_message_id: str | None
+    weight: float = 0.0  # preferred fields: what an accepted, matching answer is worth
+    points: float | None = None  # preferred fields: what this answer scored
 
 
-def field_lines(state: ConversationState) -> list[FieldLine]:
-    """One line per profile field, accepted or not, with its provenance."""
+def field_lines(state: ConversationState, vacancy: VacancyConfig) -> list[FieldLine]:
+    """One line per field the vacancy asks, in asking order, with provenance and scoring."""
+    data = state.model_dump(mode="json")["profile"]["fields"]
+    points = score_breakdown(vacancy, state.profile.fields)
     lines = []
-    for name, label in FIELD_LABELS.items():
-        field = getattr(state.profile, name)
+    for spec in vacancy.asked:
+        field = data.get(spec.name, {})
         lines.append(
             FieldLine(
-                label=label,
-                value=_display(name, field.value) if field.value is not None else "",
-                status=field.status.value,
-                note=field.note,
-                source_message_id=field.source_message_id,
+                label=field_title(spec.name),
+                requirement=spec.requirement,
+                value=display(spec, field.get("value")),
+                status=field.get("status", "missing"),
+                note=field.get("note"),
+                source_message_id=field.get("source_message_id"),
+                weight=spec.weight,
+                points=points.get(spec.name),
             )
         )
     return lines
-
-
-def _display(name: str, value: Any) -> str:
-    if name == "has_driver_license":
-        return "Yes" if value else "No"
-    if name == "location":
-        return f"{city_names().get(value.city, value.city)}, {value.country}"
-    if name in ("availability", "schedule"):
-        return options([option.value for option in value])
-    if name == "experience":
-        return experience([item.model_dump() for item in value])
-    if name == "start_date":
-        return value.strftime("%a %d %b %Y")
-    return str(value)

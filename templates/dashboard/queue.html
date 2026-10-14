@@ -11,6 +11,7 @@
   </div>
   <div class="filters__row">
     <input type="search" name="q" value="{{ form.q.value|default:'' }}" placeholder="Search name or phone" aria-label="Search">
+    <label>Job {{ form.vacancy }}</label>
     <label>Country {{ form.country }}</label>
     <label>City {{ form.city }}</label>
     <label>Availability {{ form.availability }}</label>

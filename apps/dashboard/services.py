@@ -67,6 +67,7 @@ def record_review(
 def queue(
     *,
     q: str = "",
+    vacancy: str = "",
     status: str = "",
     country: str = "",
     city: str = "",
@@ -80,6 +81,8 @@ def queue(
         if digits:
             match |= Q(candidate__phone__contains=digits)
         conversations = conversations.filter(match)
+    if vacancy:
+        conversations = conversations.filter(vacancy_id=vacancy)
     if status:
         conversations = conversations.filter(status=status)
     if country:
@@ -90,11 +93,11 @@ def queue(
     # and this lookup works the same on SQLite and Postgres.
     if availability:
         conversations = conversations.filter(
-            state__profile__availability__value__icontains=f'"{availability}"'
+            state__profile__fields__availability__value__icontains=f'"{availability}"'
         )
     if schedule:
         conversations = conversations.filter(
-            state__profile__schedule__value__icontains=f'"{schedule}"'
+            state__profile__fields__schedule__value__icontains=f'"{schedule}"'
         )
     priority = Case(
         *(When(status=s, then=Value(i)) for i, s in enumerate(STATUS_PRIORITY)),

@@ -9,49 +9,32 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from django.db.models import Max, Min
+from django.db.models import F, Max, Min
 
 from apps.candidates.models import Conversation
+from apps.dashboard.presenters import STAGE_LABELS, field_title, vacancies, vacancy_title
 from apps.messaging.models import Event, Message
-from evals.pricing import call_cost  # TODO: screening.llm.pricing once moved (see status/app.md)
-from screening.schemas import Stage
+from screening.llm.pricing import call_cost
 
 FINISHED = {
     Conversation.Status.QUALIFIED,
     Conversation.Status.NEEDS_REVIEW,
     Conversation.Status.DISQUALIFIED,
 }
-STAGE_LABELS = {
-    Stage.CONSENT: "Started",
-    Stage.NAME: "Consented",
-    Stage.LICENSE: "Gave name",
-    Stage.LOCATION: "License OK",
-    Stage.AVAILABILITY: "City OK",
-    Stage.SCHEDULE: "Availability",
-    Stage.EXPERIENCE: "Schedule",
-    Stage.START_DATE: "Experience",
-    Stage.CONFIRM: "Start date",
-    Stage.DONE: "Confirmed",
-}
-# Where a candidate stopped: the question they were being asked.
-QUESTION_LABELS = {
-    Stage.CONSENT: "Consent",
-    Stage.NAME: "Name",
-    Stage.LICENSE: "License",
-    Stage.LOCATION: "City",
-    Stage.AVAILABILITY: "Availability",
-    Stage.SCHEDULE: "Schedule",
-    Stage.EXPERIENCE: "Experience",
-    Stage.START_DATE: "Start date",
-    Stage.CONFIRM: "Confirmation",
-    Stage.DONE: "Done",
-}
-STAGES = list(Stage)
 REASON_LABELS = {
     "no_license": "No driver's license",
     "out_of_area": "City not served",
     "recruiter decision": "Recruiter decision",
 }
+
+
+def reason_label(reason: str) -> str:
+    """Outcome strings are generated per field (CONTRACTS §7): no_<name> for a boolean knockout."""
+    if reason in REASON_LABELS:
+        return REASON_LABELS[reason]
+    if reason.startswith("no_"):
+        return f"No {field_title(reason.removeprefix('no_')).lower()}"
+    return reason
 
 
 @dataclass
@@ -87,6 +70,7 @@ class Report:
     outcomes: list[Bar]
     disqualify_reasons: list[Bar]
     abandoned_at: list[Bar]
+    jobs: list[Bar]
     llm: list[LLMUsage]
     llm_cost_total: float
 
@@ -110,26 +94,50 @@ def bars(counts: Counter, base: int, labels: dict | None = None) -> list[Bar]:
     ]
 
 
-def build(since: datetime | None = None) -> Report:
+def build(since: datetime | None = None, vacancy_id: str = "") -> Report:
     conversations = Conversation.objects.all()
     if since:
         conversations = conversations.filter(started_at__gte=since)
+    if vacancy_id:
+        conversations = conversations.filter(vacancy_id=vacancy_id)
     rows = list(
-        conversations.values("id", "status", "stage", "started_at", "completed_at", "final_record")
+        conversations.values(
+            "id",
+            "vacancy_id",
+            "status",
+            "stage",
+            "started_at",
+            "completed_at",
+            "final_record",
+            # Decoded JSON (F), not text (KT): SQLite's KT gives "null" for a JSON null.
+            consent_at=F("state__consent_at"),
+            current_field=F("state__current_field"),
+            fields=F("state__profile__fields"),
+        )
     )
     ids = [row["id"] for row in rows]
     started = len(rows)
 
-    # Funnel: a conversation reached every stage up to its current one.
-    reached = Counter()
-    for row in rows:
-        index = STAGES.index(Stage(row["stage"])) if row["stage"] else 0
-        for stage in STAGES[: index + 1]:
-            reached[stage] += 1
-    funnel = [
-        Bar(STAGE_LABELS[stage], reached[stage], reached[stage] / started if started else 0)
-        for stage in STAGES
+    # Funnel: phases for every job; with one job selected, each required field in between.
+    read_back = set(
+        Event.objects.filter(conversation_id__in=ids, type="stage_entered", data__stage="confirm")
+        .values_list("conversation_id", flat=True)
+        .distinct()
+    )
+    steps: list[tuple[str, int]] = [
+        ("Started", started),
+        ("Consented", sum(1 for row in rows if row["consent_at"])),
     ]
+    vacancy = vacancies().get(vacancy_id)
+    for spec in vacancy.asked if vacancy else []:
+        if spec.requirement == "required":
+            answered = sum(1 for row in rows if _answered(row, spec.name))
+            steps.append((f"Answered: {field_title(spec.name).lower()}", answered))
+    steps += [
+        ("Reached the read-back", len(read_back)),
+        ("Finished", sum(1 for row in rows if row["status"] in FINISHED)),
+    ]
+    funnel = [Bar(label, count, count / started if started else 0) for label, count in steps]
 
     statuses = Counter(row["status"] for row in rows)
     status_labels = dict(Conversation.Status.choices)
@@ -143,11 +151,13 @@ def build(since: datetime | None = None) -> Report:
         if row["status"] == Conversation.Status.DISQUALIFIED and row["final_record"]
     )
     abandoned = Counter(
-        QUESTION_LABELS[Stage(row["stage"])]
+        field_title(row["current_field"])
+        if row["stage"] == "collecting" and row["current_field"]
+        else STAGE_LABELS.get(row["stage"], row["stage"])
         for row in rows
-        if row["status"] == Conversation.Status.ABANDONED and row["stage"]
+        if row["status"] == Conversation.Status.ABANDONED
     )
-
+    jobs = Counter(vacancy_title(row["vacancy_id"]) for row in rows)
     # Re-engagement: an inbound message after the first reminder.
     first_reminder = dict(
         Event.objects.filter(conversation_id__in=ids, type="reminder_sent")
@@ -185,8 +195,17 @@ def build(since: datetime | None = None) -> Report:
         replied_after_reminder=replied,
         funnel=funnel,
         outcomes=bars(statuses, started, status_labels),
-        disqualify_reasons=bars(reasons, sum(reasons.values()), REASON_LABELS),
+        disqualify_reasons=bars(
+            Counter({reason_label(r): n for r, n in reasons.items()}), sum(reasons.values())
+        ),
         abandoned_at=bars(abandoned, sum(abandoned.values())),
+        jobs=bars(jobs, started),
         llm=sorted(usage.values(), key=lambda line: line.cost, reverse=True),
         llm_cost_total=sum(line.cost for line in usage.values()),
     )
+
+
+def _answered(row: dict, field: str) -> bool:
+    """The candidate gave this field an answer the engine kept, accepted or flagged."""
+    value = (row["fields"] or {}).get(field) or {}
+    return value.get("status") in ("accepted", "flagged")

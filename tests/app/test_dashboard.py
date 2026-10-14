@@ -1,6 +1,5 @@
 import csv
 import io
-from datetime import date
 
 import pytest
 from django.urls import reverse
@@ -8,59 +7,74 @@ from django.urls import reverse
 from apps.candidates.models import Candidate, Conversation, ReviewAction
 from apps.messaging import services
 from apps.messaging.models import Event, Message
+from screening.config import load_config
 from screening.record import final_record
-from screening.schemas import (
-    Availability,
-    Channel,
-    ConversationState,
-    FieldStatus,
-    FieldValue,
-    Location,
-    Schedule,
-    Status,
-)
+from screening.schemas import Channel, ConversationState, FieldStatus, FieldValue, Stage, Status
+from screening.scoring import preference_score
 
-ACCEPTED = FieldStatus.ACCEPTED
+CONFIG = load_config()
 
 
 def make_conversation(
     name: str,
     status: Status = Status.QUALIFIED,
     *,
+    vacancy: str = "driver",
     phone: str | None = None,
     city: str = "barcelona",
     country: str = "ES",
-    availability: tuple[Availability, ...] = (Availability.PART_TIME,),
-    schedule: tuple[Schedule, ...] = (Schedule.EVENING,),
+    availability: tuple[str, ...] = ("part_time",),
+    schedule: tuple[str, ...] = ("evening",),
     flag_license: bool = False,
+    preferred: dict[str, bool] | None = None,
 ) -> Conversation:
+    """A conversation as the worker would have stored it, for the `driver` or `kitchen_prep` job."""
     conversation = Conversation.objects.create(
         candidate=Candidate.objects.create(name=name, phone=phone),
         channel=Conversation.Channel.WHATSAPP if phone else Conversation.Channel.WEB,
+        vacancy_id=vacancy,
     )
     state = ConversationState(
-        conversation_id=str(conversation.pk), channel=Channel.WEB, status=status
+        conversation_id=str(conversation.pk),
+        channel=Channel.WEB,
+        vacancy_id=vacancy,
+        status=status,
+        stage=Stage.COLLECTING if status == Status.IN_PROGRESS else Stage.DONE,
+        current_field="schedule" if status == Status.IN_PROGRESS else None,
     )
-    profile = state.profile
-    profile.full_name = FieldValue[str](value=name, status=ACCEPTED, source_message_id="1")
-    profile.has_driver_license = (
-        FieldValue[bool](status=FieldStatus.FLAGGED, note="license expired")
-        if flag_license
-        else FieldValue[bool](value=True, status=ACCEPTED)
-    )
-    profile.location = FieldValue[Location](
-        value=Location(country=country, city=city), status=ACCEPTED
-    )
-    profile.availability = FieldValue[list[Availability]](value=list(availability), status=ACCEPTED)
-    profile.schedule = FieldValue[list[Schedule]](value=list(schedule), status=ACCEPTED)
-    profile.start_date = FieldValue[date](value=date(2026, 10, 19), status=ACCEPTED)
+
+    def accepted(value, source=None):
+        return FieldValue(value=value, status=FieldStatus.ACCEPTED, source_message_id=source)
+
+    fields = {
+        "full_name": accepted(name, source="1"),
+        "location": accepted({"country": country, "city": city}),
+        "availability": accepted(list(availability)),
+        "schedule": accepted(list(schedule)),
+        "start_date": accepted("2026-10-19"),
+    }
+    if vacancy == "driver":
+        fields["has_driver_license"] = (
+            FieldValue(status=FieldStatus.FLAGGED, note="license expired")
+            if flag_license
+            else accepted(True)
+        )
+        fields["experience"] = accepted([{"platform": "glovo", "years": 1.5}])
+    for field_name, value in (preferred or {}).items():
+        fields[field_name] = accepted(value)
+    state.profile.fields = fields
     if flag_license:
         state.review_reasons = ["license_unclear"]
     state.summary = f"{name} summary."
+    state.preference_score = preference_score(CONFIG.vacancy(vacancy), state.profile.fields)
+    # Through JSON, exactly as the worker stores it.
+    state = ConversationState.model_validate(state.model_dump(mode="json"))
     conversation.state = state.model_dump(mode="json")
     conversation.status = status
+    conversation.stage = state.stage
     conversation.country, conversation.city = country, city
     conversation.summary = state.summary
+    conversation.preference_score = state.preference_score
     conversation.final_record = None if status == Status.IN_PROGRESS else final_record(state)
     conversation.save()
     return conversation
@@ -117,20 +131,28 @@ def test_queue_puts_qualified_and_needs_review_first(client, recruiter):
 
 
 def test_queue_ranks_by_preference_score_within_a_status(client, recruiter):
-    for name, score in [("Ana", 0.0), ("Bea", 1.5), ("Cris", 0.5)]:
-        conversation = make_conversation(name)
-        Conversation.objects.filter(pk=conversation.pk).update(preference_score=score)
-    high_score_but_disqualified = make_conversation("Dani", Status.DISQUALIFIED)
-    Conversation.objects.filter(pk=high_score_but_disqualified.pk).update(preference_score=9.0)
-
-    assert names(client.get(reverse("dashboard_queue"))) == ["Bea", "Cris", "Ana", "Dani"]
+    """The D25 tie-break: equally qualified kitchen candidates, the license holder first."""
+    make_conversation("Ana", vacancy="kitchen_prep", preferred={"has_driver_license": False})
+    make_conversation("Bea", vacancy="kitchen_prep", preferred={"has_driver_license": True})
+    make_conversation("Cris", vacancy="kitchen_prep", preferred={"food_handler_certificate": True})
+    make_conversation(
+        "Dani",
+        Status.DISQUALIFIED,
+        vacancy="kitchen_prep",
+        preferred={"has_driver_license": True, "food_handler_certificate": True},
+    )
+    response = client.get(reverse("dashboard_queue"))
+    assert names(response) == ["Bea", "Cris", "Ana", "Dani"]  # 1.5, 1.0, 0, then other status
+    scores = [row.conversation.preference_score for row in response.context["rows"]]
+    assert scores == [1.5, 1.0, 0.0, 2.5]
 
 
 def test_flags_are_counted_in_the_row(client, recruiter):
     make_conversation("Marta", Status.NEEDS_REVIEW, flag_license=True)
     row = client.get(reverse("dashboard_queue")).context["rows"][0]
     assert row.flag_count == 2  # the flagged field + the license_unclear review reason
-    assert (row.city, row.availability, row.schedule) == ("Barcelona", "Part-time", "Evening")
+    assert (row.city, row.availability, row.schedule) == ("Barcelona", "Part-time", "Evenings")
+    assert row.vacancy == "Delivery driver"
 
 
 @pytest.mark.parametrize(
@@ -144,6 +166,8 @@ def test_flags_are_counted_in_the_row(client, recruiter):
         ({"schedule": "morning"}, ["Sofía"]),
         ({"q": "laura"}, ["Laura"]),
         ({"q": "55 1234"}, ["Sofía"]),  # phone digits, typed with spaces
+        ({"vacancy": "kitchen_prep"}, ["Sofía"]),
+        ({"vacancy": "driver"}, ["Laura", "Marta"]),
     ],
 )
 def test_queue_filters(client, recruiter, params, expected):
@@ -154,8 +178,9 @@ def test_queue_filters(client, recruiter, params, expected):
         phone="+525512345678",
         country="MX",
         city="cdmx",
-        availability=(Availability.WEEKENDS,),
-        schedule=(Schedule.MORNING,),
+        vacancy="kitchen_prep",
+        availability=("weekends",),
+        schedule=("morning",),
     )
     assert names(client.get(reverse("dashboard_queue"), params)) == expected
 
@@ -189,12 +214,35 @@ def test_detail_shows_fields_flags_transcript_and_record(client, recruiter):
 
     assert "Marta summary." in body
     assert "license expired" in body and "⚑ flagged" in body
+    assert "Driver license" in body and "Glovo 1.5y" in body
     assert 'href="#m-1"' in body  # provenance link to the source message
     assert "not sent: a newer message was waiting" in body
     assert "send failed: ConnectionError: down" in body
     assert "license_unclear" in body
     assert "&quot;status&quot;: &quot;needs_review&quot;" in body  # final JSON
     assert body.count('type="radio" name="action"') == 4  # the decision buttons post a value
+
+
+def test_detail_shows_preferred_fields_with_weight_and_points(client, recruiter):
+    conversation = make_conversation(
+        "Ana",
+        vacancy="kitchen_prep",
+        preferred={"has_driver_license": True, "food_handler_certificate": False},
+    )
+    response = client.get(reverse("dashboard_detail", args=[conversation.pk]))
+    lines = {line.label: line for line in response.context["fields"]}
+    assert list(lines)[-2:] == ["Driver license", "Food handler certificate"]  # asked last
+    assert (lines["Name"].requirement, lines["Name"].points) == ("required", None)
+    license_line, certificate = lines["Driver license"], lines["Food handler certificate"]
+    assert (license_line.requirement, license_line.weight, license_line.points) == (
+        "preferred",
+        1.5,
+        1.5,
+    )
+    assert (certificate.value, certificate.points) == ("No", 0.0)
+    body = response.content.decode()
+    assert "Kitchen prep assistant" in body and "preference score 1.5" in body
+    assert "preferred · weight 1.5" in body
 
 
 # Review actions
@@ -261,9 +309,8 @@ def test_review_without_an_action_changes_nothing(client, recruiter):
 
 
 def test_export_is_the_filtered_queue_as_csv(client, recruiter):
-    make_conversation(
-        "Laura", phone="+34600111222", availability=(Availability.PART_TIME, Availability.WEEKENDS)
-    )
+    make_conversation("Laura", phone="+34600111222", availability=("part_time", "weekends"))
+    make_conversation("Ana", vacancy="kitchen_prep", preferred={"food_handler_certificate": True})
     make_conversation("Dani", Status.DISQUALIFIED)
 
     response = client.get(reverse("dashboard_export"), {"status": "qualified"})
@@ -272,8 +319,13 @@ def test_export_is_the_filtered_queue_as_csv(client, recruiter):
     text = response.content.decode("utf-8")
     assert text.startswith("﻿")
     rows = list(csv.DictReader(io.StringIO(text.lstrip("﻿"))))
-    assert [r["full_name"] for r in rows] == ["Laura"]
-    assert rows[0]["phone"] == "+34600111222"
-    assert rows[0]["availability"] == "part_time;weekends"
-    assert rows[0]["city"] == "barcelona"
-    assert rows[0]["start_date"] == "2026-10-19"
+    laura, ana = sorted(rows, key=lambda r: r["full_name"], reverse=True)
+    assert [r["full_name"] for r in (laura, ana)] == ["Laura", "Ana"]
+    assert (laura["vacancy_id"], laura["phone"]) == ("driver", "+34600111222")
+    assert laura["availability"] == "part_time;weekends"
+    assert (laura["country"], laura["city"]) == ("ES", "barcelona")
+    assert laura["start_date"] == "2026-10-19"
+    assert laura["has_driver_license"] == "yes" and laura["experience"] == "glovo:1.5"
+    # One column set for every job: a field the job doesn't ask is just empty.
+    assert laura["food_handler_certificate"] == "" and ana["experience"] == ""
+    assert (ana["food_handler_certificate"], ana["preference_score"]) == ("yes", "1")

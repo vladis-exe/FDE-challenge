@@ -6,9 +6,9 @@
   <section class="detail__main">
     <header class="card candidate">
       <div>
-        <h1>{{ record.full_name|default:conversation.candidate.name|default:"Unnamed candidate" }}</h1>
+        <h1>{{ name|default:"Unnamed candidate" }}</h1>
         <p class="sub">
-          {{ conversation.candidate.phone|default:"Web chat" }} · {{ conversation.get_channel_display }}{% if conversation.language %} · {{ conversation.language|upper }}{% endif %}
+          {{ vacancy.title.en }} · {{ conversation.candidate.phone|default:"Web chat" }} · {{ conversation.get_channel_display }}{% if conversation.language %} · {{ conversation.language|upper }}{% endif %}
           · started {{ conversation.started_at|date:"d M H:i" }}{% if conversation.completed_at %} · finished {{ conversation.completed_at|date:"d M H:i" }}{% endif %}
         </p>
       </div>
@@ -28,14 +28,15 @@
     </section>
 
     <section class="card">
-      <h2>Fields</h2>
+      <h2>Fields <span class="sub">· preference score {{ record.preference_score|floatformat:"-2" }}</span></h2>
       <table class="fields">
         {% for f in fields %}
         <tr class="field--{{ f.status }}">
-          <th>{{ f.label }}</th>
+          <th>{{ f.label }}{% if f.requirement == "preferred" %}<div class="sub" title="Asked once, never disqualifies; only ranks candidates within a status">preferred · weight {{ f.weight|floatformat:"-2" }}</div>{% endif %}</th>
           <td>{{ f.value|default:"—" }}{% if f.note %} <span class="note">{{ f.note }}</span>{% endif %}</td>
           <td class="nowrap">
             {% if f.status == "flagged" %}<span class="flag">⚑ flagged</span>{% elif f.status == "accepted" %}<span class="ok">✓</span>{% else %}<span class="sub">missing</span>{% endif %}
+            {% if f.requirement == "preferred" %}<span class="points{% if f.points %} points--scored{% endif %}">+{{ f.points|default:0|floatformat:"-2" }}</span>{% endif %}
           </td>
           <td class="nowrap">{% if f.source_message_id %}<a href="#m-{{ f.source_message_id }}">source</a>{% endif %}</td>
         </tr>

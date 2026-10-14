@@ -10,14 +10,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, QuerySet
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.candidates.models import Conversation, ReviewAction
 from apps.dashboard import analytics, presenters, services
-from screening.schemas import Availability, ConversationState, Schedule
+from screening.schemas import ConversationState
 
 PAGE_SIZE = 50
 ANY = [("", "Any")]
@@ -25,19 +25,22 @@ ANY = [("", "Any")]
 
 class QueueFilters(forms.Form):
     q = forms.CharField(required=False)
+    vacancy = forms.ChoiceField(required=False)
     status = forms.ChoiceField(required=False, choices=ANY + Conversation.Status.choices)
     country = forms.ChoiceField(required=False, choices=ANY + [("ES", "Spain"), ("MX", "Mexico")])
     city = forms.ChoiceField(required=False)
-    availability = forms.ChoiceField(
-        required=False, choices=ANY + [(a.value, presenters.OPTION_LABELS[a]) for a in Availability]
-    )
-    schedule = forms.ChoiceField(
-        required=False, choices=ANY + [(s.value, presenters.OPTION_LABELS[s]) for s in Schedule]
-    )
+    availability = forms.ChoiceField(required=False)
+    schedule = forms.ChoiceField(required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["vacancy"].choices = ANY + [
+            (vacancy_id, presenters.vacancy_title(vacancy_id))
+            for vacancy_id in presenters.vacancies()
+        ]
         self.fields["city"].choices = ANY + presenters.city_choices()
+        for name in ("availability", "schedule"):
+            self.fields[name].choices = ANY + presenters.option_choices(name)
 
 
 class ReviewForm(forms.Form):
@@ -83,6 +86,9 @@ def detail(request: HttpRequest, conversation_id: UUID) -> HttpResponse:
         Conversation.objects.select_related("candidate"), pk=conversation_id
     )
     state = ConversationState.model_validate(conversation.state)
+    vacancy = presenters.vacancies().get(conversation.vacancy_id)
+    if vacancy is None:
+        raise Http404(f"unknown vacancy {conversation.vacancy_id!r}")
     record = presenters.record_for(conversation)
     return render(
         request,
@@ -92,7 +98,9 @@ def detail(request: HttpRequest, conversation_id: UUID) -> HttpResponse:
             "state": state,
             "record": record,
             "record_json": json.dumps(record, indent=2, ensure_ascii=False),
-            "fields": presenters.field_lines(state),
+            "vacancy": vacancy,
+            "name": record["fields"].get("full_name") or conversation.candidate.name,
+            "fields": presenters.field_lines(state, vacancy),
             "transcript": conversation.messages.order_by("id"),
             "events": conversation.events.order_by("created_at", "id"),
             "reviews": conversation.review_actions.select_related("user"),
@@ -116,43 +124,75 @@ def review(request: HttpRequest, conversation_id: UUID) -> HttpResponse:
     return redirect("dashboard_detail", conversation_id=conversation.pk)
 
 
-CSV_COLUMNS = [
-    "conversation_id", "status", "channel", "phone", "full_name", "has_driver_license",
-    "country", "city", "availability", "preferred_schedule", "delivery_experience",
-    "start_date", "flags", "disqualify_reason", "review_reasons", "language", "started_at",
+CSV_HEAD = ["conversation_id", "vacancy_id", "status", "channel", "phone", "language"]
+CSV_TAIL = [
+    "preference_score", "flags", "disqualify_reason", "review_reasons", "started_at",
     "completed_at", "summary",
 ]  # fmt: skip
+
+
+def csv_field_columns() -> list[str]:
+    """Every field name any vacancy asks, in config order; a city field becomes two columns."""
+    columns: list[str] = []
+    for vacancy in presenters.vacancies().values():
+        for spec in vacancy.asked:
+            names = ["country", "city"] if spec.type == "city" else [spec.name]
+            columns += [name for name in names if name not in columns]
+    return columns
+
+
+def csv_value(value) -> str:
+    """Machine-readable values for spreadsheets: option keys, ISO dates, platform:years."""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    if isinstance(value, list):
+        return ";".join(
+            f"{item['platform']}:{item['years']:g}" if isinstance(item, dict) else str(item)
+            for item in value
+        )
+    return "" if value is None else str(value)
 
 
 @login_required
 @require_GET
 def export_csv(request: HttpRequest) -> HttpResponse:
-    """The current filtered queue as CSV, one row per conversation, from the final record."""
+    """The current filtered queue as CSV, one row per conversation, from the final record.
+
+    One column per field across all vacancies, so a mixed export still lines up; a field
+    the conversation's vacancy doesn't ask is simply empty.
+    """
     _, conversations = _filtered(request)
+    field_columns = csv_field_columns()
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="candidates.csv"'
-    response.write("﻿")  # BOM, so Excel opens the accents correctly
-    writer = csv.DictWriter(response, fieldnames=CSV_COLUMNS)
+    response.write("\ufeff")  # BOM, so Excel opens the accents correctly
+    writer = csv.DictWriter(response, fieldnames=CSV_HEAD + field_columns + CSV_TAIL)
     writer.writeheader()
     for conversation in conversations.iterator():
         record = presenters.record_for(conversation)
+        fields = dict(record["fields"])
+        vacancy = presenters.vacancies().get(conversation.vacancy_id)
+        for spec in vacancy.fields if vacancy else []:
+            if spec.type == "city" and spec.name in fields:
+                fields.update(fields.pop(spec.name))  # {"country": ..., "city": ...}
         writer.writerow(
             {
-                **{key: record.get(key) for key in CSV_COLUMNS if key in record},
+                "conversation_id": record["conversation_id"],
+                "vacancy_id": conversation.vacancy_id,
+                "status": record["status"],
                 "channel": conversation.channel,
                 "phone": conversation.candidate.phone or "",
-                "availability": ";".join(record["availability"] or []),
-                "preferred_schedule": ";".join(record["preferred_schedule"] or []),
-                "delivery_experience": ";".join(
-                    f"{item['platform']}:{item['years']:g}"
-                    for item in record["delivery_experience"] or []
-                ),
+                "language": record["language"],
+                **{name: csv_value(fields.get(name)) for name in field_columns},
+                "preference_score": f"{record['preference_score']:g}",
                 "flags": ";".join(f"{f['field']}: {f['note']}" for f in record["flags"]),
+                "disqualify_reason": record["disqualify_reason"] or "",
                 "review_reasons": ";".join(record["review_reasons"]),
                 "started_at": conversation.started_at.isoformat(),
                 "completed_at": conversation.completed_at.isoformat()
                 if conversation.completed_at
                 else "",
+                "summary": record["summary"] or "",
             }
         )
     return response
@@ -168,8 +208,20 @@ def analytics_view(request: HttpRequest) -> HttpResponse:
     if period not in PERIODS:
         period = "30"
     since = None if period == "all" else timezone.now() - timedelta(days=int(period))
+    jobs = {
+        vacancy_id: presenters.vacancy_title(vacancy_id) for vacancy_id in presenters.vacancies()
+    }
+    job = request.GET.get("job", "")
+    if job not in jobs:
+        job = ""
     return render(
         request,
         "dashboard/analytics.html",
-        {"report": analytics.build(since), "period": period, "periods": PERIODS},
+        {
+            "report": analytics.build(since, vacancy_id=job),
+            "period": period,
+            "periods": PERIODS,
+            "job": job,
+            "jobs": jobs,
+        },
     )

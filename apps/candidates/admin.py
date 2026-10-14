@@ -58,15 +58,17 @@ class ConversationAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "candidate",
+        "vacancy_id",
         "channel",
         "status",
         "stage",
+        "preference_score",
         "country",
         "city",
         "started_at",
         "next_tick_at",
     ]
-    list_filter = ["status", "channel", "country", "stage"]
+    list_filter = ["vacancy_id", "status", "channel", "country", "stage"]
     search_fields = ["candidate__name", "candidate__phone", "city"]
     list_select_related = ["candidate"]
     readonly_fields = ["id", "started_at"]

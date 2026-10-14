@@ -71,15 +71,21 @@ All sessions run in parallel in the same working tree and talk only through `doc
 - **Definition of done:** code, tests, ruff clean, status updated, committed.
 
 ## Product rules the code must honor (from the spec)
+
+*Phase 2 (CONTRACTS v4, DECISIONS D25) generalized the fixed field list into per-vacancy config —
+see CONTRACTS §7 and `docs/process-design.md`'s "Vacancies and preference scoring" before touching
+`screening/policy.py` or `schemas.py`. The rules below describe the `driver` vacancy specifically;
+they're still accurate for it, just no longer the only possible configuration.*
+
 - **Persona:** the agent is "Alex" and discloses being an AI in the opening message.
   - Spanish uses *tú*, with vocabulary per country. Spain: carnet de conducir, coche, móvil. Mexico: licencia de manejo, carro, celular.
   - Alex replies in the language of the candidate's latest message.
 - **Message limits:** about 300 characters, at most 2 sentences, one question, plain text, at most one emoji. Only the opening message may exceed these.
-- **Knockouts:**
+- **Knockouts (for the `driver` vacancy; a vacancy's own `FieldSpec.requirement` now decides this per field, CONTRACTS §7):**
   - License = no → disqualified (`no_license`).
   - City not served, confirmed by the candidate → disqualified (`out_of_area`), with a waitlist offer.
   - Unclear license, a field unresolved after 2 re-asks, a human requested, or abuse → `needs_review`.
-- **Re-asks:** at most 2 per field, then flag the field and move on. Never loop.
+- **Re-asks:** at most 2 per field, then flag the field and move on. Never loop. (A `preferred` field is the one exception: asked once, never re-asked — see CONTRACTS §7.)
 - **Message ordering:** inbound messages are processed one at a time, in order. If a newer inbound arrived while one was being processed, keep its state update but drop its reply. Only the latest message gets answered.
 - **Reminders:** at 15 min, 2 h and 20 h after the candidate's last message. Abandoned at 24 h. Nothing is sent between 21:00 and 09:00 local time; due reminders are deferred. All timings come from config, and `DEMO_TIME_SCALE` compresses them for demos.
 - **FAQ:** answers come only from `screening/config/faq.yaml`. Otherwise Alex says a recruiter will confirm. Never invent pay or contract terms.

@@ -52,6 +52,11 @@ The agent is Alex, Grupo Sazón's virtual hiring assistant: friendly, quick and 
 
 ## Data fields and validation
 
+*Originally written as Grupo Sazón's one driver role. As of the vacancy generalization (see
+"Vacancies and preference scoring" below), this table is now specifically the `driver` vacancy's
+field configuration — unchanged in behavior, just one configuration among possibly several
+instead of the only one the system can run.*
+
 The agent collects seven fields, two of them knockouts; the model extracts values, but every rule below runs in code.
 
 | Field | Stored as | Rule | If invalid or ambiguous |
@@ -97,6 +102,37 @@ Code, not the model, sets one of four outcomes, and a recruiter can override any
 
 GDPR Article 22 and the EU AI Act both scrutinize automated hiring decisions, so every rejection is logged with its reason and can be reversed by a recruiter.
 
+## Vacancies and preference scoring
+
+Grupo Sazón's driver role is the one job in this brief, but a recruiting tool that only ever asks
+about one job isn't the actual product — the next client, or Grupo Sazón's next posting, needs a
+different field set without an engineer rewriting the agent. Two product ideas follow from that:
+
+**A role's required fields are a choice, not a given.** A driver's license is a hard requirement
+for a delivery role; it isn't for a kitchen-prep role at the same company. Both should be
+expressible as the same kind of configuration — a short list of "which of our standard questions
+apply to this job, and which of them, if missing, actually disqualify someone."
+
+**A field that doesn't disqualify can still be worth asking.** If two kitchen-prep candidates are
+otherwise identical and one happens to have a driver's license — useful for covering a delivery
+shift occasionally, say — that's a reasonable tiebreaker. It should never cost the other candidate
+the job (not having a license was never a requirement), but it's a legitimate reason to put one
+candidate ahead of the other in the recruiter's queue.
+
+Concretely: every field a vacancy asks about is either **required** (today's behavior exactly —
+a bad or missing answer after two re-asks goes to human review, and a knockout answer
+disqualifies), **preferred** (asked once; whatever comes back is recorded and contributes to a
+ranking score, but it can never flag, re-ask, or disqualify anyone), or **not asked at all** for
+that role. The ranking score only ever orders candidates who are *already* in the same outcome
+bucket — it breaks ties among qualified candidates, or among needs-review candidates; it never
+promotes someone past a requirement they failed, and a recruiter sees exactly which fields
+contributed to it and by how much, not just a number.
+
+This is config, not a new kind of decision: the fields a client's vacancy can draw from (the
+"what can be asked at all" catalog) are still engineer-defined and reviewed, same as everything
+else in this spec that the model never decides on its own. What's configurable is only *which* of
+those fields apply to a given job and whether each one gates or merely ranks.
+
 ## Tone and length
 
 Messages read like a quick WhatsApp from a friendly recruiter: short, with one question at a time.
@@ -123,6 +159,7 @@ These assumptions fill gaps in the brief, and each would be confirmed with Grupo
 - Candidates either start the chat from a job-ad link or apply through a form, after which the agent sends the first message.
 - Any valid driver's license qualifies, and unclear cases go to review rather than rejection.
 - Start dates beyond 6 months are out of scope.
+- The field catalog a vacancy can draw from (see "Vacancies and preference scoring") covers what this brief needs; a real second client would likely need new field types (e.g. a language test, a background check), which is scoped as an engineering change, not something a recruiter configures unassisted.
 - Pay, contract and shift answers in the FAQ are placeholders until the client supplies them.
 
 Questions for the client:

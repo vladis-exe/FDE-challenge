@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load static %}
+{% block lang %}en{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">{% endblock %}
+{% block body_class %}dash{% endblock %}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="{% url 'dashboard_queue' %}"><span class="brand__mark">S</span> Grupo Sazón <span class="brand__sub">Recruiting</span></a>
+  <nav>
+    <a href="{% url 'dashboard_queue' %}" {% if request.resolver_match.url_name == 'dashboard_queue' %}aria-current="page"{% endif %}>Queue</a>
+    {% if user.is_staff %}<a href="{% url 'admin:index' %}">Admin</a>{% endif %}
+  </nav>
+  <form method="post" action="{% url 'logout' %}" class="topbar__user">
+    {% csrf_token %}<span>{{ user.get_username }}</span><button type="submit" class="link">Log out</button>
+  </form>
+</header>
+<main class="dash__main">
+  {% if messages %}<div class="flash">{% for m in messages %}<p class="flash__{{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+{% endblock %}

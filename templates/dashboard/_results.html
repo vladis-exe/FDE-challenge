@@ -1,0 +1,36 @@
+<table class="grid">
+  <thead>
+    <tr>
+      <th>Candidate</th><th>Status</th><th>City</th><th>Availability</th><th>Schedule</th>
+      <th>Experience</th><th>Start</th><th>Summary</th><th class="num">Last activity</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}{% with c=row.conversation %}
+    <tr>
+      <td>
+        <a class="rowlink" href="{% url 'dashboard_detail' c.pk %}">{{ row.name }}</a>
+        <div class="sub">{{ c.candidate.phone|default:"web chat" }}{% if row.flag_count %} · <span class="flag">⚑ {{ row.flag_count }}</span>{% endif %}</div>
+      </td>
+      <td>{% include "dashboard/_status.html" with status=c.status label=c.get_status_display %}<div class="sub">{{ c.stage }}</div></td>
+      <td>{{ row.city|default:"—" }}{% if c.country %} <span class="sub">{{ c.country }}</span>{% endif %}</td>
+      <td>{{ row.availability|default:"—" }}</td>
+      <td>{{ row.schedule|default:"—" }}</td>
+      <td>{{ row.experience|default:"—" }}</td>
+      <td class="nowrap">{{ row.start_date|date:"d M"|default:"—" }}</td>
+      <td class="summary">{{ c.summary|truncatechars:110|default:"—" }}</td>
+      <td class="num nowrap" title="{{ c.last_inbound_at|default:c.started_at|date:'c' }}">{{ c.last_inbound_at|default:c.started_at|timesince }}</td>
+    </tr>
+  {% endwith %}{% empty %}
+    <tr><td colspan="9" class="empty">No candidates match these filters.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if page.paginator.num_pages > 1 %}
+<nav class="pager">
+  {% if page.has_previous %}<a href="?{{ params }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}
+  <span>Page {{ page.number }} of {{ page.paginator.num_pages }} · {{ page.paginator.count }} candidates</span>
+  {% if page.has_next %}<a href="?{{ params }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
+</nav>
+{% else %}<p class="pager">{{ page.paginator.count }} candidate{{ page.paginator.count|pluralize }}</p>{% endif %}
+{% if request.htmx %}<a class="btn" href="{% url 'dashboard_export' %}?{{ params }}" id="export" hx-swap-oob="true">Export CSV</a>{% endif %}

@@ -1,0 +1,98 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ conversation.candidate }} · Grupo Sazón{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'dashboard_queue' %}">← Queue</a>
+<div class="detail">
+  <section class="detail__main">
+    <header class="card candidate">
+      <div>
+        <h1>{{ record.full_name|default:conversation.candidate.name|default:"Unnamed candidate" }}</h1>
+        <p class="sub">
+          {{ conversation.candidate.phone|default:"Web chat" }} · {{ conversation.get_channel_display }}{% if conversation.language %} · {{ conversation.language|upper }}{% endif %}
+          · started {{ conversation.started_at|date:"d M H:i" }}{% if conversation.completed_at %} · finished {{ conversation.completed_at|date:"d M H:i" }}{% endif %}
+        </p>
+      </div>
+      {% include "dashboard/_status.html" with status=conversation.status label=conversation.get_status_display %}
+    </header>
+
+    {% if record.disqualify_reason or record.review_reasons %}
+    <div class="card callout">
+      {% if record.disqualify_reason %}<p><b>Disqualified:</b> {{ record.disqualify_reason }}</p>{% endif %}
+      {% if record.review_reasons %}<p><b>Review reasons:</b> {{ record.review_reasons|join:", " }}</p>{% endif %}
+    </div>
+    {% endif %}
+
+    <section class="card">
+      <h2>Summary</h2>
+      <p>{{ conversation.summary|default:"No summary yet: written when the screening ends." }}</p>
+    </section>
+
+    <section class="card">
+      <h2>Fields</h2>
+      <table class="fields">
+        {% for f in fields %}
+        <tr class="field--{{ f.status }}">
+          <th>{{ f.label }}</th>
+          <td>{{ f.value|default:"—" }}{% if f.note %} <span class="note">{{ f.note }}</span>{% endif %}</td>
+          <td class="nowrap">
+            {% if f.status == "flagged" %}<span class="flag">⚑ flagged</span>{% elif f.status == "accepted" %}<span class="ok">✓</span>{% else %}<span class="sub">missing</span>{% endif %}
+          </td>
+          <td class="nowrap">{% if f.source_message_id %}<a href="#m-{{ f.source_message_id }}">source</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Transcript</h2>
+      <ol class="transcript">
+        {% for m in transcript %}
+        <li id="m-{{ m.pk }}" class="t t--{{ m.direction }}{% if m.suppressed %} t--suppressed{% endif %}">
+          <span class="t__who">{% if m.direction == "in" %}Candidate{% else %}Alex · {{ m.kind }}{% endif %}</span>
+          <span class="t__text">{% if m.media != "none" %}<em>[{{ m.media }}]</em> {% endif %}{{ m.text|linebreaksbr }}</span>
+          <span class="t__meta">
+            {{ m.created_at|date:"d M H:i:s" }}
+            {% if m.suppressed %} · not sent: a newer message was waiting{% endif %}
+            {% if m.send_error %} · <span class="bad">send failed: {{ m.send_error }}</span>{% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+  </section>
+
+  <aside class="detail__side">
+    <section class="card">
+      <h2>Decision</h2>
+      <form method="post" action="{% url 'dashboard_review' conversation.pk %}" class="review">
+        {% csrf_token %}
+        <div class="segmented">
+          {% for radio in review_form.action %}<label>{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}
+        </div>
+        {{ review_form.note }}
+        <button type="submit" class="btn btn--primary">Save</button>
+        <p class="sub">Approve, reject and needs review change the status; the engine is never re-run.</p>
+      </form>
+      {% if reviews %}
+      <ul class="reviews">
+        {% for r in reviews %}<li><b>{{ r.get_action_display }}</b> by {{ r.user }} · {{ r.created_at|date:"d M H:i" }}{% if r.note %}<br>{{ r.note }}{% endif %}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Timeline</h2>
+      <ol class="timeline">
+        {% for e in events %}
+        <li><time>{{ e.created_at|date:"H:i:s" }}</time> <code>{{ e.type }}</code>{% if e.data %} <span class="sub">{{ e.data|truncatechars:90 }}</span>{% endif %}</li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <details class="card">
+      <summary><h2>Final record (JSON)</h2></summary>
+      <pre class="json">{{ record_json }}</pre>
+    </details>
+  </aside>
+</div>
+{% endblock %}

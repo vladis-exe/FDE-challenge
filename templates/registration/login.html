@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% block lang %}en{% endblock %}
+{% block title %}Log in · Grupo Sazón{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">{% endblock %}
+{% block body_class %}dash login-page{% endblock %}
+{% block body %}
+<main class="card login">
+  <p class="brand"><span class="brand__mark">S</span> Grupo Sazón <span class="brand__sub">Recruiting</span></p>
+  <form method="post">
+    {% csrf_token %}
+    {% if form.errors %}<p class="bad">Wrong username or password.</p>{% endif %}
+    <label>Username {{ form.username }}</label>
+    <label>Password {{ form.password }}</label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="btn btn--primary">Log in</button>
+  </form>
+</main>
+{% endblock %}

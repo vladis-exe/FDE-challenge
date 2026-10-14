@@ -1,0 +1,23 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Queue · Grupo Sazón{% endblock %}
+{% block content %}
+<form class="filters" method="get" hx-get="{% url 'dashboard_queue' %}" hx-target="#results"
+      hx-trigger="change, keyup changed delay:300ms from:input[name=q]" hx-push-url="true">
+  <div class="tabs" role="tablist">
+    <label class="tab"><input type="radio" name="status" value="" {% if not form.status.value %}checked{% endif %}><span>All</span></label>
+    {% for value, label, count in tabs %}
+      <label class="tab"><input type="radio" name="status" value="{{ value }}" {% if form.status.value == value %}checked{% endif %}><span>{{ label }} <b>{{ count }}</b></span></label>
+    {% endfor %}
+  </div>
+  <div class="filters__row">
+    <input type="search" name="q" value="{{ form.q.value|default:'' }}" placeholder="Search name or phone" aria-label="Search">
+    <label>Country {{ form.country }}</label>
+    <label>City {{ form.city }}</label>
+    <label>Availability {{ form.availability }}</label>
+    <label>Schedule {{ form.schedule }}</label>
+    <noscript><button type="submit">Filter</button></noscript>
+    <a class="btn" href="{% url 'dashboard_export' %}?{{ params }}" id="export">Export CSV</a>
+  </div>
+</form>
+<div id="results">{% include "dashboard/_results.html" %}</div>
+{% endblock %}

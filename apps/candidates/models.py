@@ -26,8 +26,8 @@ class Conversation(models.Model):
 
     # Values match screening.schemas.Channel / Status / Stage.
     class Channel(models.TextChoices):
-        WEB = "web"
-        WHATSAPP = "whatsapp"
+        WEB = "web", "Web chat"
+        WHATSAPP = "whatsapp", "WhatsApp"
 
     class Status(models.TextChoices):
         IN_PROGRESS = "in_progress"

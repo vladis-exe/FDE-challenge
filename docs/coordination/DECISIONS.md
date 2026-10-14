@@ -72,3 +72,6 @@ The engine tells the worker when the next tick is due, already moved to 09:00 lo
 Two items engine and app converged on independently, both approved as implemented (no code changed, contract caught up to it):
 - `screening.engine.next_due_at(state, *, config) -> datetime | None` added to §2, so the worker stops duplicating E7's reminder-timing logic (app's own proposal, built by engine against it directly).
 - The "state unchanged except `transcript_tail`" line on LLM failure was read literally by app as excluding `last_inbound_at`/`last_outbound_at`/`reminders_sent`, but engine updates them (the holding reply is real outbound contact, and reminder timing would drift otherwise). The contract now says so explicitly. Checked against `screening/engine.py` directly: matches.
+
+## D24 [app] A recruiter override writes the engine state, not just the status column
+The worker copies `state.status` onto `Conversation.status` on every turn, so an override that only changed the column would be undone by the candidate's next message. The override sets both (plus a rebuilt `final_record`), logs a `ReviewAction` and a `recruiter_override` event, and never calls the engine. From then on the engine treats the screening as finished. Overriding an in-progress screening therefore ends it, which is the intent when a recruiter decides.

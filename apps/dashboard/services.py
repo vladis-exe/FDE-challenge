@@ -100,4 +100,10 @@ def queue(
         *(When(status=s, then=Value(i)) for i, s in enumerate(STATUS_PRIORITY)),
         output_field=IntegerField(),
     )
-    return conversations.order_by(priority, F("completed_at").desc(nulls_last=True), "-started_at")
+    # Within a status, the preference score breaks ties between equally eligible candidates.
+    return conversations.order_by(
+        priority,
+        F("preference_score").desc(),
+        F("completed_at").desc(nulls_last=True),
+        "-started_at",
+    )

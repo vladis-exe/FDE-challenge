@@ -116,6 +116,16 @@ def test_queue_puts_qualified_and_needs_review_first(client, recruiter):
     assert tabs["qualified"] == 1 and tabs["abandoned"] == 0
 
 
+def test_queue_ranks_by_preference_score_within_a_status(client, recruiter):
+    for name, score in [("Ana", 0.0), ("Bea", 1.5), ("Cris", 0.5)]:
+        conversation = make_conversation(name)
+        Conversation.objects.filter(pk=conversation.pk).update(preference_score=score)
+    high_score_but_disqualified = make_conversation("Dani", Status.DISQUALIFIED)
+    Conversation.objects.filter(pk=high_score_but_disqualified.pk).update(preference_score=9.0)
+
+    assert names(client.get(reverse("dashboard_queue"))) == ["Bea", "Cris", "Ana", "Dani"]
+
+
 def test_flags_are_counted_in_the_row(client, recruiter):
     make_conversation("Marta", Status.NEEDS_REVIEW, flag_license=True)
     row = client.get(reverse("dashboard_queue")).context["rows"][0]

@@ -40,6 +40,8 @@ class Conversation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name="conversations")
     channel = models.CharField(max_length=16, choices=Channel.choices)
+    # Matches a key of ScreeningConfig.vacancies (CONTRACTS §7).
+    vacancy_id = models.CharField(max_length=64, db_index=True)
 
     status = models.CharField(
         max_length=16, choices=Status.choices, default=Status.IN_PROGRESS, db_index=True
@@ -48,6 +50,8 @@ class Conversation(models.Model):
     language = models.CharField(max_length=2, blank=True)
     country = models.CharField(max_length=2, blank=True)
     city = models.CharField(max_length=64, blank=True)
+    # Ranking only, inside a status: the dashboard queue sorts by it, it never decides anything.
+    preference_score = models.FloatField(default=0.0, db_index=True)
 
     state = models.JSONField(default=dict)
 

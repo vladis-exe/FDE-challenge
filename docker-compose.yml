@@ -1,0 +1,60 @@
+# Local production-like stack: Postgres, migrations, web (gunicorn) and the worker.
+#   docker compose up --build
+#   docker compose run --rm web python manage.py seed_demo
+# Secrets come from your shell or a .env file next to this one.
+x-app: &app
+  build: .
+  environment:
+    DATABASE_URL: postgres://sazon:sazon@db:5432/sazon
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-compose-local-only-not-secret}
+    DEBUG: "False"
+    ALLOWED_HOSTS: localhost,127.0.0.1
+    PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
+    SECURE_COOKIES: "False"  # plain http on localhost
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    LLM_MODEL_FAST: ${LLM_MODEL_FAST:-claude-haiku-5-5}
+    LLM_MODEL_SMART: ${LLM_MODEL_SMART:-claude-sonnet-5-5}
+    TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+    TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+    TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+    DEMO_TIME_SCALE: ${DEMO_TIME_SCALE:-1}
+    DEMO_RECRUITER_PASSWORD: ${DEMO_RECRUITER_PASSWORD:-}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sazon
+      POSTGRES_PASSWORD: sazon
+      POSTGRES_DB: sazon
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sazon"]
+      interval: 2s
+      retries: 30
+
+  migrate:
+    <<: *app
+    command: python manage.py migrate --noinput
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    <<: *app
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *app
+    command: python manage.py run_worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

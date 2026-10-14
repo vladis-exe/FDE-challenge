@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-**All engine tasks done** (E1–E9, E6b). Open for: review findings, eval-driven prompt fixes (V3/V4), contract follow-ups.
+**All engine tasks done** (E1–E9, E6b). Now: hardening from the eval scenarios while V2 is built; open for eval-driven fixes.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -20,6 +20,7 @@ Last updated: 2026-10-12
 | E7 | `screening/timers.py` + `engine.handle_tick`: fixed reminders (kind `reminder`) at 15 min / 2 h / 20 h of silence (counted from the candidate's last message, or from the opening if they never replied); a reminder due in quiet hours waits until 09:00 candidate-local (`reminder_deferred` + `reminder_sent`, one message even if several came due); `abandoned` at 24 h with no message, stage kept. `DEMO_TIME_SCALE` honored via config. New: `engine.next_due_at(state, config=)` | `uv run pytest tests/engine` (173 pass; `test_timers.py` includes the eval scenario 16 timeline) | 7dcc63a |
 | E8 | `screening/record.py`: `final_record(state)` (contract JSON; only accepted values; flags as `{field, note}`). `screening/summary.py` + `prompts/summary.md`: Spanish recruiter note on the smart tier, written when the status leaves in_progress or abandoned (close or abandonment); a failure → `summary=None` + `llm_error`, and the close is still sent. Opt-outs get a fixed summary and no LLM call. The CLI prints the final record | `uv run pytest tests/engine` (180 pass). Live: the demo script's summary on Sonnet 5.5 is accurate (mentions the correction and the unanswered pay figure), 2.5 s | 62db461 |
 | E6b | `screening/guard.py`: `check_reply` / `trim_reply` for the message rules. `compose_reply` drafts, regenerates once with the broken rules quoted back, then trims; the retry's `llm_call` event carries `retry_for` and `trimmed`. Prompt tuning from live runs: name in at most 1 message in 3, varied openers, no judging answers (not even positively), availability options inside the question | `uv run pytest tests/engine` (201 pass). Live probe: first drafts broke a rule in 4 of 18 → 0 of 18 after the guard. Two demo runs: natural tone, no retries needed | a4cbb86 |
+| E4 fixes | The extract prompt now treats "mañana (mismo)" as tomorrow's date, not asap (scenario 16 ground truth); vague areas like "por la zona sur" are not a `city_text` (scenario 17: avoids a false out-of-area confirmation); hedged dates like "cuando sea, pronto supongo" are `vague` (scenario 07). Found by running **every scenario's scripted line** through the live extractor: all 20 lines now give the intent and fields the scenarios expect | `uv run pytest tests/engine` (201 pass); live re-probe 18/18 with regressions | b3562cc, see git log |
 
 ## Blocked
 None
@@ -49,6 +50,7 @@ None (pytest config and UP046 resolved by the lead in 5944914)
 - After `DEMO_TIME_SCALE`, `reminder_schedule` and `abandon_after` are already scaled timedeltas, and `config.time_scale` holds the factor. Quiet hours are not scaled (wall-clock rule).
 - LLM: `from screening.llm import AnthropicClient, FakeLLM, LLMError`. `FakeLLM({"extract": [...], "compose": lambda system, messages: "..."})`. Engine purposes: `extract`, `compose`, `summary`.
 - Validators: `from screening.validators import match_city, validate_*`. Evals can reuse `match_city` to score city answers.
+- **Evals (V1 notes answered):** Zaragoza → `not_served` (fuzzy 61 vs "Puebla de Zaragoza", below the 80 suggestion cut); "san pedro" → ambiguous Guadalajara/Monterrey (I used San Pedro Tlaquepaque, not Cholula; the expected outcome is unchanged); FAQ covers pay, not health insurance; the review-reason strings and outcomes match your ground truth.
 - **Evals (V3):** a composed reply that needed the guard shows up as a second `llm_call` with purpose `compose` and `data.retry_for` (plus `data.trimmed`), useful for a message-rule compliance score.
 - **Evals:** `screening.record.final_record(state)` is the record to score against `expected`. For silence scenarios, call `engine.next_due_at(state, config=)` to know when to tick.
 - Evals: the first extract call after a schema change can take ~30 s (one-off). Don't count it in latency stats, or warm up first.

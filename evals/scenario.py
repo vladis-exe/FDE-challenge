@@ -112,6 +112,9 @@ class Scenario(_Strict):
     persona: str
     facts: dict[str, str]  # what the candidate knows; the persona LLM may only reveal these
     behaviors: list[str]
+    # Random style notes and one sidetrack per run (simulator.QUIRKS). Off where an early
+    # derail would pre-empt the scripted moment the scenario exists for.
+    quirks: bool = True
     script: list[ScriptedTurn] = []
     pauses: list[Pause] = []
     sensitive_terms: list[str] = []

@@ -14,6 +14,7 @@ facts:
   name: Fernanda Reyes Aguilar
   license: Licencia de manejo, valid.
   location: Angelópolis, Puebla.
+quirks: false  # an early sidetrack pre-empted the scripted moment (V8 run)
 script:
   - when: {step: availability}
     text: oiga mejor puedo hablar con una persona? tengo dudas del contrato y prefiero hablarlo con alguien

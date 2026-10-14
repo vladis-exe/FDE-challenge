@@ -12,6 +12,7 @@ persona: >
 facts:
   name: Alba Castro Prieto
   license: Carnet B.
+quirks: false  # a random style note made the candidate volunteer (invent) answers before opting out (V8 run)
 script:
   - when: {step: location}
     text: sabes qué, déjalo, ya encontré otro curro. no me escribas más porfa

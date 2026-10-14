@@ -40,7 +40,8 @@ QUIRKS = [
     "Include one realistic typo.",
     "No capital letters and no punctuation at all this time.",
     "Answer in as few words as you can.",
-    "If it fits naturally, also mention one more fact Alex hasn't asked about yet.",
+    "If one of your listed facts fits naturally and Alex hasn't asked about it yet, mention it "
+    "too. Never make up a fact that isn't listed.",
 ]
 SIDETRACK = (
     "This time don't answer yet: reply with a short reaction or a quick question of your own "
@@ -226,7 +227,9 @@ class Simulation:
         self._send(self.persona.reply(self.lines, directive, step(self.state), local), "none")
 
     def _directive(self) -> str | None:
-        if self.state.stage.value == "confirm" or self.rng.random() >= QUIRK_ODDS:
+        if not self.scenario.quirks or self.state.stage.value == "confirm":
+            return None
+        if self.rng.random() >= QUIRK_ODDS:
             return None
         # Ignoring the question costs the engine a re-ask; once per run keeps the
         # ground truth reachable (two would risk flagging a field the persona knows).

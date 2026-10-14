@@ -21,7 +21,11 @@ def chat(client, db, engine, channel) -> Conversation:
 def test_job_ad_page_renders(client, db):
     response = client.get(reverse("chat_start"))
     assert response.status_code == 200
-    assert b"Chatear con Alex" in response.content
+    body = response.content.decode()
+    assert "Chatear con Alex" in body
+    # Real inputs, not <option>s: the picker must post a value when clicked.
+    assert body.count('type="radio" name="country"') == 2
+    assert body.count('type="radio" name="language"') == 2
 
 
 def test_starting_a_chat_creates_a_web_conversation_with_the_opening_message(client, chat):

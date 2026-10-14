@@ -38,8 +38,12 @@ UI_TEXT = {
 
 
 class StartChatForm(forms.Form):
-    country = forms.ChoiceField(choices=[("ES", "España"), ("MX", "México")])
-    language = forms.ChoiceField(choices=[("es", "Español"), ("en", "English")])
+    country = forms.ChoiceField(
+        choices=[("ES", "España"), ("MX", "México")], widget=forms.RadioSelect
+    )
+    language = forms.ChoiceField(
+        choices=[("es", "Español"), ("en", "English")], widget=forms.RadioSelect, initial="es"
+    )
 
 
 class SendForm(forms.Form):

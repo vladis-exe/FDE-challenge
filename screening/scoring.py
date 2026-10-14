@@ -33,4 +33,5 @@ def score_breakdown(vacancy: VacancyConfig, fields: dict[str, FieldValue]) -> di
 
 
 def preference_score(vacancy: VacancyConfig, fields: dict[str, FieldValue]) -> float:
-    return round(sum(score_breakdown(vacancy, fields).values()), 2)
+    # float() because sum([]) is the int 0, and the state's field isn't re-validated on assignment
+    return float(round(sum(score_breakdown(vacancy, fields).values()), 2))

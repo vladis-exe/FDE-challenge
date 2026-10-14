@@ -149,3 +149,8 @@ def test_experience_and_options_formulas():
     many_years = [{"platform": "glovo", "years": 12}, {"platform": "rappi", "years": 3}]
     fields = {"exp": accepted(many_years), "shift": accepted(["b"])}
     assert score_breakdown(vacancy, fields) == {"exp": 2.5, "shift": 2.0}  # years capped at 5
+
+
+def test_the_score_is_always_a_float_even_with_no_preferred_fields():
+    score = preference_score(DRIVER, {})
+    assert score == 0.0 and isinstance(score, float)

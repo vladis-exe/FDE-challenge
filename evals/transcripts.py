@@ -25,6 +25,14 @@ def transcript_md(scenario: Scenario, run: SimResult, score: ScenarioScore, zone
         out += [f"- check `{c.name}` failed: {c.detail}" for c in score.checks if not c.passed]
         out += [f"- error: {score.error}"] if score.error else []
         out.append("")
+    out += conversation_md(run, tz)
+    out += ["## Final record", "", "```json", _json(run.record), "```", ""]
+    return "\n".join(out)
+
+
+def conversation_md(run: SimResult, tz: ZoneInfo) -> list[str]:
+    """The messages as Markdown lines: the candidate quoted, Alex plain, a heading per day."""
+    out: list[str] = []
     day = None
     for line in run.lines:
         local = line.at.astimezone(tz)
@@ -44,8 +52,7 @@ def transcript_md(scenario: Scenario, run: SimResult, score: ScenarioScore, zone
             label = f" *({', '.join(tags)})*" if tags else ""
             out.append(f"**Alex** · {stamp}{label}  \n{line.text}")
         out.append("")
-    out += ["## Final record", "", "```json", _json(run.record), "```", ""]
-    return "\n".join(out)
+    return out
 
 
 def report_md(

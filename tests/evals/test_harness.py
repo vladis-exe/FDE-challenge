@@ -175,3 +175,31 @@ def test_compare_flags_failures_across_repeats(tmp_path: Path, monkeypatch, caps
     out = capsys.readouterr().out
     assert "| **fake** |" in out and "50% (50% / 50%)" in out
     assert "| fake | none | 16_silence_late_reply_barcelona |" in out
+
+
+def test_sample_renders_the_real_conversation_and_record(config) -> None:
+    from evals.samples import Sample, sample_md
+
+    run, _ = offline("09_voice_note_emoji_cdmx", config)
+    scenario = load_scenario(SCENARIOS_DIR / "09_voice_note_emoji_cdmx.yaml")
+    sample = Sample(
+        file="x.md",
+        scenario=scenario.id,
+        title="A voice note",
+        context="Hard case. More context.",
+        notes=["Alex asks for text."],
+    )
+    out = sample_md(sample, scenario, run, "America/Mexico_City")
+    assert out.startswith("# A voice note\n\n*Mexico · outcome `qualified`")
+    assert "- Alex asks for text." in out and "[🎤 voice note]" in out
+    assert '"status": "qualified"' in out and '"summary"' not in out
+
+
+def test_after_a_knockout_unreached_fields_may_be_empty_but_not_wrong(config) -> None:
+    scenario = load_scenario(SCENARIOS_DIR / "10_no_license_puebla.yaml")
+    run, scored = offline("10_no_license_puebla", config)
+    assert scored.passed and run.record["status"] == "disqualified"
+    empty = run.model_copy(update={"record": {**run.record, "full_name": None}})
+    assert score(scenario, empty, config).passed
+    wrong = run.model_copy(update={"record": {**run.record, "full_name": "Otro Nombre"}})
+    assert not score(scenario, wrong, config).passed

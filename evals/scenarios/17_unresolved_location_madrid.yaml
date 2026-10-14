@@ -21,8 +21,14 @@ behaviors:
   - Never names a city or neighborhood, whatever the agent offers, and never asks for a person.
   - Answers every other question normally.
 script:
+  # All three location answers are scripted: free-form, the privacy-minded persona tends to
+  # end with "is there a real person?", which is a different (human_requested) scenario.
   - when: {stage: location}
     text: por la zona sur
+  - when: {stage: location}
+    text: eso da igual no? prefiero no decirlo
+  - when: {stage: location}
+    text: por ahi, de verdad q da igual. sigue con lo demas
 expected_status: needs_review
 expected:
   status: needs_review

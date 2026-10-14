@@ -27,7 +27,8 @@ DEFINITIONS = {
     "the ground truth.",
     "knockout": "Disqualified exactly when the ground truth says so, for the same reason.",
     "fields": "Share of the record's data fields (name, license, country, city, availability, "
-    "schedule, experience, start date, language) that match the ground truth exactly.",
+    "schedule, experience, start date, language) that match the ground truth exactly; after a "
+    "knockout, a field never reached may be empty.",
     "rules": "Share of Alex's LLM-written messages within the limits: at most 300 characters, "
     "2 sentences, 1 question, 1 emoji, plain text.",
     "language": "Share of Alex's messages written in the language of the candidate's latest "
@@ -106,10 +107,15 @@ class ScenarioScore(BaseModel):
 def score(scenario: Scenario, run: SimResult, config: ScreeningConfig) -> ScenarioScore:
     record, expected = run.record, scenario.expected.model_dump(mode="json")
     ignore = set(scenario.score_ignore)
+    # A knockout ends the conversation at once (spec), so a candidate who leads with an
+    # out-of-area city is never asked their name; an empty field is fine, a wrong one isn't.
+    cut_short = record["status"] == "disqualified" == expected["status"]
     field_errors = [
         f"{key}: expected {expected[key]!r}, got {record[key]!r}"
         for key in DATA_FIELDS
-        if key not in ignore and not _same(key, expected[key], record[key])
+        if key not in ignore
+        and not _same(key, expected[key], record[key])
+        and not (cut_short and record[key] is None)
     ]
     compared = [key for key in DATA_FIELDS if key not in ignore]
     outcome = (

@@ -53,6 +53,7 @@ class Extraction(BaseModel):
     confirmation: Literal["confirm", "deny"] | None = None
     question: str | None = None
     faq_id: str | None = None
+    detail: str | None = None  # the candidate's own detail on an unclear yes/no, for the recruiter
     fields: Any = None  # per vacancy: see extraction_model
 
     def field(self, name: str) -> Any:

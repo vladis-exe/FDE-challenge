@@ -256,3 +256,23 @@ def test_a_retry_that_still_breaks_the_rules_is_trimmed():
     result = compose_reply(reply, [], llm=llm, limits=load_config().message_limits)
     assert result.text == "Anotado. ¿Qué horario prefieres?"
     assert result.trimmed is True
+
+
+def test_names_typed_in_lowercase_are_title_cased_for_display_only(config):
+    state = completed_state()
+    state.profile.fields["full_name"] = accepted("carlos méndez ruiz")
+    text = readback(state, config)
+    assert text.startswith("¡Gracias, Carlos! Repasemos: Carlos Méndez Ruiz,")
+    assert state.profile.fields["full_name"].value == "carlos méndez ruiz"  # stored as typed
+
+
+def test_a_name_with_its_own_capitals_is_kept(config):
+    state = completed_state()
+    state.profile.fields["full_name"] = accepted("María de la Fuente")
+    assert "María de la Fuente," in summarize(state, config)
+
+
+def test_under_a_year_of_experience_reads_in_months(config):
+    state = completed_state()
+    state.profile.fields["experience"] = accepted([ExperienceItem(platform="just_eat", years=0.5)])
+    assert "Just Eat 6 meses" in summarize(state, config)

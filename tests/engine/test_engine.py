@@ -844,3 +844,46 @@ def test_stage_entered_names_the_field_for_drop_off_analytics():
     result = convo.send(ext(consent="yes"))
     entered = [e.data for e in result.events if e.type == "stage_entered"]
     assert entered == [{"stage": "collecting", "field": "full_name"}]
+
+
+# E16: fixes for the live-run findings in status/evals.md
+
+
+def test_a_surname_reply_is_joined_to_the_first_name_in_code():
+    """Sonnet returned just "ramirez soto" after the surname re-ask (scenarios 09, 19)."""
+    convo = Convo()
+    convo.send(ext(consent="yes"))
+    convo.send(ext(full_name="kevin"))
+    convo.send(ext(full_name="ramirez soto"))
+    assert convo.value("full_name") == "kevin ramirez soto"
+
+
+def test_a_full_name_after_the_surname_reask_is_not_doubled():
+    convo = Convo()
+    convo.send(ext(consent="yes"))
+    convo.send(ext(full_name="Kevin"))
+    convo.send(ext(full_name="Kevin Ramírez Soto"))
+    assert convo.value("full_name") == "Kevin Ramírez Soto"
+
+
+def test_a_flag_note_keeps_the_candidates_detail():
+    """Scenario 13: the renewal appointment was lost from the recruiter's view."""
+    convo = Convo()
+    convo.send(ext(consent="yes"))
+    convo.send(ext(full_name="Iker Etxeberria"))
+    convo.send(
+        {**ext(has_driver_license="expired"), "detail": "caducó en agosto, renueva en 2 semanas"}
+    )
+    assert convo.field("has_driver_license").note == (
+        "license expired: caducó en agosto, renueva en 2 semanas"
+    )
+
+
+def test_restating_a_flagged_answer_without_new_detail_changes_nothing():
+    convo = Convo()
+    convo.send(ext(consent="yes"))
+    convo.send(ext(full_name="Iker Etxeberria"))
+    convo.send({**ext(has_driver_license="expired"), "detail": "caducó en agosto"})
+    result = convo.send(ext(has_driver_license="expired"))
+    assert convo.field("has_driver_license").note == "license expired: caducó en agosto"
+    assert "field_flagged" not in event_types(result)

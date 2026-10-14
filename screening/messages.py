@@ -66,6 +66,8 @@ WORDS = {
         "and": "y",
         "years": "años",
         "year": "año",
+        "months": "meses",
+        "month": "mes",
         "other": "otra plataforma",
         "without": "sin",
         "review": "lo revisará un reclutador",
@@ -76,6 +78,8 @@ WORDS = {
         "and": "and",
         "years": "years",
         "year": "year",
+        "months": "months",
+        "month": "month",
         "other": "another platform",
         "without": "no",
         "review": "a recruiter will check this",
@@ -103,7 +107,16 @@ NAME_FIELD = "full_name"  # Alex uses the first name when the vacancy asks for o
 
 def first_name(state: ConversationState) -> str | None:
     name = state.profile.fields.get(NAME_FIELD)
-    return name.value.split()[0] if name and name.value else None
+    return display_name(name.value).split()[0] if name and name.value else None
+
+
+def display_name(name: str) -> str:
+    """How a name typed in lowercase ("carlos méndez") is shown in fixed text.
+
+    Only all-lowercase input is changed, and only for display: the stored value
+    stays as typed, and a name with its own capitals ("María de la Fuente") is kept.
+    """
+    return name.title() if name == name.lower() else name
 
 
 def for_state(key: str, state: ConversationState, **values: str) -> str:
@@ -154,7 +167,7 @@ def summarize(state: ConversationState, config: ScreeningConfig) -> str:
             continue
         value = typed(spec, field.value)
         if spec.type == "text":
-            parts.append(value)
+            parts.append(display_name(value))
         elif spec.type == "boolean":
             parts.append(f"{intro or spec.name}: {words['yes' if value else 'no']}")
         elif spec.type == "city":
@@ -194,6 +207,10 @@ def _join(items: list[str], words: dict[str, str]) -> str:
 
 
 def _years(years: float, language: Language) -> str:
+    if years < 1:  # "6 meses" reads better than "0,5 años"
+        months = max(1, round(years * 12))
+        unit = WORDS[language]["month" if months == 1 else "months"]
+        return f"{months} {unit}"
     number = f"{years:g}"
     if language == "es":
         number = number.replace(".", ",")

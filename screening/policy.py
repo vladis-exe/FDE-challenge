@@ -342,8 +342,16 @@ class _Turn:
         name_field = self.field(spec.name)
         candidate = " ".join(raw.split())
         partial = name_field.value if name_field.status is FieldStatus.MISSING else None
-        if partial and len(candidate.split()) == 1 and candidate.casefold() != partial.casefold():
-            candidate = f"{partial} {candidate}"  # "Laura" + "Pérez"
+        surname_reply = (
+            partial
+            and name_field.attempts > 0  # Alex asked for the surname
+            and self.x.intent != "correction"
+            and not candidate.casefold().startswith(partial.casefold())
+        )
+        if surname_reply:
+            # Join in code: a model may return just the surname it was asked for
+            # ("ramirez soto"), which must complete "kevin", not replace it.
+            candidate = f"{partial} {candidate}"
         verdict = validate(
             spec,
             candidate,
@@ -384,13 +392,19 @@ class _Turn:
             self.event(event_type, field=spec.name, value=stored)
             self.acknowledge.append(self.describe(spec))
         elif verdict.outcome == "flag" and spec.requirement == "required":
-            if value.status is FieldStatus.FLAGGED and value.note == verdict.note:
+            # Keep the candidate's own detail ("cita para renovarlo en 2 semanas"): it is
+            # what the recruiter needs to decide.
+            note = f"{verdict.note}: {self.x.detail}" if self.x.detail else verdict.note
+            same_answer = value.status is FieldStatus.FLAGGED and value.note.startswith(
+                verdict.note
+            )
+            if same_answer and (not self.x.detail or value.note == note):
                 return  # the same unclear answer again ("caducó en agosto"): nothing new
             value.value = None
             value.status = FieldStatus.FLAGGED
             value.source_message_id = self.message.id
-            value.note = verdict.note
-            self.event("field_flagged", field=spec.name, note=verdict.note)
+            value.note = note
+            self.event("field_flagged", field=spec.name, note=note)
             self.add_reason(f"{spec.outcome_name}_unclear")
             self.acknowledge.append(f"{spec.name}: noted, a recruiter will look at it")
         elif asked:

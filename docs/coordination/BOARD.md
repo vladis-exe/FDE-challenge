@@ -150,6 +150,12 @@ The 3-day framing is dropped (Vlad's call); the quality bar isn't.
   where two otherwise-equal candidates differ only on a `preferred` field demonstrably ranks
   them in that order on the dashboard; full suite green; CONTRACTS v4 fully implemented, no lane
   still coding against v3 shapes.
+  - **✅ Verified by lead, 2026-10-15.** Both vacancies live-verified via the CLI and the real
+    worker (app's A10/A11 live check, $0.0039; engine's E16 live check). The tie-break is real,
+    not simulated: evals' V8 live run scored the kitchen_prep pair at 2.5 vs. 1.0, and the demo
+    fixture (A12, 24 real conversations) shows it on the actual dashboard queue. `uv run pytest
+    tests/engine tests/evals` (312 pass), `DJANGO_SETTINGS_MODULE=config.settings uv run pytest
+    tests/app` (108 pass, 2 skipped), `uv run ruff check .` clean. No v3 holdouts found.
 
 ### Engine (E10+): `screening/`
 Order: E10 → E11 → E12 → E13 → E14 → E15. E10 unblocks app and evals, same as E1 did.
@@ -184,25 +190,25 @@ Order: E10 → E11 → E12 → E13 → E14 → E15. E10 unblocks app and evals, 
 
 ### App (A10+): Django
 Order: A10 → A11 → A12. Needs E10, E11 at minimum; A11 needs E14.
-- [ ] **A10 Vacancy on the conversation.** `Conversation.vacancy_id` + `preference_score` columns
+- [x] **A10 Vacancy on the conversation.** `Conversation.vacancy_id` + `preference_score` columns
   and migration (CONTRACTS §5). `/chat/` picker and `/apply/` gain a vacancy choice (a demo
   convenience — see CONTRACTS §5's note that one link per real job ad is the production shape);
   both pass `vacancy_id` through to `engine.new_conversation`.
-- [ ] **A11 Dashboard for the new shape.** Queue sorts by `preference_score` within a status
+- [x] **A11 Dashboard for the new shape.** Queue sorts by `preference_score` within a status
   (CONTRACTS §5). Detail page shows each field's requirement level and, for preferred fields,
   its weight and whether it scored. CSV export and the analytics page updated for the new
   `final_record["fields"]` shape.
-- [ ] **A12 Re-seed.** `seed_demo`'s fixture predates `schema_version: 2`; regenerate it from a
+- [x] **A12 Re-seed.** `seed_demo`'s fixture predates `schema_version: 2`; regenerate it from a
   fresh eval baseline run covering both vacancies (not a migration — this is demo data).
 
 ### Evals (V7+): `evals/`
 V7 needs E10-E12 at least; V8 needs E14.
-- [ ] **V7 Vacancy-aware scenarios.** Add `vacancy: driver` to the existing 20 scenarios
+- [x] **V7 Vacancy-aware scenarios.** Add `vacancy: driver` to the existing 20 scenarios
   (CONTRACTS §6) and reshape their `expected` blocks to `fields: {...}`. Add 3-4 new scenarios
   against `kitchen_prep`: a candidate with no license still qualifies; two otherwise-identical
   candidates differing only on a preferred field rank in the right order; a required field under
   the new generic code path still knocks out correctly (prove the refactor didn't quietly change
   `driver`'s behavior).
-- [ ] **V8 Re-run and report.** V3 scoring and the V6 smoke suite against the rebuilt engine;
+- [x] **V8 Re-run and report.** V3 scoring and the V6 smoke suite against the rebuilt engine;
   note any regressions from the refactor in `status/evals.md`, separate from genuinely new
   findings about the vacancy system itself.

@@ -8,21 +8,24 @@ the take-home for Orbio's Forward Deployed Engineer role.
 The full product spec lives in [`docs/process-design.md`](docs/process-design.md). This file is
 about running and understanding the code.
 
-## Status (2026-10-14)
+## Status (2026-10-15)
 
-**CP1 (day 1 target) is done and verified:** the engine completes a full screening against the
-real LLM, the web chat creates conversations through the worker, and the admin shows them. See
-`docs/coordination/BOARD.md` for the live task board.
+**The whole thing works, end to end, for two different jobs.** What started as one hardcoded
+driver role (CP1–CP3) was generalized into a config-driven field system (Phase 2, CP4): any job
+picks required and preferred fields from a small typed catalog, a preferred field never
+disqualifies but can break a tie between two otherwise-equal candidates. Both are live-verified,
+not just unit-tested — see `docs/coordination/BOARD.md` for the checkpoint evidence.
 
 | Lane | State |
 | --- | --- |
-| **Engine** (`screening/`) | Done — E1 through E9 and E6b, the whole conversation engine, extensively tested (200+ tests) and probed against the real API. |
-| **App** (Django) | CP1 done — project, worker, web chat. WhatsApp (A4), the recruiter dashboard (A5), analytics (A6), seed data (A7), Docker (A8) are next. |
-| **Evals** (`evals/`) | 20 scenarios with ground truth written (V1). The simulator, scorers, model-comparison report and smoke suite (V2–V6) are next. |
+| **Engine** (`screening/`) | Done. The full conversation engine for an arbitrary vacancy, 269 tests, live-verified on both shipped jobs. See `screening/README.md` for the current architecture. |
+| **App** (Django) | Done — project, worker, both channels, dashboard, analytics, Docker, demo data for both jobs. |
+| **Evals** (`evals/`) | Done — scenarios, simulator, scorers, a model-comparison report, a live run on the generalized engine, curated samples. |
 
-**One known gap:** the web chat worker is still wired to a stub engine
-(`apps/messaging/services.py`), not the real one in `screening/`, even though the real engine has
-been ready for a day. The CLI already talks to the real engine — see below for the difference.
+**What's actually left:** the live WhatsApp sandbox check (needs Twilio's Account SID + Auth
+Token from Vlad — a partial credential already in `.env` isn't the right type, see Setup), an
+actual Railway deployment (L4), and the presentation notes (L6). Everything else in the original
+task board is done.
 
 ## Architecture
 
@@ -64,7 +67,18 @@ Two rules shape everything else:
   events in one transaction before sending anything. That's the entire ordering and
   reply-to-latest guarantee — no separate queue.
 
-See `docs/coordination/DECISIONS.md` for the full, append-only decision log this summarizes.
+**A third rule, added when the engine was generalized past one hardcoded job (Phase 2):**
+which fields a screening asks, and whether each one *gates* or merely *ranks*, is a YAML config
+per vacancy (`screening/config/vacancies/*.yaml`), not a code change — see
+[`screening/README.md`](screening/README.md) for the field-type catalog and how to add a job. A
+field marked `preferred` is asked once, never disqualifies, and only ever breaks a tie between
+two candidates who are otherwise in the same outcome bucket (never a path around a real
+requirement) — the concrete case is `kitchen_prep.yaml`, where a driver's license is a knockout
+for the `driver` job but just a plus, worth 1.5 points, for a job that doesn't need one.
+
+See `docs/coordination/DECISIONS.md` for the full, append-only decision log this summarizes, and
+[`docs/code-tour.md`](docs/code-tour.md) for a line-by-line trace of one message through the
+engine (written pre-Phase-2; still accurate in shape, see its note at the top).
 
 ## Setup
 
@@ -92,23 +106,33 @@ uv run python -m screening.cli --fake                                      # no 
 Prints every reply, the state diff and the events (including `llm_call` with tokens, cache hits
 and latency) after each turn.
 
-**Web chat — exercises the full Django path (worker, persistence, polling):**
+`--vacancy kitchen_prep` runs the other shipped job (no license requirement; one's preferred).
+
+**Web chat — the full Django path (worker, persistence, polling), with the real engine:**
 
 ```bash
 uv run python manage.py runserver 8000
 uv run python manage.py run_worker          # second terminal; --once to drain and exit
 ```
 
-Open `http://localhost:8000/chat/`, pick a country and language. Watch it land in
-`http://localhost:8000/admin/`. **Currently runs the stub engine, not the real one** (see
-Status) — the conversation mechanics are real, Alex's replies aren't yet.
+Open `http://localhost:8000/chat/?vacancy=driver` (or `kitchen_prep`) — the `?vacancy=` param is
+the production shape (one link per real job ad); the bare `/chat/` picker is a demo convenience.
+Watch it land in `http://localhost:8000/dashboard/`.
 
-**WhatsApp:** not wired yet (A4). The contract (`docs/coordination/CONTRACTS.md` §5) specifies a
-Twilio webhook at `/webhooks/twilio/whatsapp/` with signature validation and idempotency on
-`MessageSid`.
+**Recruiter dashboard:** `http://localhost:8000/dashboard/` (login required —
+`uv run python manage.py seed_demo` creates a recruiter login and 24 real seeded screenings
+across both jobs, or `createsuperuser` for a fresh one). Queue with status tabs and filters,
+a detail page (fields in asking order, required then preferred, each preferred field showing its
+weight and whether it scored), CSV export, and `/dashboard/analytics/` (funnel, outcomes, cost
+and latency by purpose, a per-job breakdown).
 
-**Recruiter dashboard:** not built yet (A5). Today, `/admin/` shows conversations, messages and
-events with inlines.
+**WhatsApp:** built (`/webhooks/twilio/whatsapp/`, Twilio signature validation, idempotent on
+`MessageSid`) but not live-tested against the real sandbox yet — that needs a Twilio
+**Account SID + Auth Token** (`.env`'s `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`), which is a
+different credential type from a Twilio **API Key** (SID starting `SK`); an API key can send
+messages but can't sign incoming webhooks, so it can't stand in here. `/apply/` is the
+agent-initiated form (phonenumbers-parsed, E.164); candidates who message the number first with
+no link or form screen for `WHATSAPP_VACANCY` (env, default `driver`).
 
 **Tests:**
 
@@ -118,43 +142,79 @@ DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app
 uv run ruff check .
 ```
 
-**Evals:** the 20 ground-truth scenarios are in `evals/scenarios/*.yaml`, validated by
-`evals/scenario.py`. The simulator and scorers that run them against the engine (V2/V3) aren't
-built yet — until then, the CLI against a scenario's script is the closest thing to a live run.
+**Evals:**
+
+```bash
+uv run python -m evals.run --suite smoke        # 5 scenarios, ~$0.10
+uv run python -m evals.run                      # all 24 (both jobs), ~$0.17
+uv run python -m evals.samples evals/runs/<dir>  # regenerate docs/sample-conversations/
+```
+
+24 ground-truth scenarios (`evals/scenarios/*.yaml`, 20 `driver` + 4 `kitchen_prep`, including a
+tie-break pair that differs only in whether they have a license) run a Sonnet- or Haiku-played
+persona against the real engine on a fake clock, score outcome/field/message-rule accuracy, and
+report cost and latency. `evals/reports/` has the model-comparison and live-run reports;
+`docs/sample-conversations/` has 6 curated, unedited transcripts — two deliberately show engine
+stumbles that got fixed, not just the happy path.
 
 ## LLM choice and trade-offs
 
 Claude behind a thin typed client (`screening/llm/`) — no LangChain/LangGraph/CrewAI, the
 orchestration is a few hundred lines in `screening/engine.py` and `policy.py` that fit in a live
-code review. Two tiers: **Haiku 5.5** (fast) for extraction and reply composition, **Sonnet 5.5**
-(smart) for the recruiter-facing summary (D12).
+code review. Two tiers, chosen by evals, not by default (D12): **Haiku 5.5** for understanding
+each message and writing each reply, **Sonnet 5.5** for the one-time recruiter summary.
 
-What's measured so far, from live probes against the real API (see `status/engine.md` for the
-raw numbers):
+**The comparison (V4, `evals/reports/model-comparison.md`), head to head on the same 20
+scenarios, same simulated candidate:**
 
-- Structured output via `messages.parse`, one retry on an invalid record.
-- The system prompt (persona, rules, FAQ catalogue, few-shot examples) is cached and
-  byte-stable; a live extract call reads ~5,000 of ~5,200 input tokens from cache, at roughly
-  1.3 s per call.
-- A deterministic guard (`screening/guard.py`) checks every composed reply against the message
-  rules (≤300 chars, one question, ≤1 emoji...) and regenerates once, then trims, if it's broken.
-  Measured: 4 of 18 first drafts broke a rule; 0 of 18 final replies did (D21).
+| Configuration | Scenarios passed | Fields correct | Cost / conversation | Cost at 1,000/week | Median latency |
+| --- | --- | --- | --- | --- | --- |
+| **Haiku fast + Sonnet summary (shipped)** | **20/20** | 100% | **$0.0059** | **$5.88** | 2.5 s |
+| Sonnet fast + Sonnet summary | 18/20 | 99% | $0.0377 | $37.73 | 3.0 s |
 
-**Not done yet:** a head-to-head model comparison (V4 — e.g. Haiku vs. Sonnet for
-extract/compose on accuracy, latency and cost) is still on the evals board. This section gets
-updated with that report and a final recommendation once it lands; today's choice is the
-reasonable default, not yet the evals-backed one.
+Sonnet bought no measurable quality on anything scored — both got every outcome right — and cost
+6.4× more. **Status: provisional**, one repeat per configuration instead of the planned three
+(the Anthropic account ran out of credits mid-run); the direction is clear enough that the
+decision shipped anyway, repeats pending if there's budget to confirm it further.
+
+**Then the engine was generalized to any vacancy (Phase 2) and re-run live** on both shipped
+jobs (`evals/reports/v8-v4-engine.md`, 24 scenarios): 20/24 passed, 96% outcome accuracy, 100%
+knockout accuracy, 96% field accuracy, 100% message-rule and language-match compliance, $0.0062
+per conversation, 2.3 s p50 per message. The 4 misses were simulator issues (an overly
+improvisational persona, fixed on the evals side) and two real engine findings, both fixed and
+re-verified live afterward (see D32–D34) — the report's failures are deliberately left visible
+rather than quietly re-run clean, including in the curated samples (`docs/sample-conversations/`).
+
+What makes this affordable at all: the system prompt (persona, rules, FAQ catalogue, the job's
+own fields) is cached and byte-stable per vacancy — a live extract call reads ~5,000 of ~5,200
+input tokens from cache. A deterministic guard (`screening/guard.py`) checks every composed
+reply against the message rules and regenerates once, then trims, if it's broken — measured at
+4 of 18 first drafts needing it, 0 of 18 final replies breaking a rule (D21).
+
+**Note on recent runs:** while developing on a constrained budget (a 5 EUR top-up, meant to
+stretch), `LLM_MODEL_SMART` was temporarily set to Haiku too, for both the engine's summary and
+evals' simulator persona — so the V8 numbers above used Haiku throughout, not the shipped
+Sonnet-summary configuration. The comparison table (V4) is the real one for the shipped config.
 
 ## Key engineering decisions
 
-The full append-only log is `docs/coordination/DECISIONS.md` (23 entries and counting). The ones
+The full append-only log is `docs/coordination/DECISIONS.md` (34 entries and counting). The ones
 most worth knowing:
 
 - **Django over FastAPI, functional core / imperative shell** (D1, D2) — the engine is
   framework-free and unit-testable without a database; Django gives auth, admin and migrations
-  for the shell, for free, in a 3-day build.
+  for the shell, for free.
 - **Code decides, the LLM speaks** (D3) — deterministic outcomes, auditable under GDPR Art. 22
   and the EU AI Act, immune to prompt injection by construction.
+- **Vacancies: a config-driven field catalog, preference scoring that only ever breaks ties**
+  (D25) — the field set, knockouts and ranking signals for a job are YAML, not code, but drawn
+  from a small closed catalog an engineer reviews; a `preferred` field can never substitute for
+  a failed `required` one, keeping D3's auditability argument intact even as the system got
+  more flexible.
+- **When code can know the answer, fix it in code, not the prompt** (D33) — a surname reply
+  joining the stored first name, a read-back that can't misstate a flagged value, option labels
+  in the candidate's own country vocabulary: each found live, each fixed where it can't drift
+  with a model change, prompt fixes reserved for what only the model can judge.
 - **Sequential per-conversation processing, reply only to the latest message** (D7) — a burst of
   messages never produces a stale question.
 - **A DB-backed queue and a worker command, no Celery/Redis** (D8) — fewer moving parts at
@@ -167,9 +227,11 @@ most worth knowing:
 
 ## What's next
 
-**To finish the take-home:** A4 (WhatsApp), A5 (recruiter dashboard), switching the web chat off
-the stub engine, V2–V6 (eval simulator, scorers, model comparison, smoke suite, sample
-conversations), A7 (seed data), A8 (Docker), and deploy.
+**To actually finish:** the live WhatsApp sandbox check (needs Vlad's Twilio Account SID + Auth
+Token — see Running It), an actual Railway deployment (L4), and the presentation notes (L6).
+Optional, budget-permitting: 2 more V4 repeats to firm up the provisional model-comparison
+numbers. Everything else on the original board — engine, app, evals, both Phase 1 and the
+vacancy generalization — is done and live-verified.
 
 **Production, with more time:**
 - **Voice:** same engine — it's channel-agnostic already (`Channel.WEB`/`WHATSAPP`/`SIM`) — with
@@ -186,10 +248,12 @@ conversations), A7 (seed data), A8 (Docker), and deploy.
 
 | Path | Owns |
 | --- | --- |
-| `screening/` | The engine: schemas, config, validators, LLM client, policy/state machine, compose, CLI. |
-| `apps/candidates`, `apps/messaging`, `apps/dashboard` | Django: models, worker, channels, dashboard. |
+| `screening/` | The engine: schemas, config (incl. `config/vacancies/*.yaml`), validators, field-type catalog, scoring, LLM client, policy/state machine, compose, CLI. Own guide: `screening/README.md`. |
+| `apps/candidates`, `apps/messaging`, `apps/dashboard` | Django: models, worker, both channels, dashboard, analytics. |
 | `config/`, `manage.py`, `templates/`, `static/` | Django project plumbing. |
-| `evals/` | Scenario definitions, simulator and scorers. |
-| `docs/process-design.md` | The product spec. |
-| `docs/coordination/` | How this was built: `BOARD.md` (tasks), `CONTRACTS.md` (interfaces), `DECISIONS.md` (the why), `status/` (lane logs). |
+| `evals/` | Scenarios (both jobs), simulator, scorers, model comparison, sample-conversation generator. |
+| `docs/process-design.md` | The product spec, including "Vacancies and preference scoring". |
+| `docs/code-tour.md` | A traced, line-level walkthrough of one message through the engine (pre-Phase-2 shapes; still accurate in mechanics). |
+| `docs/sample-conversations/` | 6 curated, real transcripts — includes engine stumbles, not just the happy path. |
+| `docs/coordination/` | How this was built: `BOARD.md` (tasks), `CONTRACTS.md` (interfaces, v4.1), `DECISIONS.md` (the why, 34 entries), `status/` (lane logs). |
 | `tests/engine`, `tests/app`, `tests/evals` | Tests, one tree per lane. |

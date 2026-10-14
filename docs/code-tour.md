@@ -1,5 +1,16 @@
 # Code tour: how a message actually moves through this system
 
+> **This trace predates Phase 2 (CONTRACTS v4).** It was written when there was one hardcoded job
+> (seven fixed `CandidateProfile` fields, a per-field `Stage` enum). The engine has since been
+> generalized to the vacancy system — `CandidateProfile.fields` is now a dict keyed by whatever
+> a vacancy's `FieldSpec` list defines, `Stage` collapsed to four generic phases, and there are two
+> live jobs (`driver`, `kitchen_prep`). **For the current architecture, read `screening/README.md`
+> instead** — it's engine's own guide, written for exactly this purpose and kept current by the
+> lane that owns the code. The *mechanics* traced below (extract → policy.decide → compose →
+> guard → persist, one lock per conversation, the LLM called exactly twice per turn) are still
+> accurate in shape; only the field model and a few function signatures changed. Worth a reread
+> once, matching old names to new, rather than trusting this file's specifics verbatim.
+
 The README gives you the map. This is the walk — one concrete message, traced through the real
 function calls, then each module explained on its own. Read this with the files open; every
 section names exact functions so you can jump straight to them.

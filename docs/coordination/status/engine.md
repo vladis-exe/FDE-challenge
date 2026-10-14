@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-**Phase 2: E11–E14 in progress** as one schema switch-over (see note below). E10 done.
+**Phase 2 engine tasks done (E10–E15)**, except the live LLM check, which is blocked on API credits (see Blocked).
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -26,9 +26,11 @@ Last updated: 2026-10-12
 | Task | What changed | How to verify | Commit |
 | --- | --- | --- | --- |
 | E10 | `screening/config/vacancy.py`: `FieldSpec`/`VacancyConfig` (CONTRACTS §7 + the 4 approved keys), validators (text/city never preferred, options only on enum_multi, weight only on preferred, no duplicate names), `VacancyConfig.asked` = required fields then preferred ones, `off` never asked. `vacancies/driver.yaml` (the 7 original fields, all required, `reason: license`), `vacancies/kitchen_prep.yaml` (license preferred, weight 1.5; food handler certificate preferred, weight 1.0; no delivery experience). `ScreeningConfig.vacancies`, `config.vacancy(id)` → `KeyError` listing valid ids. `screening/llm/pricing.py` (`call_cost`, `events_cost`, `PRICES`) | `uv run pytest tests/engine` (214 pass), `tests/evals` (36 pass) | 5952809 |
+| E12 prep | `screening/fields.py` (field-type catalog: raw answer shape per type, `typed()` restores values after JSON, `is_knockout`, `validate`), `screening/scoring.py` (`preference_score` + `score_breakdown` per CONTRACTS §7, experience capped at 5 years), generic `validate_boolean` / `validate_options`. Then the v4 transition table as a docstring, before the code | `uv run pytest tests/engine` | e222541, c29f0b4 |
+| E11–E15 | One switch-over commit (v4 touches every module). **Schemas** exactly CONTRACTS v4 §1. **Policy**: fields from the vacancy, required first; preferred asked once, never re-asked or flagged; a boolean "no" disqualifies only a required field (`no_<reason>`: driver keeps `no_license`); unclear → `<reason>_unclear` (driver keeps `license_unclear`); an accepted city sets `country_hint`. **Read-back loop fixed**: a restatement (or re-stating a flagged answer) counts as confirming; deny-without-details and real corrections are rounds, capped at `max_attempts_per_field`, then `needs_review` + `unresolved:confirm`. **Extraction**: per-vacancy `Extraction` schema via `create_model` (cached), so constrained decoding only allows this job's fields and options; the prompt describes rules by field type and lists the vacancy's fields (stable per vacancy → still cached). **Compose**: asks by field name + label, preferred marked optional; generic read-back, opening ("N preguntas sobre el puesto de X") and `close_knockout`. **Record**: v4 `{"fields": {...}, "preference_score"}`. **Tests**: the 49 driver state-machine tests pass unchanged in behavior, now with a JSON round trip each turn like the app; new tests for the read-back cap (5) and kitchen_prep (7, including the D25 tie-break). CLI `--vacancy` | `uv run pytest tests/engine` (249 pass); `uv run python -m screening.cli --fake --vacancy kitchen_prep --script tests/engine/scripts/demo_kitchen.txt` → qualified, no license | 3a88c60 |
 
 ## Blocked
-None
+- **The live LLM check of Phase 2 is blocked: the Anthropic account is out of credits** (HTTP 400 "credit balance is too low", 2026-10-14). **Vlad**, please top up; then I'll run `uv run python -m screening.cli --script tests/engine/scripts/demo_mx.txt --country MX` and `... --vacancy kitchen_prep --script tests/engine/scripts/demo_kitchen.txt`, plus the scenario-line extraction probe, to confirm the per-vacancy schema with real structured output. Note: the engine handled the outage as designed (a holding reply each turn, state untouched). Evals' paid runs (V4, V8) are blocked by the same thing.
 
 ## Requests (to other lanes or the lead)
 - **Evals:** `screening/llm/pricing.py` is in (5952809), a copy of `evals/pricing.py`. Please switch `evals/scoring.py` and `tests/evals/test_harness.py` to it and delete `evals/pricing.py`, so there's one price table.
@@ -54,7 +56,18 @@ None
 - (Done: cache-token request, CONTRACTS v2, D14.)
 
 ## Notes for other lanes
-- **Phase 2 sequencing (E11–E14):** the v4 schema change (`CandidateProfile.fields`, the generic `Stage`) breaks policy, extraction, compose and the record all at once. So E11–E14 land as **one switch-over commit** that keeps the suite green, preceded by small green commits for the new pure modules (field-type catalog, scoring). Until it lands, keep coding against CONTRACTS v4 shapes; nothing in `main` will be half-migrated.
+- **Evals (V7): what changed for you in 3a88c60.** `tests/evals` is red until V7, as expected for a breaking contract change:
+  - `engine.new_conversation(..., vacancy_id=scenario.vacancy, ...)`.
+  - `screening.cli.fake_llm(vacancy)` now takes the `VacancyConfig`: `fake_llm(config.vacancy(scenario.vacancy))`. Your 6 `fake_llm()` failures are this.
+  - `final_record` is the v4 shape: `record["fields"]["location"] == {"country":..., "city":...}` (no top-level `country`/`city`), missing fields absent rather than null, plus `vacancy_id` and `preference_score`.
+  - Driver outcome strings are unchanged: `no_license`, `license_unclear`, `unresolved:<field>`. New: `unresolved:confirm` (read-back cap).
+  - The read-back loop is fixed, so your V4 paid runs aren't waiting on me anymore (they're waiting on API credits).
+- **App (A10/A11):**
+  - `engine.new_conversation(..., vacancy_id=...)`; an unknown id raises `KeyError` in `engine.start` (CONTRACTS says `new_conversation`, but it has no config to check against; please surface it as a 404/form error).
+  - Mirror `country`/`city` from `final_record(state)["fields"].get("location")`; `state.country_hint` is updated to the accepted city's country.
+  - `stage_entered` events now carry `{"stage": "collecting", "field": "<name>"}`, and abandonment carries `field` too, so the funnel/drop-off can group by field.
+  - For the dashboard breakdown: `screening.scoring.score_breakdown(config.vacancy(id), state.profile.fields)` → `{field: points}`.
+  - Cost: `screening.llm.pricing.call_cost` (unchanged numbers).
 - **App (A2): the real engine is ready to replace the stub.** `from screening import engine`, `engine.EngineContext(config=load_config(), llm=AnthropicClient())`, same signatures as CONTRACTS §2. `handle_tick` and summaries are live (E7, E8). `from screening.record import final_record` for `Conversation.final_record`. For `next_tick_at`, use `engine.next_due_at(state, config=...)` (see Contract change requests).
 - **Lead, please confirm a contract reading:** on an LLM failure, CONTRACTS §2 says "state unchanged except `transcript_tail`". I also update the bookkeeping fields `last_inbound_at`, `reminders_sent = 0` and `last_outbound_at` (the holding reply was sent), because reminders are timed from the candidate's last message. Profile, stage, status, attempts and strikes are untouched.
 - E1 is in (56b5071): `from screening.schemas import ...` and `from screening.config import load_config`.

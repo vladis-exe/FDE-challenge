@@ -136,6 +136,10 @@ class Row:
     start_date: date | None
     flag_count: int
 
+    @property
+    def score_label(self) -> str:
+        return f"{self.conversation.preference_score:g}"
+
 
 def row(conversation: Conversation) -> Row:
     record = record_for(conversation)
@@ -165,6 +169,14 @@ class FieldLine:
     source_message_id: str | None
     weight: float = 0.0  # preferred fields: what an accepted, matching answer is worth
     points: float | None = None  # preferred fields: what this answer scored
+
+    @property
+    def weight_label(self) -> str:
+        return f"{self.weight:g}"
+
+    @property
+    def points_label(self) -> str:
+        return f"+{self.points or 0:g}"
 
 
 def field_lines(state: ConversationState, vacancy: VacancyConfig) -> list[FieldLine]:

@@ -99,6 +99,7 @@ def detail(request: HttpRequest, conversation_id: UUID) -> HttpResponse:
             "record": record,
             "record_json": json.dumps(record, indent=2, ensure_ascii=False),
             "vacancy": vacancy,
+            "score": f"{record['preference_score']:g}",
             "name": record["fields"].get("full_name") or conversation.candidate.name,
             "fields": presenters.field_lines(state, vacancy),
             "transcript": conversation.messages.order_by("id"),

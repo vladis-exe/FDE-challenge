@@ -145,6 +145,7 @@ def test_queue_ranks_by_preference_score_within_a_status(client, recruiter):
     assert names(response) == ["Bea", "Cris", "Ana", "Dani"]  # 1.5, 1.0, 0, then other status
     scores = [row.conversation.preference_score for row in response.context["rows"]]
     assert scores == [1.5, 1.0, 0.0, 2.5]
+    assert [row.score_label for row in response.context["rows"]] == ["1.5", "1", "0", "2.5"]
 
 
 def test_flags_are_counted_in_the_row(client, recruiter):
@@ -241,8 +242,8 @@ def test_detail_shows_preferred_fields_with_weight_and_points(client, recruiter)
     )
     assert (certificate.value, certificate.points) == ("No", 0.0)
     body = response.content.decode()
-    assert "Kitchen prep assistant" in body and "preference score 1.5" in body
-    assert "preferred · weight 1.5" in body
+    assert "Kitchen prep assistant" in body and "preference score 1.5<" in body
+    assert "preferred · weight 1.5<" in body and "+1.5<" in body and "+0<" in body
 
 
 # Review actions

@@ -28,15 +28,15 @@
     </section>
 
     <section class="card">
-      <h2>Fields <span class="sub">· preference score {{ record.preference_score|floatformat:"-2" }}</span></h2>
+      <h2>Fields <span class="sub">· preference score {{ score }}</span></h2>
       <table class="fields">
         {% for f in fields %}
         <tr class="field--{{ f.status }}">
-          <th>{{ f.label }}{% if f.requirement == "preferred" %}<div class="sub" title="Asked once, never disqualifies; only ranks candidates within a status">preferred · weight {{ f.weight|floatformat:"-2" }}</div>{% endif %}</th>
+          <th>{{ f.label }}{% if f.requirement == "preferred" %}<div class="sub" title="Asked once, never disqualifies; only ranks candidates within a status">preferred · weight {{ f.weight_label }}</div>{% endif %}</th>
           <td>{{ f.value|default:"—" }}{% if f.note %} <span class="note">{{ f.note }}</span>{% endif %}</td>
           <td class="nowrap">
             {% if f.status == "flagged" %}<span class="flag">⚑ flagged</span>{% elif f.status == "accepted" %}<span class="ok">✓</span>{% else %}<span class="sub">missing</span>{% endif %}
-            {% if f.requirement == "preferred" %}<span class="points{% if f.points %} points--scored{% endif %}">+{{ f.points|default:0|floatformat:"-2" }}</span>{% endif %}
+            {% if f.requirement == "preferred" %}<span class="points{% if f.points %} points--scored{% endif %}">{{ f.points_label }}</span>{% endif %}
           </td>
           <td class="nowrap">{% if f.source_message_id %}<a href="#m-{{ f.source_message_id }}">source</a>{% endif %}</td>
         </tr>

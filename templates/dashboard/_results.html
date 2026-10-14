@@ -18,7 +18,7 @@
       <td>{{ row.availability|default:"—" }}</td>
       <td>{{ row.schedule|default:"—" }}</td>
       <td class="nowrap">{{ row.start_date|date:"d M"|default:"—" }}</td>
-      <td class="num">{% if c.preference_score %}{{ c.preference_score|floatformat:"-2" }}{% else %}<span class="sub">0</span>{% endif %}</td>
+      <td class="num">{% if c.preference_score %}{{ row.score_label }}{% else %}<span class="sub">0</span>{% endif %}</td>
       <td class="summary">{{ c.summary|truncatechars:110|default:"—" }}</td>
       <td class="num nowrap" title="{{ c.last_inbound_at|default:c.started_at|date:'c' }}">{{ c.last_inbound_at|default:c.started_at|timesince }}</td>
     </tr>

@@ -120,6 +120,8 @@ def test_message_rules(text: str, problems: str) -> None:
         ("yeah got a spanish one now", "en"),
         ("👍", None),
         ("Tom Whitaker", None),
+        ("media jornada, part time", "es"),
+        ("full time", None),
     ],
 )
 def test_detect_language(text: str, language: str | None) -> None:

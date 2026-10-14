@@ -60,13 +60,14 @@ ES_WORDS = set(
     "les ni eso esto qué yo tú te tu tus mi mis tengo tienes es soy estoy puedo quiero "
     "gracias hola vale bueno pues claro trabajo semana mañana tarde noche años año meses "
     "carnet licencia coche carro dónde cuál cuándo vives ciudad empezar tiempo completo "
-    "horario seguimos perfecto genial".split()
+    "horario seguimos perfecto genial media jornada completa mañanas tardes noches fines".split()
 )
+# "full time" and "part time" are everyday loanwords in Mexican Spanish: not English evidence.
 EN_WORDS = set(
     "the and to of in is you that it for on with as are be this have from or at by not but "
     "what all we when your can there an will my i do does got yeah yes hi thanks thank please "
     "how where which would like work week weekends morning afternoon evening years months "
-    "license car city live start time full part great".split()
+    "license car city live start great".split()
 )
 
 

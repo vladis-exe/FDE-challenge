@@ -1,9 +1,9 @@
 # Status: app
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
 ## Current task
-None: **all Phase 2 app tasks (A10–A12) are done.** Still open: the live WhatsApp sandbox run (needs Vlad's Account SID + Auth Token, see Blocked) and any review notes.
+None: **every app task (A1–A12) is done, and nothing is routed to the app lane.** Re-checked 2026-10-15 after engine's E17: `tests/app` 108 pass, 2 skipped; ruff clean. The only open item is Vlad's `sudo docker rm -f sazon-pg-test` (see Requests).
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -27,10 +27,10 @@ None: **all Phase 2 app tasks (A10–A12) are done.** Still open: the live Whats
 | A1 | Django project `config/` (settings from env, dj-database-url with a SQLite fallback, UTC, whitenoise, django-htmx). Apps `candidates`, `messaging`, `dashboard`. Models exactly as CONTRACTS §5, initial migrations, admin with message/event/review inlines on Conversation. | `cp .env.example .env && uv run python manage.py migrate && uv run pytest tests/app` | 049360c |
 
 ## Blocked
-- **Live WhatsApp sandbox check (CP2) needs Vlad.** No `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_WHATSAPP_FROM` in this environment, and no tunnel. The lead is right that the API key pair in `.env` (`SK…`) doesn't unblock it: Twilio signs webhooks with the account's Auth Token, so the signature check can't run without it. (Sending could use an API key plus the Account SID, but the webhook can't.) Steps once they're set: (1) join the sandbox from a phone, (2) expose the app (Railway from L4, or `ngrok http 8000`) and set `PUBLIC_BASE_URL` to that URL exactly, since the signature check depends on it, (3) set the sandbox "when a message comes in" URL to `<PUBLIC_BASE_URL>/webhooks/twilio/whatsapp/` (POST), (4) run the web server and `run_worker`, then message the sandbox or submit `/apply/`.
+None. The live WhatsApp sandbox check is **closed, not blocked**: Twilio's free tier won't accept a custom sandbox webhook (lead, D35), so it isn't an app bug. The webhook code stays covered by `test_whatsapp.py`, and `docs/deployment.md` has the production webhook steps.
 
 ## Requests (to other lanes or the lead)
-- **lead:** please add `WHATSAPP_VACANCY=driver` to `.env.example`. It's optional: it picks the job for candidates who message the WhatsApp number first, with no form or link (one number = one job ad). It's read in `config/settings.py`.
+- ~~**lead:** please add `WHATSAPP_VACANCY=driver` to `.env.example`.~~ Done by the lead, thanks.
 - **Local dev DB reseeded on v4 (2026-10-14, Vlad asked for it).** `db.sqlite3` (the `DATABASE_URL` in `.env`) had 8 v3 test conversations, which the v4 dashboard can't read. Ran `migrate` (applied 0002, 0003), then `seed_demo --reset`: it now holds the 24 V8 screenings (20 driver, 4 kitchen_prep). Logins are kept (`vlad`, `demo-recruiter`), and `recruiter` was added. Its password is a newly generated `DEMO_RECRUITER_PASSWORD` in the untracked `.env` (none was set before), so `seed_demo --reset` reproduces the same login. A backup of the old file is in the app session's scratchpad (`db.sqlite3.before-v4-reseed`), temporary and not in the repo.
 - **lead (heads-up for L4/demo):** any deployed DB still holds v3 conversations and needs the same: `python manage.py migrate && python manage.py seed_demo --reset`. `--reset` deletes **all** candidates first, so use it only on demo/dev databases. (CONTRACTS §7 says to regenerate dev data, not migrate it.)
 - **`sazon-pg-test` container: still running, needs Vlad.** `docker rm -f sazon-pg-test` fails with "could not kill container: permission denied" (the daemon refuses, probably AppArmor/snap), and `sudo` needs a password. Vlad: `sudo docker rm -f sazon-pg-test` (or restart Docker). Harmless meanwhile; it only holds port 55432, which the Postgres app tests use.
@@ -40,7 +40,7 @@ None (the `next_due_at` proposal landed as CONTRACTS v3, thanks).
 
 ## Notes for other lanes
 - **engine:** all your v4 notes are done on the app side (A10/A11): unknown ids are a form error; country/city come from the record; drop-off groups by `current_field`; the detail page uses `score_breakdown`; cost uses `screening.llm.pricing`. Small observation, not a request: the kitchen_prep opening says "Son 7 preguntas", and kitchen asks 5 required + 2 preferred, so 7 is right if the count includes the optional ones.
-- **engine, two findings from the app's live check (Haiku 5.5, 2026-10-14):**
+- **engine, two findings from the app's live check (Haiku 5.5, 2026-10-14). Both fixed in E17 (7e5d185), thanks:**
   1. **Spain wording in Mexico:** the MX driver run asked "¿jornada completa, media jornada, fines de semana…?" because the `availability` label in both vacancy YAMLs has only an `es` text (Spain's wording), while `option_labels` already has `es_MX` (tiempo completo / medio tiempo). The read-back was correct ("medio tiempo"); only the question used Spain's wording. CLAUDE.md asks for vocabulary per country, so the label probably needs an `es_MX` variant (or compose should pick it).
   2. **Internal id in the recruiter summary:** "Marta Gil Ortega está cualificada para el puesto de cocina (kitchen_prep)…". The summary prompt probably gets the vacancy id; the title ("Ayudante de cocina") would read better.
 - **evals:** `evals/pricing.py` is no longer imported by the app; delete it whenever you switch your own imports.

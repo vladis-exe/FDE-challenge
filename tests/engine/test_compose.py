@@ -5,7 +5,7 @@ import pytest
 from screening.compose import Ask, ReplyPlan, compose_reply, instructions, user_prompt
 from screening.config import load_config
 from screening.llm import FakeLLM
-from screening.messages import fixed, opening, readback, summarize
+from screening.messages import display_name, fixed, opening, readback, summarize
 from screening.prompts import load_prompt
 from screening.schemas import (
     Channel,
@@ -318,3 +318,26 @@ def test_a_question_names_the_thing_in_the_candidates_vocabulary():
         term="curso de manejo higiénico de alimentos",
     )
     assert "Call it: curso de manejo higiénico de alimentos." in instructions(plan(ask=ask))
+
+
+# E21: display names, word by word
+
+
+@pytest.mark.parametrize(
+    "typed, shown",
+    [
+        ("kevin Ramírez Soto", "Kevin Ramírez Soto"),  # A15: mixed input stayed as typed
+        ("iker etxeberria goñi", "Iker Etxeberria Goñi"),
+        ("María de la Fuente", "María de la Fuente"),
+        ("maría de la fuente", "María de la Fuente"),  # particles stay lowercase
+        ("juan de los santos y garcía", "Juan de los Santos y García"),
+        ("McDonald", "McDonald"),  # existing capitals are kept
+        ("ana mcdonald", "Ana Mcdonald"),  # all lowercase: nothing to keep
+        ("joão dos santos", "João dos Santos"),
+        ("pieter van dijk", "Pieter van Dijk"),
+        ("jean-pierre dupont", "Jean-Pierre Dupont"),
+        ("de la cruz", "De la Cruz"),  # a particle first is still capitalized
+    ],
+)
+def test_display_name_capitalizes_word_by_word(typed, shown):
+    assert display_name(typed) == shown

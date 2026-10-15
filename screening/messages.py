@@ -117,13 +117,25 @@ def first_name(state: ConversationState) -> str | None:
     return display_name(name.value).split()[0]
 
 
-def display_name(name: str) -> str:
-    """How a name typed in lowercase ("carlos méndez") is shown in fixed text.
+# Name particles kept lowercase inside a name ("María de la Fuente", "van Dijk").
+PARTICLES = {"de", "del", "la", "las", "los", "y", "da", "dos", "van"}
 
-    Only all-lowercase input is changed, and only for display: the stored value
-    stays as typed, and a name with its own capitals ("María de la Fuente") is kept.
+
+def display_name(name: str) -> str:
+    """How a name is shown in fixed text and on the dashboard: "kevin Ramírez" → "Kevin Ramírez".
+
+    Word by word: a word with any capital is kept as typed ("McDonald"), a particle
+    stays lowercase except as the first word, and anything else gets a capital first
+    letter (each part of "jean-pierre"). Display only: the stored value stays as typed.
     """
-    return name.title() if name == name.lower() else name
+    words = name.split()
+    shown = []
+    for index, word in enumerate(words):
+        if word != word.lower() or (index > 0 and word in PARTICLES):
+            shown.append(word)
+        else:
+            shown.append("-".join(part[:1].upper() + part[1:] for part in word.split("-")))
+    return " ".join(shown)
 
 
 def for_state(key: str, state: ConversationState, **values: str) -> str:

@@ -3,8 +3,9 @@
 Last updated: 2026-10-15
 
 ## Current task
-**Demo readiness round (CP5, BOARD.md):** E18, V9, E19, A13 done; last loop E20 → V11 → A14 (A13 found a leak in the demo data).
-Instructions in "Notes for other lanes" below. L4 (Railway deploy) still waits on Vlad's account.
+**CP5 verified (BOARD.md). Every lane is idle with nothing open.** What's left is Vlad's:
+L4 (Railway deploy, `docs/deployment.md`), a visual pass over the dashboard with his own login,
+and `sudo docker rm -f sazon-pg-test`.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -36,14 +37,8 @@ None
 None
 
 ## Notes for other lanes
-**Demo readiness round, last loop (BOARD.md, under "Found in A13").** CONTRACTS is now **v4.2**:
-`engine.forget_undelivered` (D36). Top-up spend so far: about $0.93 of 5 EUR.
-- **Engine:** nothing open (E20 final at `385aaab`).
-- **App → A14, start now.** Run id `20261015-072346-v11-final`. Re-seed, grep the whole fixture
-  for "Corrected:" and "(kitchen_prep)", check the tie-break and every page. Commit as `[A14]`.
-- **Evals:** V11 done; nothing open. (Was: V11 (b).) Simulator burst handling calls `engine.forget_undelivered` (v4.2), then
-  the full 24-scenario run on the engine at `385aaab` (go given). Report like V9, run id in
-  `status/evals.md` for app. Budget ≤ $0.25. Commit as `[V11]`.
+None open. CP5 is verified; engine, app and evals are done. Re-read BOARD.md if the lead routes
+anything new.
 
 ## Review notes for lanes
 
@@ -146,6 +141,8 @@ One thing to pick up **once credits are back, before the live verification**: ev
   compound-first-name limit. No "Corrected:" anywhere, no false "repeated" in summaries. 02's
   volunteered "tengo diabetes" stays in the transcript only, never the record or the summary, as
   the spec requires. Run `20261015-072346-v11-final` is the demo source. Top-up spend: about $1.10.
+- **E20 docs `107652f`: approved.** Expanded the existing known-limits line instead of duplicating it.
+- **A14 `7e85ebc`: approved, CP5 declared.** Verified the fixture, suite and tree myself (BOARD.md).
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

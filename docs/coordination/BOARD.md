@@ -223,6 +223,14 @@ round should cost under $1.
 - **CP5:** the dashboard is seeded from a run of the final engine with Sonnet summaries (no
   "(kitchen_prep)" leftovers); one live web-chat conversation completed in a real browser through
   the real worker; full suite green; ruff check and format clean tree-wide.
+  - **✅ Verified by lead, 2026-10-15.** Fixture from V11's run (`20261015-072346-v11-final`,
+    engine `385aaab`): 0 "Corrected:", 0 "(kitchen_prep)" anywhere in it; 24 conversations, every
+    outcome; kitchen tie-break 2.5 > 1.0 > 0. Live browser screening through the real worker: A13
+    (qualified, 0 errors, $0.0077). `uv run pytest tests/engine tests/evals` (385 pass),
+    `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (110 pass, 2 skipped),
+    `uv run ruff check .` and `ruff format --check .` clean, working tree clean. The round found
+    and fixed a candidate-visible leak, a wrong-start-date class of bug, a repeated FAQ answer,
+    Spain wording in Mexico and summaries counting unsent replies. Spend: about $1.10 of 5 EUR.
 
 Order: E18 → V9 → A13, with E19 → V10 in parallel to A13.
 - [x] **E18 Last compose polish.** (`b318b8b`, false positives fixed in `7cbb9fb`) "Genial, Simón." (evals' note, `status/evals.md`): compose
@@ -267,5 +275,5 @@ shows), so one more short loop before CP5. Order: E20 → V11 → A14.
 - [x] **A13b Worker calls `forget_undelivered`** (`b2dd0d8`) (CONTRACTS v4.2 §5 step 3, D36): pass the turn's
   suppressed replies to `engine.forget_undelivered` and persist what it returns, in the same
   transaction. Test: a burst of two messages leaves only the delivered reply in `transcript_tail`.
-- [ ] **A14 Final re-seed.** `seed_demo --reset --from-run <V11 run>`; check no "Corrected:" /
+- [x] **A14 Final re-seed.** (`7e85ebc`) `seed_demo --reset --from-run <V11 run>`; check no "Corrected:" /
   "(kitchen_prep)" text and the tie-break still holds; pages via the test client as in A13.

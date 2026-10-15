@@ -18,17 +18,13 @@ not just unit-tested — see `docs/coordination/BOARD.md` for the checkpoint evi
 
 | Lane | State |
 | --- | --- |
-| **Engine** (`screening/`) | Done. The full conversation engine for an arbitrary vacancy, 269 tests, live-verified on both shipped jobs. See `screening/README.md` for the current architecture. |
-| **App** (Django) | Done — project, worker, both channels, dashboard, analytics, Docker, demo data for both jobs. |
-| **Evals** (`evals/`) | Done — scenarios, simulator, scorers, a model-comparison report, a live run on the generalized engine, curated samples. |
+| **Engine** (`screening/`) | Done. The full conversation engine for an arbitrary vacancy, 403 engine + evals tests, live-verified on both shipped jobs. See `screening/README.md` and `screening/WALKTHROUGH.md`. |
+| **App** (Django) | Done: project, worker, both channels, dashboard, analytics, Docker, demo data for both jobs from the final eval run. 111 tests. |
+| **Evals** (`evals/`) | Done: 24 scenarios, simulator, scorers, a model-comparison report, the final run (`evals/reports/v11-final.md`: 21/24, the 3 fails explained), curated samples. |
 
-**What's actually left:** an actual Railway deployment (L4) and the presentation notes (L6).
-Everything else in the original task board is done — including the WhatsApp sandbox
-investigation, which turned out not to be a code gap: real Twilio credentials, a working
-tunnel, a webhook that correctly rejects unsigned requests, and Twilio's own message log
-(checked directly via their API) all confirm the sandbox's "when a message comes in" webhook
-simply can't be set on a free-tier account — it redirects straight to an upgrade page (D35).
-The webhook's correctness rests on its tests, not a live demo, unless that account is upgraded.
+**What's left:** the Railway deployment (L4, `docs/deployment.md`). The live WhatsApp sandbox
+demo is blocked by Twilio's free tier, not by this code (D35): the webhook is built and tested.
+For the live session, see `docs/presentation-notes.md`.
 
 ## Architecture
 
@@ -189,6 +185,13 @@ improvisational persona, fixed on the evals side) and two real engine findings, 
 re-verified live afterward (see D32–D34) — the report's failures are deliberately left visible
 rather than quietly re-run clean, including in the curated samples (`docs/sample-conversations/`).
 
+**The final run** (`evals/reports/v11-final.md`, after a last round of fixes found in live
+testing: a leaked "Corrected:" label, start dates resolved in code, per-country FAQ wording,
+summaries that ignore undelivered replies): 21/24, 96% outcomes, 100% knockouts, 98% fields,
+100% message rules (now including leaked labels) and language match, $0.0061 per conversation,
+2.0 s p50. Two fails are simulator drift (both pass on a scripted rerun) and one is a documented
+limit (a compound first name alone counts as a full name). This run is the demo data.
+
 What makes this affordable at all: the system prompt (persona, rules, FAQ catalogue, the job's
 own fields) is cached and byte-stable per vacancy — a live extract call reads ~5,000 of ~5,200
 input tokens from cache. A deterministic guard (`screening/guard.py`) checks every composed
@@ -231,7 +234,7 @@ most worth knowing:
 
 ## What's next
 
-**To actually finish:** an actual Railway deployment (L4) and the presentation notes (L6). The
+**To actually finish:** an actual Railway deployment (L4, `docs/deployment.md`). The
 2 extra V4 repeats were deliberately skipped (not forgotten) — the decision they'd confirm is
 already clear, and they'd cost most of the remaining demo budget to double-check it. Everything
 else on the original board — engine, app, evals, both Phase 1 and the vacancy generalization,

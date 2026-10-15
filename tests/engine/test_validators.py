@@ -354,11 +354,15 @@ def test_relative_days_are_read_in_code(text, offset):
         "por las mañanas",  # morning, not tomorrow
         "en la mañana",
         "el lunes",
-        "mañana o pasado mañana, no sé",  # two different days: ambiguous
     ],
 )
-def test_no_single_relative_day_means_none(text):
+def test_no_relative_day_means_none(text):
     assert relative_day(text) is None
+
+
+@pytest.mark.parametrize("text", ["mañana o pasado", "mañana o pasado mañana, no sé"])
+def test_several_days_offered_means_the_earliest(text):
+    assert relative_day(text) == 1  # available from tomorrow
 
 
 @pytest.mark.parametrize(

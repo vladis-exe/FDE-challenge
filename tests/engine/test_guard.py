@@ -1,9 +1,10 @@
 import pytest
 
-from screening.config import MessageLimits
-from screening.guard import check_reply, trim_reply
+from screening.config import MessageLimits, load_config
+from screening.guard import check_reply, not_names, trim_reply, wrong_vocative
 
 LIMITS = MessageLimits()
+NOT_NAMES = not_names(load_config())
 
 
 @pytest.mark.parametrize(
@@ -115,3 +116,20 @@ def test_trim_drops_a_wrong_vocative():
         "Genial, Simón. ¿Me dices tu nombre y apellido?", asks=True, limits=LIMITS, name=None
     )
     assert trimmed == "Genial. ¿Me dices tu nombre y apellido?"
+
+
+# Lead review of E18: a capitalized word after a comma is usually a place or platform
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Perfecto, Madrid es una de nuestras ciudades. ¿Tienes carnet?",
+        "Genial, Glovo cuenta como experiencia. ¿Cuántos años?",
+        "Great, Barcelona works for us. Do you have a license?",
+        "Entendido, Monterrey. ¿Desde cuándo podrías empezar?",
+    ],
+)
+def test_places_and_platforms_are_not_vocatives(text):
+    assert wrong_vocative(text, "Laura", not_names=NOT_NAMES) is None
+    assert check_reply(text, asks=True, limits=LIMITS, name="Laura", not_names=NOT_NAMES) == []

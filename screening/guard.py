@@ -9,7 +9,9 @@ regenerated once, and if it still breaks one, trimmed by `trim_reply`.
 
 import re
 
-from screening.config import MessageLimits
+from screening.config import MessageLimits, ScreeningConfig
+from screening.messages import PLATFORM_LABELS
+from screening.validators.text import normalize
 
 # A sentence ends at . ! ? or … followed by a space or the end. Spanish opening
 # marks (¡ ¿) start a sentence, so "¡Genial, Laura! ¿Dónde vives?" is two.
@@ -25,22 +27,48 @@ def sentences(text: str) -> list[str]:
 
 
 # An opener that addresses someone: "Genial, Simón." / "Thanks, Tom!" -> the name.
-_VOCATIVE = re.compile(r"^\W*\w+(?: \w+)?, ([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)(?=[.!,?¡¿ ])")
-ALEX = "Alex"  # Alex naming itself is fine ("Hola, soy Alex" doesn't match anyway)
+# The word must end the clause: "Perfecto, Madrid es una de nuestras ciudades" is a
+# sentence about a city, not someone being addressed.
+_VOCATIVE = re.compile(r"^\W*\w+(?: \w+)?, ([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)(?=[.!,?])")
+ALEX = "Alex"
 
 
-def wrong_vocative(text: str, name: str | None) -> str | None:
+def not_names(config: ScreeningConfig) -> frozenset[str]:
+    """Capitalized words Alex says that aren't anyone's name: places and platforms.
+
+    Acknowledging them is exactly what the location and experience steps do
+    ("Entendido, Monterrey."), so they must never count as addressing someone.
+    """
+    words = {normalize(label) for label in PLATFORM_LABELS.values()} | {normalize(ALEX)}
+    for area in config.service_areas.values():
+        for city in area.cities:
+            for term in [city.key, city.name, *city.aliases, *city.neighborhoods, *city.regions]:
+                words.add(normalize(term))
+    return frozenset(words)
+
+
+def wrong_vocative(
+    text: str, name: str | None, *, not_names: frozenset[str] = frozenset()
+) -> str | None:
     """The name a reply opens by addressing, if it isn't the candidate's accepted one."""
     match = _VOCATIVE.match(text)
-    if not match or match.group(1) == ALEX:
+    if not match:
         return None
-    if name and match.group(1).casefold() == name.casefold():
+    word = match.group(1)
+    if normalize(word) in not_names or word == ALEX:
         return None
-    return match.group(1)
+    if name and word.casefold() == name.casefold():
+        return None
+    return word
 
 
 def check_reply(
-    text: str, *, asks: bool, limits: MessageLimits, name: str | None = None
+    text: str,
+    *,
+    asks: bool,
+    limits: MessageLimits,
+    name: str | None = None,
+    not_names: frozenset[str] = frozenset(),
 ) -> list[str]:
     """The rules `text` breaks, in plain words (empty when it's fine)."""
     problems: list[str] = []
@@ -62,14 +90,21 @@ def check_reply(
         problems.append("more than one emoji")
     if _FORMATTING.search(text):
         problems.append("formatting")
-    if wrong_vocative(text, name):
+    if wrong_vocative(text, name, not_names=not_names):
         problems.append("addresses them by a name they haven't given")
     return problems
 
 
-def trim_reply(text: str, *, asks: bool, limits: MessageLimits, name: str | None = None) -> str:
+def trim_reply(
+    text: str,
+    *,
+    asks: bool,
+    limits: MessageLimits,
+    name: str | None = None,
+    not_names: frozenset[str] = frozenset(),
+) -> str:
     """Cut a reply down to the rules without rewriting it. Deterministic."""
-    wrong = wrong_vocative(text, name)
+    wrong = wrong_vocative(text, name, not_names=not_names)
     if wrong:
         text = text.replace(f", {wrong}", "", 1)  # "Genial, Simón." -> "Genial."
     text = _FORMATTING.sub(" ", text)

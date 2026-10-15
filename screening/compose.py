@@ -117,6 +117,7 @@ def compose_reply(
     *,
     llm: LLMClient,
     limits: MessageLimits,
+    not_names: frozenset[str] = frozenset(),
 ) -> Composed:
     """Draft, check the message rules, regenerate once if broken, then trim if still broken.
 
@@ -127,7 +128,8 @@ def compose_reply(
     draft = _draft(messages, llm)
     composed = Composed(text=draft.value, calls=[draft])
     name = plan.first_name
-    composed.problems = check_reply(draft.value, asks=asks, limits=limits, name=name)
+    rules = {"asks": asks, "limits": limits, "name": name, "not_names": not_names}
+    composed.problems = check_reply(draft.value, **rules)
     if not composed.problems:
         return composed
 
@@ -140,8 +142,8 @@ def compose_reply(
                                {"role": "user", "content": feedback}], llm)  # fmt: skip
     composed.calls.append(retry)
     composed.text = retry.value
-    if check_reply(retry.value, asks=asks, limits=limits, name=name):
-        composed.text = trim_reply(retry.value, asks=asks, limits=limits, name=name)
+    if check_reply(retry.value, **rules):
+        composed.text = trim_reply(retry.value, **rules)
         composed.trimmed = True
     return composed
 

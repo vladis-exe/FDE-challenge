@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 from screening import messages, timers
 from screening.compose import Composed, ReplyPlan, compose_reply
 from screening.config import ScreeningConfig
+from screening.guard import not_names
 from screening.llm import LLMClient, LLMError, LLMResult
 from screening.locale import candidate_timezone
 from screening.policy import FixedReply, decide
@@ -115,6 +116,7 @@ def handle_message(
                     decision.state.transcript_tail,
                     llm=ctx.llm,
                     limits=ctx.config.message_limits,
+                    not_names=not_names(ctx.config),
                 )
                 events.extend(_compose_calls(composed, now))
                 outbound.append(OutboundMessage(text=composed.text, kind="reply"))

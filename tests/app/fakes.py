@@ -8,6 +8,7 @@ from django.db import transaction
 
 from apps.candidates.models import Conversation
 from apps.messaging.models import Message
+from screening import engine
 from screening.schemas import (
     Channel,
     ConversationState,
@@ -76,6 +77,9 @@ class FakeEngine:
                 Event(type="field_accepted", at=message.received_at, data={"n": len(self.seen)})
             ],
         )
+
+    def forget_undelivered(self, state: ConversationState, dropped) -> ConversationState:
+        return engine.forget_undelivered(state, dropped)  # pure, so the real one
 
     def next_due_at(self, state: ConversationState, *, config) -> datetime | None:
         anchor = state.last_inbound_at or state.last_outbound_at

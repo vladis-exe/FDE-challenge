@@ -192,3 +192,26 @@ def test_a_reply_resets_the_reminder_clock(db, llm, channel):
     conversation.refresh_from_db()
     assert conversation.state["reminders_sent"] == 0
     assert conversation.next_tick_at == reply_at + timedelta(minutes=15)
+
+
+@time_machine.travel(T0, tick=False)
+def test_a_dropped_reply_is_forgotten_by_the_engine(db, llm, channel):
+    """D36: under reply-to-latest the summary and the next prompt see only what was sent."""
+    conversation = services.start_conversation(
+        Candidate.objects.create(phone="+34600111333"),
+        Conversation.Channel.WHATSAPP,
+        vacancy_id="driver",
+    )
+    drafts = iter(["¿Cómo te llamas?", "Gracias, Ana. ¿Dónde vives?"])
+    llm.scripts["compose"] = lambda system, messages: next(drafts)
+    llm.scripts["extract"] += [extraction(consent="yes"), extraction(full_name="Ana Ruiz")]
+    services.store_inbound(conversation, "sí")
+    services.store_inbound(conversation, "Ana Ruiz")  # arrives before "sí" is processed
+    drain()
+
+    conversation.refresh_from_db()
+    agent = [line["text"] for line in conversation.state["transcript_tail"][1:]
+             if line["role"] == "agent"]  # fmt: skip
+    assert agent == ["Gracias, Ana. ¿Dónde vives?"]
+    assert [m.text for m in channel.sent[-1:]] == ["Gracias, Ana. ¿Dónde vives?"]
+    assert conversation.messages.get(text="¿Cómo te llamas?").suppressed

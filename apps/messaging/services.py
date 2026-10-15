@@ -6,8 +6,9 @@ cross-worker locking of rule 1 is tested on Postgres in tests/app/test_postgres_
    time, oldest first. The conversation row stays locked for the whole turn, so no other worker
    can process the same conversation at the same time.
 2. Reply-to-latest: if a newer inbound message is already waiting when a turn finishes, that
-   turn's state is kept but its reply/reminder is stored as suppressed and never sent. `close`
-   messages are always sent.
+   turn's state is kept but its reply/reminder is stored as suppressed and never sent, and
+   removed from the engine's transcript (`engine.forget_undelivered`, D36). `close` messages are
+   always sent.
 3. Idempotency: an inbound message with a provider SID (Twilio MessageSid) is stored once, however
    many times the webhook delivers it.
 4. Persist before send: state, mirrored columns, outbound messages and events are written in one
@@ -219,7 +220,9 @@ def _persist_turn(
     suppress: bool = False,
 ) -> list[Message]:
     """Write one turn's results. Call inside a transaction. Returns the messages to send."""
-    state = result.state
+    dropped = [item for item in result.outbound if suppress and item.kind != "close"]
+    # The engine already wrote these into its transcript; the candidate never sees them (D36).
+    state = engine.forget_undelivered(result.state, dropped) if dropped else result.state
     record = final_record(state)
     location = record["fields"].get("location") or {}
     conversation.state = state.model_dump(mode="json")
@@ -266,7 +269,7 @@ def _persist_turn(
             direction=Message.Direction.OUT,
             kind=item.kind,
             text=item.text,
-            suppressed=suppress and item.kind != "close",
+            suppressed=item in dropped,
         )
         for item in result.outbound
     )

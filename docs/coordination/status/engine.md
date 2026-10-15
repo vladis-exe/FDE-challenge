@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-None. E17 done; engine documented (`screening/README.md`, `screening/WALKTHROUGH.md`, D32–D34). Open for new findings.
+**E18, in progress** (lead, 35f6361): compose must not address the candidate by a name that isn't an accepted `full_name` ("Genial, Simón."). Fix in code; live check under $0.05.
 
 ## Done
 | Task | What changed | How to verify | Commit |

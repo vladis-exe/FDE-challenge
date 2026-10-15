@@ -1,7 +1,7 @@
 import pytest
 
 from screening.config import MessageLimits, load_config
-from screening.guard import check_reply, not_names, trim_reply, wrong_vocative
+from screening.guard import check_reply, not_names, strip_label, trim_reply, wrong_vocative
 
 LIMITS = MessageLimits()
 NOT_NAMES = not_names(load_config())
@@ -133,3 +133,34 @@ def test_trim_drops_a_wrong_vocative():
 def test_places_and_platforms_are_not_vocatives(text):
     assert wrong_vocative(text, "Laura", not_names=NOT_NAMES) is None
     assert check_reply(text, asks=True, limits=LIMITS, name="Laura", not_names=NOT_NAMES) == []
+
+
+# E20 (1): a meta label from a retry must never reach the candidate
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Corrected: Anotado, el lunes 19 de octubre. ¿Tienes licencia de manejo?",
+        "Revised: Anotado, el lunes 19 de octubre. ¿Tienes licencia de manejo?",
+        "Mensaje: Anotado, el lunes 19 de octubre. ¿Tienes licencia de manejo?",
+        "Mensaje corregido: Anotado, el lunes 19 de octubre. ¿Tienes licencia de manejo?",
+        "Here is the corrected message: Anotado, el lunes 19 de octubre. "
+        "¿Tienes licencia de manejo?",
+        "Aquí tienes el mensaje: Anotado, el lunes 19 de octubre. ¿Tienes licencia de manejo?",
+        '"Anotado, el lunes 19 de octubre. ¿Tienes licencia de manejo?"',
+    ],
+)
+def test_a_leading_meta_label_or_quotes_are_stripped(text):
+    assert strip_label(text) == "Anotado, el lunes 19 de octubre. ¿Tienes licencia de manejo?"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Anotado: el lunes 19 de octubre. ¿Tienes licencia?",  # not a label
+        "Perfecto, Madrid. ¿Tienes carnet?",
+    ],
+)
+def test_ordinary_text_is_untouched(text):
+    assert strip_label(text) == text

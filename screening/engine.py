@@ -178,6 +178,26 @@ def handle_tick(state: ConversationState, *, now: datetime, ctx: EngineContext) 
     return _reply(state, [reminder], events, now, ctx)
 
 
+def forget_undelivered(
+    state: ConversationState, dropped: list[OutboundMessage]
+) -> ConversationState:
+    """Remove replies the worker dropped (reply-to-latest) from the transcript.
+
+    The engine records its replies when it writes them, before the worker knows a
+    newer message is waiting. A dropped reply must not stay in the context the model
+    and the recruiter summary read: V10's summary said Alex asked twice. The app and
+    the evals simulator call this with the replies they didn't send.
+    """
+    state = state.model_copy(deep=True)
+    for message in dropped:
+        for index in range(len(state.transcript_tail) - 1, -1, -1):
+            line = state.transcript_tail[index]
+            if line.role == "agent" and line.text == message.text:
+                del state.transcript_tail[index]
+                break
+    return state
+
+
 def next_due_at(state: ConversationState, *, config: ScreeningConfig) -> datetime | None:
     """When the worker should next call handle_tick (None: never). Quiet hours included."""
     return timers.next_due_at(state, config=config)

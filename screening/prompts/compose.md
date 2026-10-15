@@ -31,6 +31,7 @@ Hard rules for every message:
 
 How to ask:
 - For a job question, the plan says "Ask for: <field>" and, under "Ask about", what to find out. Turn that into one natural question in your own words, using the country's vocabulary. When it lists options, use exactly those words (they are already in the candidate's vocabulary) and put them inside the question itself ("¿Buscas jornada completa, media jornada, fines de semana o una combinación?"); never add a sentence after it.
+- When the plan says "Call it", use exactly that term for the thing you ask about: it is already in the candidate's country vocabulary.
 - When the plan marks a question as optional, say lightly that it's not required for this job.
 - The other asks have fixed meanings:
   - consent: ask if they'd like to start the quick questions.

@@ -121,6 +121,7 @@ from screening.validators import Verdict, local_date, match_city
 from screening.validators.text import normalize
 
 FINAL = {Status.QUALIFIED, Status.NEEDS_REVIEW, Status.DISQUALIFIED}
+QUESTION_OVERLAP = 0.5  # share of the reported question's words that must be in the message
 
 
 @dataclass(frozen=True)
@@ -217,7 +218,7 @@ class _Turn:
         self.collect()
 
     def after_close(self) -> None:
-        if self.x.faq_id or self.x.question:
+        if self.question_asked():
             self.reply(None)
         else:
             self.replies.append(FixedReply("after_close"))
@@ -468,7 +469,7 @@ class _Turn:
 
     def send_readback(self) -> None:
         self.enter(Stage.CONFIRM)
-        if self.x.faq_id or self.x.question:
+        if self.question_asked():
             self.reply(None)
         self.replies.append(FixedReply("readback"))
 
@@ -505,7 +506,7 @@ class _Turn:
             redirect=redirect,
             ask=ask,
         )
-        if not self.faq_given and (self.x.faq_id or self.x.question):
+        if not self.faq_given and self.question_asked():
             self.faq_given = True
             entry = next((e for e in self.config.faq if e.id == self.x.faq_id), None)
             if entry:
@@ -540,6 +541,9 @@ class _Turn:
             about=spec.label[self.state.language],
             optional=spec.requirement == "preferred",
             options=options,
+            # The read-back noun names the thing in their vocabulary ("licencia de manejo",
+            # "curso de manejo higiénico de alimentos"): the question should use it too.
+            term=localized(spec.summary, self.locale, self.state.language) or None,
             retry_reason=retry_reason,
         )
 
@@ -574,6 +578,21 @@ class _Turn:
 
     def fields_given(self) -> bool:
         return any(self.raw(spec) is not None for spec in self.vacancy.asked)
+
+    def question_asked(self) -> bool:
+        """Whether this message asks a job question, not just whether the model said so.
+
+        The extractor copies the question in the candidate's words, so a real one shares
+        words with the message. A question it carried over from the transcript doesn't
+        (A13: the pay answer was repeated on "sí, tengo licencia").
+        """
+        if not (self.x.faq_id or self.x.question):
+            return False
+        words = {word for word in normalize(self.x.question or "").split() if len(word) > 2}
+        if not words:
+            return bool(self.x.faq_id)
+        said = set(normalize(self.message.text).split())
+        return len(words & said) / len(words) >= QUESTION_OVERLAP
 
     def pending(self, kind: str) -> bool:
         return (self.state.pending_confirmation or {}).get("type") == kind

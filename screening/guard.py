@@ -62,6 +62,24 @@ def wrong_vocative(
     return word
 
 
+# A model answering the retry feedback may preface the message: "Corrected:",
+# "Mensaje corregido:", "Here is the corrected message:". Never meant for the candidate.
+_LABEL = re.compile(
+    r"""^\s*(?:corrected|revised|rewritten|fixed|updated|correction|corregido|corregida
+    |corrección|revisado|versión\ corregida|mensaje(?:\ corregido)?|message|respuesta|reply
+    |here(?:'s|\ is)[^:\n]{0,40}|aquí\ (?:tienes|está)[^:\n]{0,40})\s*:\s*""",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+def strip_label(text: str) -> str:
+    """Drop a leading meta label and wrapping quotes; leave ordinary text untouched."""
+    text = _LABEL.sub("", text, count=1).strip()
+    if len(text) > 1 and text[0] in '"“' and text[-1] in '"”':
+        text = text[1:-1].strip()
+    return text
+
+
 def check_reply(
     text: str,
     *,

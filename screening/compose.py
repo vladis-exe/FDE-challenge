@@ -11,7 +11,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from screening.config import MessageLimits
-from screening.guard import check_reply, trim_reply
+from screening.guard import check_reply, strip_label, trim_reply
 from screening.llm import LLMClient, LLMResult
 from screening.prompts import load_prompt
 from screening.schemas import TranscriptLine
@@ -35,6 +35,7 @@ class Ask(BaseModel):
     field: str  # a vacancy field name, or one of SPECIAL_ASKS
     about: str | None = None  # field asks: the field's label, in the reply's language
     optional: bool = False  # a preferred field: say it's not required for this job
+    term: str | None = None  # the thing asked about, in the candidate's country vocabulary
     retry_reason: str | None = None  # set when re-asking: why the last answer didn't work
     options: list[str] = []  # city_choice: the cities to offer
     city_not_served: str | None = None  # out_of_area: the city the candidate named
@@ -77,6 +78,8 @@ def instructions(plan: ReplyPlan) -> str:
         line = f"Ask for: {ask.field}."
         if ask.about:
             line += f" Ask about: {ask.about}."
+        if ask.term:
+            line += f" Call it: {ask.term}."
         if ask.optional:
             line += " This question is optional for this job."
         if ask.options:
@@ -126,6 +129,7 @@ def compose_reply(
     asks = plan.ask is not None
     messages = [{"role": "user", "content": user_prompt(plan, transcript)}]
     draft = _draft(messages, llm)
+    draft.value = strip_label(draft.value)  # a label is never meant for the candidate
     composed = Composed(text=draft.value, calls=[draft])
     name = plan.first_name
     rules = {"asks": asks, "limits": limits, "name": name, "not_names": not_names}
@@ -136,10 +140,12 @@ def compose_reply(
     feedback = (
         f'Your draft was: "{draft.value}"\n'
         f"It broke these rules: {'; '.join(composed.problems)}. "
-        "Write the message again, following every rule."
+        "Write the message again, following every rule. Reply with the message text only, "
+        "exactly as the candidate will read it: no label, no quotes, no explanation."
     )
     retry = _draft(messages + [{"role": "assistant", "content": draft.value},
                                {"role": "user", "content": feedback}], llm)  # fmt: skip
+    retry.value = strip_label(retry.value)
     composed.calls.append(retry)
     composed.text = retry.value
     if check_reply(retry.value, **rules):

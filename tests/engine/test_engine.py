@@ -9,7 +9,13 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 
 from screening.config import load_config
-from screening.engine import EngineContext, handle_message, new_conversation, start
+from screening.engine import (
+    EngineContext,
+    forget_undelivered,
+    handle_message,
+    new_conversation,
+    start,
+)
 from screening.fields import typed
 from screening.llm import FakeLLM, LLMError
 from screening.schemas import (
@@ -68,6 +74,8 @@ class Convo:
              at: datetime | None = None) -> TurnResult:  # fmt: skip
         if extraction is not None:
             self.llm.scripts["extract"].append(extraction)
+            if text == "..." and isinstance(extraction, dict) and extraction.get("question"):
+                text = extraction["question"]  # a question is in the message that asks it
         self.count += 1
         message = InboundMessage(
             id=f"m{self.count}",
@@ -972,3 +980,42 @@ def test_a_refused_day_is_never_what_code_stores():
     tomorrow = ext(start_date={"kind": "date", "resolved": "2026-10-24"})
     convo.send(tomorrow, text="hoy no, mañana sí", at=friday)
     assert convo.value("start_date") == date(2026, 10, 24)
+
+
+# E20: findings from A13's live web-chat pass
+
+
+def test_an_earlier_question_reported_again_is_not_answered_again():
+    """A13: the pay answer was repeated on "sí, tengo licencia"."""
+    convo = Convo()
+    convo.through_license()
+    convo.send(
+        ext(location="Madrid", question="¿cuánto pagan?", faq_id="pay"),
+        text="Madrid. oye, ¿cuánto pagan?",
+    )
+    assert "El pago depende" in convo.said
+    stale = ext(availability=["part_time"], question="¿cuánto pagan?", faq_id="pay")
+    result = convo.send(stale, text="media jornada")
+    assert "El pago depende" not in convo.said
+    assert "faq_answered" not in event_types(result)
+
+
+def test_the_certificate_question_uses_mexican_vocabulary():
+    convo = Convo(phone="+525500000005", vacancy="kitchen_prep")
+    convo.send(ext(consent="yes", full_name="Mariana López"))
+    convo.send(ext(location="Guadalajara"))
+    convo.send(ext(availability=["part_time"]))
+    convo.send(ext(schedule=["morning"]))
+    convo.send(ext(start_date={"kind": "asap"}))
+    convo.send(ext(has_driver_license="yes"))
+    assert "Call it: curso de manejo higiénico de alimentos." in convo.said
+
+
+def test_forgotten_replies_leave_the_transcript():
+    """V10: the summary said Alex asked twice; the first reply had been dropped in a burst."""
+    convo = Convo()
+    convo.send(ext(consent="yes"))
+    dropped = convo.send(ext(full_name="Laura Pérez"))  # the worker drops this reply
+    state = forget_undelivered(convo.state, dropped.outbound)
+    assert state.transcript_tail == convo.state.transcript_tail[:-1]  # only the last reply goes
+    assert convo.state.transcript_tail[-1].role == "agent"  # the input isn't modified

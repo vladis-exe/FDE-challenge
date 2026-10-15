@@ -288,3 +288,33 @@ def test_the_read_back_shows_what_they_said_about_a_flagged_answer(config):
         "carnet de conducir: caducó en agosto, renueva en 2 semanas (lo revisará un reclutador)"
         in summarize(state, config)
     )
+
+
+# E20 (1): the label is stripped in code, and the retry asks for the text only
+
+
+def test_a_labelled_retry_never_reaches_the_candidate():
+    """A13 live run: the retry answered "Corrected: …" and trim kept it."""
+    draft = "Anotado, el lunes 19. Ahora una pregunta. ¿Tienes licencia de manejo? Gracias."
+    retry = "Corrected: Anotado, el lunes 19. ¿Tienes licencia de manejo?"
+    llm = FakeLLM({"compose": [draft, retry]})
+    result = compose_reply(
+        plan(ask=Ask(field="x")), [], llm=llm, limits=load_config().message_limits
+    )
+    assert result.text == "Anotado, el lunes 19. ¿Tienes licencia de manejo?"
+    feedback = llm.calls_for("compose")[1].messages[-1]["content"]
+    assert "message text only" in feedback
+
+
+def test_mexico_gets_agendar_in_the_close():
+    assert "agendar una entrevista" in fixed("close_completed", language="es", country="MX")
+    assert "concertar una entrevista" in fixed("close_completed", language="es", country="ES")
+
+
+def test_a_question_names_the_thing_in_the_candidates_vocabulary():
+    ask = Ask(
+        field="food_handler_certificate",
+        about="si tiene el carnet",
+        term="curso de manejo higiénico de alimentos",
+    )
+    assert "Call it: curso de manejo higiénico de alimentos." in instructions(plan(ask=ask))

@@ -22,6 +22,7 @@ readback:
 
 # Qualified and needs review get the same close, so nothing implies a rejection.
 close_completed:
+  es_MX: "¡Listo{name}! Un reclutador de Grupo Sazón te escribirá en los próximos días para agendar una entrevista. ¡Gracias por tu tiempo!"
   es: "¡Listo{name}! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!"
   en: "All done{name}! A Grupo Sazón recruiter will message you in the next few days to set up an interview. Thanks for your time!"
 

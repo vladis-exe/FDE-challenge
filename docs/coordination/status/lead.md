@@ -114,6 +114,11 @@ One thing to pick up **once credits are back, before the live verification**: ev
   "known fail", and that failure was the bug E19 fixed. Give it a failure that doesn't depend on an
   engine bug (e.g. a fixture scenario with a deliberately wrong `expected`). Engine: run
   `tests/evals` too before committing a behavior change.
+- **E19 follow-up `404b95c`: sent back.** "Several relative days → the earliest" breaks
+  negations: "hoy no, mañana sí" → 0, "mañana no, pasado mañana" → 1, so `near_date` would
+  overwrite the model's correct reading with the day the candidate refused. Rule now: exactly one
+  relative day → code decides; two or more → None, the model's reading stands. My "pick one" note
+  was too loose; only the None option was safe.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

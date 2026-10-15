@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-None. All engine work is done and approved through E20; CP5 verified by the lead (af384a5). Nothing open for engine.
+**E21, in progress** (lead): `display_name` capitalizes word by word ("kevin Ramírez Soto"), keeping particles and existing capitals.
 
 ## Done
 | Task | What changed | How to verify | Commit |

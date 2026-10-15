@@ -136,8 +136,11 @@ every turn, as the app does, so they exercise the stored shapes.
 
 ## Known limits
 
-- A compound first name alone ("José Luis") passes the two-word name check: the
-  spec says no format policing on names.
+- A two-word first name alone ("Soy Luis Ángel", "José Luis") counts as a full name, so
+  no surname is asked for (seen live in V11 scenario 10). Code can't tell "Luis Ángel"
+  from "Luis Pérez" without guessing which words are surnames, and the spec says no
+  format policing on names; the cost is an occasional record without a surname, which
+  the recruiter fills in on the call.
 - Experience on a platform outside the known list is stored as `other`; the
   name the candidate gave isn't kept (CONTRACTS §1).
 - A "stop" that is also an insult ("pinche bot, ya deja de preguntar") is honored

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from screening.cli import main
@@ -60,3 +62,26 @@ def test_unknown_vacancy_is_an_argument_error(capsys):
     with pytest.raises(SystemExit):
         main(["--fake", "--vacancy", "astronaut"])
     assert "driver, kitchen_prep" in capsys.readouterr().err
+
+
+# E22: the demo scripts are Vlad's free pre-demo smoke test; they must not rot.
+
+SCRIPTS = Path(__file__).parent / "scripts"
+
+
+def test_demo_kitchen_script_qualifies_under_fake(capsys):
+    main(["--fake", "--vacancy", "kitchen_prep", "--script", str(SCRIPTS / "demo_kitchen.txt")])
+    output = capsys.readouterr().out
+    assert "Final status: qualified" in output
+    assert "Marta Gil, Madrid, media jornada, tardes" in output  # the read-back
+    assert "carnet de conducir: no" in output  # a preferred "no" never disqualifies
+    assert '"preference_score": 1.0' in output  # the certificate's weight
+
+
+def test_demo_mx_script_qualifies_under_fake(capsys):
+    main(["--fake", "--country", "MX", "--script", str(SCRIPTS / "demo_mx.txt")])
+    output = capsys.readouterr().out
+    assert "Options: Guadalajara, Monterrey" in output  # the ambiguous "san pedro"
+    assert "El pago depende" in output  # the FAQ mid-flow
+    assert "Monterrey, medio tiempo, tardes" in output  # the correction at the read-back
+    assert "Final status: qualified" in output

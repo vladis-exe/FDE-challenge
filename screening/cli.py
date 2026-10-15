@@ -14,17 +14,18 @@ import json
 import re
 import sys
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
 
 from screening import engine
-from screening.config import VacancyConfig, load_config
+from screening.config import ScreeningConfig, VacancyConfig, load_config
 from screening.llm import AnthropicClient, FakeLLM, LLMClient
 from screening.record import final_record
 from screening.schemas import Channel, ConversationState, InboundMessage, Status, TurnResult
+from screening.validators import match_city, relative_day
 
 DIM, BOLD, CYAN = "2", "1", "1;36"
 
@@ -144,79 +145,125 @@ def interactive_lines() -> Iterator[str]:
         yield line
 
 
-# --fake: a keyword stub that answers whatever field is being asked, by field type.
+# --fake: a keyword stub for the extractor, so the CLI runs with no API key.
+# Like the real extractor it reads every field a message mentions, but only the
+# phrasings the demo scripts and simple answers use. It's a smoke test, not a model.
 
-YES = {"si", "sí", "yes", "claro", "vale", "ok", "👍"}
-NO = {"no", "nope", "nel", "👎"}
-OPTION_WORDS = {
-    "complet": "full_time",
-    "full": "full_time",
-    "media": "part_time",
-    "medio": "part_time",
-    "part": "part_time",
-    "fin": "weekends",
-    "weekend": "weekends",
-    "mañana": "morning",
-    "morning": "morning",
-    "tarde": "afternoon",
-    "afternoon": "afternoon",
-    "noche": "evening",
-    "evening": "evening",
-    "flex": "flexible",
+YES_START = re.compile(r"^\W*(?:s[ií]|va|sale|vale|claro|ok|yes|sim[oó]n|👍|todo bien)\b|^\W*👍")
+NO_START = re.compile(r"^\W*(?:ah\s+)?(?:no|nel|nope|👎)\b")
+NAME = re.compile(r"\b(?:me llamo|soy|my name is)\s+([^\W\d_]+(?:\s+[^\W\d_]+)+)", re.IGNORECASE)
+PLACE_PREFIX = re.compile(r"^\W*(?:vivo en|estoy en|en|de|in)\s+", re.IGNORECASE)
+OPTION_WORDS = {  # word at a word start -> option value
+    r"\b(?:jornada )?complet": "full_time",
+    r"\bfull": "full_time",
+    r"\bmedi[ao]\b": "part_time",
+    r"\bpart": "part_time",
+    r"\bfines? de semana|\bweekend": "weekends",
+    r"\bmañanas\b|\b(?:por|en) la mañana\b|\bmorning": "morning",
+    r"\btardes?\b|\bafternoon": "afternoon",
+    r"\bnoches?\b|\bevening": "evening",
+    r"\bflexible|\bme da igual": "flexible",
 }
+EXPERIENCE = re.compile(
+    r"\b(\d+(?:[.,]\d+)?|un|una)\s+(año|años|mes|meses|years?|months?)\s+(?:con|en|on|at)\s+(.+)$"
+)
+TERSE_EXPERIENCE = re.compile(r"^\W*([^\d\W][^\d]*?)\s+(\d+(?:[.,]\d+)?)\b")
+WEEKDAYS_ES = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+PAY_QUESTION = re.compile(r"cu[aá]nto pagan|\bsueldo\b|\bpago\b|how much")
 
 
-def fake_llm(vacancy: VacancyConfig) -> FakeLLM:
+def fake_llm(vacancy: VacancyConfig, config: ScreeningConfig | None = None) -> FakeLLM:
+    config = config or load_config()
     return FakeLLM(
         {
-            "extract": lambda system, messages: fake_extract(vacancy, messages),
+            "extract": lambda system, messages: fake_extract(vacancy, config, messages),
             "compose": fake_compose,
             "summary": lambda system, messages: "[fake summary]",
         }
     )
 
 
-def fake_extract(vacancy: VacancyConfig, messages: list[dict[str, str]]) -> dict[str, Any]:
+def fake_extract(
+    vacancy: VacancyConfig, config: ScreeningConfig, messages: list[dict[str, str]]
+) -> dict[str, Any]:
     prompt = messages[-1]["content"]
     asking = re.search(r"Asking for: (.+)", prompt).group(1)
+    today = date.fromisoformat(re.search(r"local date: (\d{4}-\d{2}-\d{2})", prompt).group(1))
     text = prompt.split("<candidate_message>\n")[1].split("\n</candidate_message>")[0].strip()
-    lowered = text.lower().strip(" .!¡¿?")
-    yes, no = lowered in YES, lowered in NO
+    lowered = text.casefold()
+    yes, no = bool(YES_START.search(lowered)), bool(NO_START.search(lowered))
     english = re.search(r"\b(yes|i|my|the)\b", lowered) is not None
-    record: dict[str, Any] = {"intent": "answer", "language": "en" if english else "es"}
     fields: dict[str, Any] = {}
-    record["fields"] = fields
+    record: dict[str, Any] = {
+        "intent": "answer",
+        "language": "en" if english else "es",
+        "fields": fields,
+    }
+    asked = next((spec for spec in vacancy.asked if asking.startswith(spec.name)), None)
 
     if asking == "consent":
-        record["consent"] = "no" if no else "yes"
-        return record
-    if asking.startswith("confirm"):  # the read-back, or an out-of-area city
-        if yes or no:
-            record["confirmation"] = "confirm" if yes else "deny"
-        else:
-            city = next(spec for spec in vacancy.asked if spec.type == "city")
-            fields[city.name] = text
-        return record
-    spec = next((spec for spec in vacancy.asked if asking.startswith(spec.name)), None)
-    if spec is None:
-        return record
-    if spec.type in ("text", "city"):
-        fields[spec.name] = text
-    elif spec.type == "boolean":
-        fields[spec.name] = "yes" if yes else "no" if no else "vague"
-    elif spec.type == "enum_multi":
-        chosen = {value for word, value in OPTION_WORDS.items() if word in lowered}
-        fields[spec.name] = [option for option in spec.options if option in chosen]
-    elif spec.type == "experience":
-        years = re.search(r"\d+(?:[.,]\d+)?", lowered)
-        if no or not years:
-            fields[spec.name] = {"has_experience": False}
-        else:
-            amount = float(years.group().replace(",", "."))
-            fields[spec.name] = {"items": [{"platform": lowered.split()[0], "years": amount}]}
-    elif spec.type == "date":
-        fields[spec.name] = {"kind": "asap"}
+        record["consent"] = "no" if no and not yes else "yes"
+    if asking.startswith("confirm") and (yes or no):  # the read-back, or an out-of-area city
+        record["confirmation"] = "deny" if no else "confirm"
+    if PAY_QUESTION.search(lowered):
+        record["question"], record["faq_id"] = text, "pay"
+
+    for spec in vacancy.asked:
+        value = _fake_field(spec, text, lowered, asked is spec, yes, no, today, config)
+        if value is not None:
+            fields[spec.name] = value
+    if asking.startswith("confirm") and fields:
+        record["intent"] = "correction"
     return record
+
+
+def _fake_field(spec, text, lowered, is_asked, yes, no, today, config) -> Any:
+    """One field's raw answer from the message, or None if it doesn't give one."""
+    if spec.type == "text":
+        match = NAME.search(text)
+        return match.group(1) if match else (text if is_asked else None)
+    if spec.type == "boolean":
+        if not is_asked:
+            return None
+        if no or "no tengo" in lowered:
+            return "no"
+        return "yes" if yes or "tengo" in lowered else "vague"
+    if spec.type == "city":
+        # Volunteered only when introduced as a place ("vivo en…"): "todo bien, gracias"
+        # must not fuzzy-match Gràcia.
+        introduced = PLACE_PREFIX.match(text) is not None
+        place = PLACE_PREFIX.sub("", text).strip(" .!?")
+        served = introduced and match_city(place, config).kind != "not_served"
+        return place if is_asked or served else None
+    if spec.type == "enum_multi":
+        chosen = {value for word, value in OPTION_WORDS.items() if re.search(word, lowered)}
+        options = [option for option in spec.options if option in chosen]
+        return options or None
+    if spec.type == "experience":
+        match = EXPERIENCE.search(lowered)
+        if match:
+            number = match.group(1)
+            amount = 1.0 if number in ("un", "una") else float(number.replace(",", "."))
+            unit = "months" if match.group(2).startswith(("mes", "month")) else "years"
+            return {"items": [{"platform": match.group(3).strip(" .!"), unit: amount}]}
+        if not is_asked:
+            return None
+        terse = TERSE_EXPERIENCE.match(lowered)  # "glovo 1,5"
+        if terse:
+            years = float(terse.group(2).replace(",", "."))
+            return {"items": [{"platform": terse.group(1), "years": years}]}
+        return {"has_experience": False}  # asked, and no duration given: none
+    if spec.type == "date":
+        offset = relative_day(lowered)
+        if offset is not None:
+            return {"kind": "date", "resolved": (today + timedelta(days=offset)).isoformat()}
+        for index, day in enumerate(WEEKDAYS_ES):
+            if re.search(rf"\b{day}\b", lowered):
+                ahead = (index - today.weekday() - 1) % 7 + 1  # the next one, never today
+                return {"kind": "date", "resolved": (today + timedelta(days=ahead)).isoformat()}
+        if is_asked or re.search(r"^\W*ya\b|cuanto antes|asap|right away", lowered):
+            return {"kind": "asap"}  # any other answer to the date question: as soon as possible
+    return None
 
 
 def fake_compose(system: str, messages: list[dict[str, str]]) -> str:

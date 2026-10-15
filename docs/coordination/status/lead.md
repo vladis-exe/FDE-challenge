@@ -150,6 +150,10 @@ One thing to pick up **once credits are back, before the live verification**: ev
 - **E21 `5e9fe37` + `75e628b`: approved.** Word-by-word display names: particles lowercase,
   all-caps words normalized ("LAURA DE LA FUENTE" → "Laura de la Fuente"), mixed case kept
   ("McDonald"), apostrophes and hyphens handled. Display only. 403 engine+evals, 111 app pass.
+- **E22 `5fb523b`: approved.** Both demo scripts reach qualified under `--fake` again, with a test
+  each so they can't rot. Engine corrected its own E11–E15 row: that exact `--fake` command had
+  never been run (a simpler script was). Worth remembering: a status claim needs the literal
+  command it names. Presentation notes (L6) rewritten in `78c0268`; README refreshed.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

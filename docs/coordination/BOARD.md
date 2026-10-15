@@ -225,7 +225,7 @@ round should cost under $1.
   the real worker; full suite green; ruff check and format clean tree-wide.
 
 Order: E18 → V9 → A13.
-- [ ] **E18 Last compose polish.** "Genial, Simón." (evals' note, `status/evals.md`): compose
+- [x] **E18 Last compose polish.** (`b318b8b`, false positives fixed in `7cbb9fb`) "Genial, Simón." (evals' note, `status/evals.md`): compose
   must not address the candidate by a name that isn't an accepted `full_name`. Prefer a code fix
   (what the plan gives compose) over a prompt tweak. Live check ≤ $0.05.
 - [ ] **V9 Final run.** After E18 commits: smoke suite first, then one full 24-scenario run on the

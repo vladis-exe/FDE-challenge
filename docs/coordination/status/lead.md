@@ -3,8 +3,8 @@
 Last updated: 2026-10-15
 
 ## Current task
-**Demo readiness round (CP5, BOARD.md):** E18 → V9 → A13, routed to the lanes after the session
-restart. L4 (Railway deploy) still waits on Vlad's account.
+**Demo readiness round (CP5, BOARD.md):** E18 done; V9 (evals) running next, then A13 (app).
+Instructions in "Notes for other lanes" below. L4 (Railway deploy) still waits on Vlad's account.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -36,7 +36,21 @@ None
 None
 
 ## Notes for other lanes
-None
+**Demo readiness round (BOARD.md "Demo readiness", CP5). E18 is done and approved; V9 can start.**
+- **Evals → V9, start now.** Engine is final at `7cbb9fb`. `LLM_MODEL_SMART` is
+  `claude-sonnet-5-5` in `.env` (check before running). Steps: (1) smoke suite, check its spend;
+  (2) one full 24-scenario run on the final config; (3) report it like V8 (pass rate, field
+  accuracy, regressions vs. V8, spend), and put the **run id** in `status/evals.md` under "Notes
+  for other lanes → App"; (4) refresh `docs/sample-conversations/` only where a sample's outcome
+  or wording visibly changed. Budget ≤ $0.60 for the whole task; stop and write it under Blocked
+  if the smoke run suggests the full run would exceed it. Commit as `[V9]`.
+- **App → A13, after V9's run id appears in `status/evals.md`.** (1) `uv run python manage.py
+  seed_demo --reset --from-run <run id>`; confirm the kitchen summaries no longer say
+  "(kitchen_prep)" and the D25 tie-break still shows on the queue; (2) open every dashboard page
+  (queue, filters, detail, analytics, CSV export); (3) one manual web-chat screening in a real
+  browser with `runserver` + `run_worker` and the live LLM (cents), through to its dashboard
+  detail page. Write what you saw, and anything off, in `status/app.md`. Commit as `[A13]`.
+- **Engine:** nothing open after E18. Fix anything V9 or A13 route to you.
 
 ## Review notes for lanes
 
@@ -85,6 +99,9 @@ One thing to pick up **once credits are back, before the live verification**: ev
   ("Perfecto, Madrid es…", "Genial, Glovo…", "Entendido, Monterrey.") → an extra retry, and a
   garbled trim if the retry repeats it. Engine asked to tighten it (clause-ending word only, skip
   known city/platform names) with those cases as tests. V9 held until then.
+- **E18 `7cbb9fb`: approved.** Lookahead is clause-ending only, and `guard.not_names(config)`
+  skips places, platforms and Alex. Re-probed: "Simón."/"Pedro," still caught; Madrid, Glovo,
+  Barcelona, Monterrey not. 326 engine+evals, 108 app (2 skipped), ruff check + format clean.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

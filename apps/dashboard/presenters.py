@@ -13,6 +13,7 @@ from typing import Any
 from apps.candidates.models import Conversation
 from apps.messaging.services import engine_context
 from screening.config import FieldSpec, VacancyConfig
+from screening.messages import display_name
 from screening.record import final_record
 from screening.schemas import ConversationState
 from screening.scoring import score_breakdown
@@ -90,6 +91,14 @@ def record_for(conversation: Conversation) -> dict[str, Any]:
     return final_record(ConversationState.model_validate(conversation.state))
 
 
+def candidate_name(conversation: Conversation, record: dict[str, Any]) -> str:
+    """The name as the read-back shows it ("nuria vidal roca" -> "Nuria Vidal Roca").
+
+    Display only: the record and `Candidate.name` keep what the candidate typed.
+    """
+    return display_name(record["fields"].get("full_name") or conversation.candidate.name or "")
+
+
 def option_label(spec: FieldSpec, option: str) -> str:
     label = spec.option_labels.get(option, {}).get("en") or option.replace("_", " ")
     return label[:1].upper() + label[1:]
@@ -100,6 +109,8 @@ def display(spec: FieldSpec | None, value: Any) -> str:
     if value is None:
         return ""
     kind = spec.type if spec else None
+    if spec and spec.name == "full_name":
+        return display_name(value)
     if kind == "boolean":
         return "Yes" if value else "No"
     if kind == "city":
@@ -148,7 +159,7 @@ def row(conversation: Conversation) -> Row:
     start = fields.get("start_date")
     return Row(
         conversation=conversation,
-        name=conversation.candidate.name or fields.get("full_name") or "—",
+        name=candidate_name(conversation, record) or "—",
         vacancy=vacancy_title(conversation.vacancy_id),
         where=where(conversation) if conversation.status in ("in_progress", "abandoned") else "",
         city=city_names().get(conversation.city, ""),

@@ -330,3 +330,22 @@ def test_export_is_the_filtered_queue_as_csv(client, recruiter):
     # One column set for every job: a field the job doesn't ask is just empty.
     assert laura["food_handler_certificate"] == "" and ana["experience"] == ""
     assert (ana["food_handler_certificate"], ana["preference_score"]) == ("yes", "1")
+
+
+def test_names_typed_in_lowercase_are_shown_capitalized(client, recruiter):
+    """Display only, like the read-back (`screening.messages.display_name`)."""
+    conversation = make_conversation("nuria vidal roca")
+    make_conversation("María de la Fuente")  # a name with its own capitals is kept
+
+    queue = client.get(reverse("dashboard_queue")).content.decode()
+    detail = client.get(reverse("dashboard_detail", args=[conversation.pk])).content.decode()
+    export = client.get(reverse("dashboard_export")).content.decode("utf-8").lstrip("﻿")
+
+    assert "Nuria Vidal Roca" in queue and "María de la Fuente" in queue
+    assert "<h1>Nuria Vidal Roca</h1>" in detail
+    assert ">nuria vidal roca<" not in queue + detail  # the summary is model prose, left as is
+    names = {row["full_name"] for row in csv.DictReader(io.StringIO(export))}
+    assert names == {"Nuria Vidal Roca", "María de la Fuente"}
+    conversation.refresh_from_db()
+    assert conversation.candidate.name == "nuria vidal roca"
+    assert conversation.state["profile"]["fields"]["full_name"]["value"] == "nuria vidal roca"

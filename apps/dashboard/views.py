@@ -100,7 +100,7 @@ def detail(request: HttpRequest, conversation_id: UUID) -> HttpResponse:
             "record_json": json.dumps(record, indent=2, ensure_ascii=False),
             "vacancy": vacancy,
             "score": f"{record['preference_score']:g}",
-            "name": record["fields"].get("full_name") or conversation.candidate.name,
+            "name": presenters.candidate_name(conversation, record),
             "fields": presenters.field_lines(state, vacancy),
             "transcript": conversation.messages.order_by("id"),
             "events": conversation.events.order_by("created_at", "id"),
@@ -176,6 +176,8 @@ def export_csv(request: HttpRequest) -> HttpResponse:
         for spec in vacancy.fields if vacancy else []:
             if spec.type == "city" and spec.name in fields:
                 fields.update(fields.pop(spec.name))  # {"country": ..., "city": ...}
+        if fields.get("full_name"):
+            fields["full_name"] = presenters.candidate_name(conversation, record)
         writer.writerow(
             {
                 "conversation_id": record["conversation_id"],

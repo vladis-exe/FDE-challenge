@@ -235,7 +235,7 @@ Order: E18 → V9 → A13, with E19 → V10 in parallel to A13.
 - [ ] **A13 Re-seed and browser pass.** `seed_demo --from-run <V9 run>`; check every dashboard
   page. Then one manual web-chat screening in a browser with the real worker and a live LLM
   (cents), end to end to the dashboard detail page. Note anything off in `status/app.md`.
-- [ ] **E19 V9's engine findings** (`status/evals.md`, Notes → Engine (V9, new)). (1) Resolve
+- [x] **E19 V9's engine findings** (`5bd51ef`) (`status/evals.md`, Notes → Engine (V9, new)). (1) Resolve
   relative days ("hoy", "mañana", "mañana mismo", "pasado mañana", "today", "tomorrow") in code
   from the message's local date, not by the model (D33's rule; scenario 16 stored Friday's
   "mañana mismo" as Friday, 1 run in 4). (2) A platform answer that names a country or city

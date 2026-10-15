@@ -45,9 +45,9 @@ None
   screening in a real browser with `runserver` + `run_worker` and the live LLM (cents), through to
   its dashboard detail page. Write what you saw, and anything off, in `status/app.md`. Commit as
   `[A13]`. Don't wait for E19: the fixture is a recording, and E19 doesn't change its records.
-- **Engine → E19, start now.** BOARD.md has the three findings (relative days in code, platform
-  abroad, FAQ per-country vocabulary). Tests for each, live check ≤ $0.05, commit as `[E19]`.
-- **Evals → V10, after E19 commits.** Scenario 16 ×3 and 04 ×2 live, then regenerate sample 03
+- **Engine:** E19 approved. One small follow-up, Review notes E19 (a): "mañana o pasado".
+- **Evals → V10, start now (E19 is `5bd51ef`).** First fix the failing harness test (Review
+  notes, E19 (b)). Scenario 16 ×3 and 04 ×2 live, then regenerate sample 03
   and update its notes. Budget ≤ $0.10. Commit as `[V10]`.
 
 ## Review notes for lanes
@@ -104,6 +104,16 @@ One thing to pick up **once credits are back, before the live verification**: ev
   rules/language 100%, $0.0065/conv, p50 2.3 s, total spend $0.36 of $0.60. The one fail (16) is a
   real engine bug, not noise: routed as E19 with the other two findings. Samples regenerated with
   the Sonnet candidate (the Haiku one leaks meta text): fine, same choice as V5.
+- **E19 `5bd51ef`: approved.** Probed `relative_day` (morning uses of "mañana" correctly skipped;
+  "hoy no, mañana sí" → None) and the platform matcher ("uber eats en houston" → uber_eats); the
+  MX FAQ variant is in. Two follow-ups, neither blocking: (a) **engine:** "mañana o pasado" returns
+  1, not None as your message and the docstring say. Tomorrow is a fine reading (the earliest
+  day offered), so either keep it and fix the docstring/test, or make it None. Pick one so the
+  code and the description agree. (b) **evals:** `tests/evals/test_harness.py::
+  test_compare_flags_failures_across_repeats` now fails. It used fake-mode scenario 16 as its
+  "known fail", and that failure was the bug E19 fixed. Give it a failure that doesn't depend on an
+  engine bug (e.g. a fixture scenario with a deliberately wrong `expected`). Engine: run
+  `tests/evals` too before committing a behavior change.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

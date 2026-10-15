@@ -3,7 +3,7 @@
 Last updated: 2026-10-14
 
 ## Current task
-None. **Evals lane done.** V4 repeats 2–3 skipped per the lead's final call (V4 stays provisional on one repeat per configuration; the decision isn't in doubt). **Spend from the top-up: ~$0.48** (the last re-check $0.048).
+**V9 (waiting on E18):** once engine commits E18, run the smoke suite, check spend, then one full 24-scenario run on the final config (fast Haiku 5.5, smart Sonnet 5.5; simulated candidate Haiku 5.5 as in V8, per Vlad's budget call). Budget ≤ $0.60. **Spend from the top-up so far: ~$0.48.**
 
 ## Done
 | Task | What changed | How to verify | Commit |

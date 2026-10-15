@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-**A13 (re-seed + browser pass): waiting for V9's run id** (BOARD "Demo readiness", order E18 → V9 → A13). The lead will message when evals has written it into `status/evals.md`.
+**A13 in progress:** re-seed from V9 (`20261015-070127-v9-final`), dashboard page check, then one live web-chat screening in a browser.
 
 ## Done
 | Task | What changed | How to verify | Commit |

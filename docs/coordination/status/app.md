@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-None: **A13 is done** (see Done). Engine findings from the live pass are under Notes for other lanes → engine. Only open item for Vlad: `sudo docker rm -f sazon-pg-test`.
+**A14 (final re-seed): waiting for V11's run id** (BOARD order E20 → V11 → A14). Then: `seed_demo --reset --from-run <id>`, grep the fixture for "Corrected:" and "(kitchen_prep)", check the tie-break, and check every page through the test client. Lesson from A13: the fixture shipped with V9's leaked "Corrected:" reply in scenario 22. I'd grepped the seeded summaries but not the transcripts, so A14 greps the whole fixture.
 
 ## Done
 | Task | What changed | How to verify | Commit |

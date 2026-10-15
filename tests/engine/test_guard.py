@@ -15,7 +15,7 @@ LIMITS = MessageLimits()
     ],
 )
 def test_good_replies_pass(text):
-    assert check_reply(text, asks=True, limits=LIMITS) == []
+    assert check_reply(text, asks=True, limits=LIMITS, name="Laura") == []
 
 
 def test_reply_without_an_ask_must_not_ask():
@@ -79,3 +79,39 @@ def test_trim_drops_leading_sentences_until_it_fits():
     trimmed = trim_reply(text, asks=True, limits=LIMITS)
     assert len(trimmed) <= LIMITS.max_chars
     assert trimmed.endswith("¿Cuándo puedes empezar?")
+
+
+# E18: never address the candidate by a name they haven't given
+
+
+@pytest.mark.parametrize(
+    "text, name",
+    [
+        ("Genial, Simón. ¿Me dices tu nombre y apellido?", None),  # evals' V8 run
+        ("Gracias, Pedro. ¿En qué ciudad vives?", "Laura"),
+    ],
+)
+def test_a_vocative_name_that_isnt_theirs_is_a_problem(text, name):
+    assert "addresses them by a name they haven't given" in check_reply(
+        text, asks=True, limits=LIMITS, name=name
+    )
+
+
+@pytest.mark.parametrize(
+    "text, name",
+    [
+        ("Genial, Laura. ¿En qué ciudad vives?", "Laura"),
+        ("genial, laura. ¿En qué ciudad vives?", "Laura"),
+        ("Perfecto, anotado. ¿En qué ciudad vives?", None),  # not a name
+        ("Hola, soy Alex. ¿Empezamos?", None),
+    ],
+)
+def test_their_own_name_or_no_name_is_fine(text, name):
+    assert check_reply(text, asks=True, limits=LIMITS, name=name) == []
+
+
+def test_trim_drops_a_wrong_vocative():
+    trimmed = trim_reply(
+        "Genial, Simón. ¿Me dices tu nombre y apellido?", asks=True, limits=LIMITS, name=None
+    )
+    assert trimmed == "Genial. ¿Me dices tu nombre y apellido?"

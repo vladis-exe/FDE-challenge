@@ -6,7 +6,7 @@ import pytest
 from screening.config import load_config
 from screening.engine import EngineContext, handle_tick, new_conversation, next_due_at, start
 from screening.llm import FakeLLM
-from screening.schemas import Channel, ConversationState, FieldValue, Stage, Status
+from screening.schemas import Channel, ConversationState, FieldStatus, FieldValue, Stage, Status
 
 MADRID = ZoneInfo("Europe/Madrid")
 MEXICO = ZoneInfo("America/Mexico_City")
@@ -27,7 +27,9 @@ def silent_since(ctx, at: datetime, phone="+34600000000", replied=True) -> Conve
     if replied:
         state.stage = Stage.COLLECTING
         state.current_field = "location"
-        state.profile.fields["full_name"] = FieldValue(value="Laura Pérez")
+        state.profile.fields["full_name"] = FieldValue(
+            value="Laura Pérez", status=FieldStatus.ACCEPTED
+        )
         state.last_inbound_at = at
     return state
 

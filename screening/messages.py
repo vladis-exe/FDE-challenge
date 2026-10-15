@@ -106,8 +106,15 @@ NAME_FIELD = "full_name"  # Alex uses the first name when the vacancy asks for o
 
 
 def first_name(state: ConversationState) -> str | None:
+    """The first name to address them by: only from an accepted full name.
+
+    A partial name waiting for its surname, or anything the model merely saw in a
+    message ("simón, empecemos"), is never used to address the candidate.
+    """
     name = state.profile.fields.get(NAME_FIELD)
-    return display_name(name.value).split()[0] if name and name.value else None
+    if name is None or name.status is not FieldStatus.ACCEPTED or not name.value:
+        return None
+    return display_name(name.value).split()[0]
 
 
 def display_name(name: str) -> str:

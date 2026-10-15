@@ -1,7 +1,8 @@
 """The message rules from the spec, checked in code on every composed reply.
 
 At most 2 sentences and ~300 characters, exactly one question and it comes last
-(none when the plan asks nothing), at most one emoji, plain text. The prompt asks
+(none when the plan asks nothing), at most one emoji, plain text, and never
+addressing the candidate by a name they haven't given (E18). The prompt asks
 for all of this; the guard makes sure of it: a reply that breaks a rule is
 regenerated once, and if it still breaks one, trimmed by `trim_reply`.
 """
@@ -23,7 +24,24 @@ def sentences(text: str) -> list[str]:
     return [part for part in parts if _EMOJI.sub("", part).strip()]
 
 
-def check_reply(text: str, *, asks: bool, limits: MessageLimits) -> list[str]:
+# An opener that addresses someone: "Genial, Simón." / "Thanks, Tom!" -> the name.
+_VOCATIVE = re.compile(r"^\W*\w+(?: \w+)?, ([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)(?=[.!,?¡¿ ])")
+ALEX = "Alex"  # Alex naming itself is fine ("Hola, soy Alex" doesn't match anyway)
+
+
+def wrong_vocative(text: str, name: str | None) -> str | None:
+    """The name a reply opens by addressing, if it isn't the candidate's accepted one."""
+    match = _VOCATIVE.match(text)
+    if not match or match.group(1) == ALEX:
+        return None
+    if name and match.group(1).casefold() == name.casefold():
+        return None
+    return match.group(1)
+
+
+def check_reply(
+    text: str, *, asks: bool, limits: MessageLimits, name: str | None = None
+) -> list[str]:
     """The rules `text` breaks, in plain words (empty when it's fine)."""
     problems: list[str] = []
     if len(text) > limits.max_chars:
@@ -44,11 +62,16 @@ def check_reply(text: str, *, asks: bool, limits: MessageLimits) -> list[str]:
         problems.append("more than one emoji")
     if _FORMATTING.search(text):
         problems.append("formatting")
+    if wrong_vocative(text, name):
+        problems.append("addresses them by a name they haven't given")
     return problems
 
 
-def trim_reply(text: str, *, asks: bool, limits: MessageLimits) -> str:
+def trim_reply(text: str, *, asks: bool, limits: MessageLimits, name: str | None = None) -> str:
     """Cut a reply down to the rules without rewriting it. Deterministic."""
+    wrong = wrong_vocative(text, name)
+    if wrong:
+        text = text.replace(f", {wrong}", "", 1)  # "Genial, Simón." -> "Genial."
     text = _FORMATTING.sub(" ", text)
     text = re.sub(r"\s+", " ", text).strip()
     emoji = _EMOJI.findall(text)

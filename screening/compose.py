@@ -26,6 +26,9 @@ VOCABULARY = {
     "MX": "Mexico: licencia de manejo, carro, celular",
 }
 REPLY_MAX_TOKENS = 300
+# Said explicitly, because a model otherwise picks a "name" out of the transcript
+# ("simón, empecemos" → "Genial, Simón."). The guard enforces it too.
+UNKNOWN_NAME = "unknown (they haven't given it yet: don't address them by any name)"
 
 
 class Ask(BaseModel):
@@ -93,7 +96,7 @@ def user_prompt(plan: ReplyPlan, transcript: list[TranscriptLine]) -> str:
         f"Job: {plan.job_title}\n"
         f"Language: {language}\n"
         f"Country vocabulary: {VOCABULARY[plan.country]}\n"
-        f"Candidate's first name: {plan.first_name or 'unknown'}\n"
+        f"Candidate's first name: {plan.first_name or UNKNOWN_NAME}\n"
         "</situation>\n"
         f"<recent_conversation>\n{render_transcript(transcript)}\n</recent_conversation>\n"
         f"<write>\n{instructions(plan)}\n</write>"
@@ -123,7 +126,8 @@ def compose_reply(
     messages = [{"role": "user", "content": user_prompt(plan, transcript)}]
     draft = _draft(messages, llm)
     composed = Composed(text=draft.value, calls=[draft])
-    composed.problems = check_reply(draft.value, asks=asks, limits=limits)
+    name = plan.first_name
+    composed.problems = check_reply(draft.value, asks=asks, limits=limits, name=name)
     if not composed.problems:
         return composed
 
@@ -136,8 +140,8 @@ def compose_reply(
                                {"role": "user", "content": feedback}], llm)  # fmt: skip
     composed.calls.append(retry)
     composed.text = retry.value
-    if check_reply(retry.value, asks=asks, limits=limits):
-        composed.text = trim_reply(retry.value, asks=asks, limits=limits)
+    if check_reply(retry.value, asks=asks, limits=limits, name=name):
+        composed.text = trim_reply(retry.value, asks=asks, limits=limits, name=name)
         composed.trimmed = True
     return composed
 

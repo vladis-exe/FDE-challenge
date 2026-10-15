@@ -905,3 +905,23 @@ def test_the_summary_names_the_job_by_its_title():
     convo.send(ext(intent="human_request"))
     content = convo.llm.calls_for("summary")[0].messages[0]["content"]
     assert content.startswith("<job>Ayudante de cocina</job>")
+
+
+# E18: Alex only uses a name the candidate has given and code has accepted
+
+
+def test_a_partial_unconfirmed_name_is_not_used_to_address_them():
+    convo = Convo()
+    convo.send(ext(consent="yes"))
+    convo.send(ext(full_name="simón"))  # one word: stored as partial, surname asked
+    content = convo.llm.calls_for("compose")[-1].messages[0]["content"]
+    assert "Candidate's first name: unknown" in content
+    assert "don't address them by any name" in content
+
+
+def test_an_accepted_name_is_offered_to_compose():
+    convo = Convo()
+    convo.send(ext(consent="yes"))
+    convo.send(ext(full_name="laura pérez"))
+    content = convo.llm.calls_for("compose")[-1].messages[0]["content"]
+    assert "Candidate's first name: Laura" in content

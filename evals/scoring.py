@@ -30,7 +30,7 @@ DEFINITIONS = {
     "preference score) that match the ground truth exactly; after a knockout, a field never "
     "reached may be empty.",
     "rules": "Share of Alex's LLM-written messages within the limits: at most 300 characters, "
-    "2 sentences, 1 question, 1 emoji, plain text.",
+    '2 sentences, 1 question, 1 emoji, plain text, no leaked draft label ("Corrected:").',
     "language": "Share of Alex's messages written in the language of the candidate's latest "
     "message (messages whose language can't be told apart are skipped).",
     "disclosure": "The opening message says Alex is an AI.",
@@ -50,6 +50,15 @@ WAITLIST = re.compile(r"avis|lista|waitlist|let you know", re.I)
 EMOJI = re.compile("[\U0001f300-\U0001faff☀-➿⭐⭕]")
 FORMATTING = re.compile(r"\n|\*\*|__|^\s*[-•#]\s", re.M)
 SENTENCE_END = re.compile(r"[.!?…]+(?=\s|$)")
+# A draft label the model leaked into the message ("Corrected: Anotado…"). An explicit list,
+# since Alex's own openers use colons too ("Repasemos:", "Te cuento:").
+META_LABEL = re.compile(
+    r"^\W*(corrected|revised|rewritten|final|draft|message|reply|response|output|answer"
+    r"|corregido|corrección|revisado|mensaje|respuesta|borrador|versión|version)"
+    r"( (message|reply|response|mensaje|respuesta|version|versión))?\s*:"
+    r"|^\W*(here is|here's|aquí tienes|aquí está)\b",
+    re.I,
+)
 
 ES_WORDS = set(
     "de la que el en y los se del las por un para con una su al lo como más pero sus le ya "
@@ -233,6 +242,8 @@ def _rules(text: str) -> str:
         problems.append("emojis")
     if FORMATTING.search(text):
         problems.append("formatting")
+    if META_LABEL.search(text):
+        problems.append("meta label")
     return ", ".join(problems)
 
 

@@ -108,6 +108,16 @@ def test_persona_sees_only_delivered_messages_and_gets_the_directive() -> None:
         ("Hola 👋🎉 ¿seguimos?", "emojis"),
         ("**Genial** ¿dónde vives?", "formatting"),
         ("x" * 301, "301 chars"),
+        # V9 scenario 22: a draft label leaked into the sent message
+        ("Corrected: Anotado, lunes 2 de noviembre. ¿Algo más?", "meta label"),
+        ("Revised message: Got it, Monday it is.", "meta label"),
+        ("Mensaje: ¿En qué ciudad vives?", "meta label"),
+        ("Here is the reply: noted!", "meta label"),
+        ("Here's my answer.", "meta label"),
+        # Alex's own colon openers are fine
+        ("¡Gracias, Iker! Repasemos: Iker, Bilbao, ¿está todo bien?", ""),
+        ("Te cuento: el reclutador te lo confirma. ¿Tienes carnet?", ""),
+        ("Sobre el sueldo: depende de la ciudad. ¿Dónde vives?", ""),
     ],
 )
 def test_message_rules(text: str, problems: str) -> None:

@@ -213,3 +213,25 @@ V7 needs E10-E12 at least; V8 needs E14.
 - [x] **V8 Re-run and report.** V3 scoring and the V6 smoke suite against the rebuilt engine;
   note any regressions from the refactor in `status/evals.md`, separate from genuinely new
   findings about the vacancy system itself.
+
+## Demo readiness (after the session restart, 2026-10-15)
+
+Everything above is done except L4. This round makes the demo data match the final engine and
+gets the one manual browser pass CP1 deferred. Budget: about $4.5 of the 5 EUR left; the whole
+round should cost under $1.
+
+- **CP5:** the dashboard is seeded from a run of the final engine with Sonnet summaries (no
+  "(kitchen_prep)" leftovers); one live web-chat conversation completed in a real browser through
+  the real worker; full suite green; ruff check and format clean tree-wide.
+
+Order: E18 → V9 → A13.
+- [ ] **E18 Last compose polish.** "Genial, Simón." (evals' note, `status/evals.md`): compose
+  must not address the candidate by a name that isn't an accepted `full_name`. Prefer a code fix
+  (what the plan gives compose) over a prompt tweak. Live check ≤ $0.05.
+- [ ] **V9 Final run.** After E18 commits: smoke suite first, then one full 24-scenario run on the
+  final config (`LLM_MODEL_SMART` is back on Sonnet 5.5). Report it like V8, record spend, and
+  write the run id in `status/evals.md` for app. Refresh `docs/sample-conversations/` only if a
+  sample's outcome or wording visibly changed. Budget ≤ $0.60.
+- [ ] **A13 Re-seed and browser pass.** `seed_demo --from-run <V9 run>`; check every dashboard
+  page. Then one manual web-chat screening in a browser with the real worker and a live LLM
+  (cents), end to end to the dashboard detail page. Note anything off in `status/app.md`.

@@ -14,10 +14,12 @@ from pydantic import BaseModel, Field
 
 T = TypeVar("T")
 
+
 class Channel(StrEnum):
     WEB = "web"
     WHATSAPP = "whatsapp"
-    SIM = "sim"                 # evals and CLI
+    SIM = "sim"  # evals and CLI
+
 
 class Status(StrEnum):
     IN_PROGRESS = "in_progress"
@@ -27,28 +29,33 @@ class Status(StrEnum):
     ABANDONED = "abandoned"
     OPTED_OUT = "opted_out"
 
-class Stage(StrEnum):           # v4: generic phases, not one value per field (see §7)
+
+class Stage(StrEnum):  # v4: generic phases, not one value per field (see §7)
     CONSENT = "consent"
-    COLLECTING = "collecting"   # which field is current: state.current_field
+    COLLECTING = "collecting"  # which field is current: state.current_field
     CONFIRM = "confirm"
     DONE = "done"
+
 
 class FieldStatus(StrEnum):
     MISSING = "missing"
     ACCEPTED = "accepted"
-    FLAGGED = "flagged"         # unresolved or unclear; goes to human review
+    FLAGGED = "flagged"  # unresolved or unclear; goes to human review
+
 
 class FieldValue(BaseModel, Generic[T]):
     value: T | None = None
     status: FieldStatus = FieldStatus.MISSING
-    source_message_id: str | None = None   # provenance: which inbound message gave it
-    attempts: int = 0                      # re-asks used for this field (max from config)
-    note: str | None = None                # short reason when flagged, e.g. "license expired"
+    source_message_id: str | None = None  # provenance: which inbound message gave it
+    attempts: int = 0  # re-asks used for this field (max from config)
+    note: str | None = None  # short reason when flagged, e.g. "license expired"
+
 
 class Availability(StrEnum):
     FULL_TIME = "full_time"
     PART_TIME = "part_time"
     WEEKENDS = "weekends"
+
 
 class Schedule(StrEnum):
     MORNING = "morning"
@@ -56,16 +63,20 @@ class Schedule(StrEnum):
     EVENING = "evening"
     FLEXIBLE = "flexible"
 
+
 class Location(BaseModel):
     country: Literal["ES", "MX"]
-    city: str                   # canonical key from service_areas.yaml, e.g. "barcelona"
+    city: str  # canonical key from service_areas.yaml, e.g. "barcelona"
+
 
 class ExperienceItem(BaseModel):
-    platform: str               # normalized key: glovo, uber_eats, just_eat, rappi, didi_food, other
-    years: float                # months converted, 0-40
+    platform: str  # normalized key: glovo, uber_eats, just_eat, rappi, didi_food, other
+    years: float  # months converted, 0-40
 
-class CandidateProfile(BaseModel):   # v4: keyed by the vacancy's field names, see §7
+
+class CandidateProfile(BaseModel):  # v4: keyed by the vacancy's field names, see §7
     fields: dict[str, FieldValue[Any]] = {}
+
 
 class TranscriptLine(BaseModel):
     role: Literal["candidate", "agent"]
@@ -73,49 +84,66 @@ class TranscriptLine(BaseModel):
     at: datetime
     message_id: str | None = None
 
+
 class ConversationState(BaseModel):
     conversation_id: str
     channel: Channel
-    vacancy_id: str                                   # v4: which VacancyConfig this screening is against (§7)
+    vacancy_id: str  # v4: which VacancyConfig this screening is against (§7)
     status: Status = Status.IN_PROGRESS
     stage: Stage = Stage.CONSENT
-    current_field: str | None = None                  # v4: which field is being asked, when stage=COLLECTING
+    current_field: str | None = None  # v4: which field is being asked, when stage=COLLECTING
     language: Literal["es", "en"] = "es"
-    country_hint: Literal["ES", "MX"] | None = None   # from phone prefix until location is known
+    country_hint: Literal["ES", "MX"] | None = None  # from phone prefix until location is known
     consent_at: datetime | None = None
     profile: CandidateProfile = Field(default_factory=CandidateProfile)
-    disqualify_reason: str | None = None              # v4: "out_of_area", or "no_<outcome_name>" for a boolean knockout
-    review_reasons: list[str] = []      # e.g. "<outcome_name>_unclear", "unresolved:<field>", "unresolved:confirm", "human_requested", "abuse"
-    pending_confirmation: dict[str, Any] | None = None  # e.g. out-of-area city awaiting the candidate's confirm
+    disqualify_reason: str | None = (
+        None  # v4: "out_of_area", or "no_<outcome_name>" for a boolean knockout
+    )
+    review_reasons: list[
+        str
+    ] = []  # e.g. "<outcome_name>_unclear", "unresolved:<field>", "unresolved:confirm", "human_requested", "abuse"
+    pending_confirmation: dict[str, Any] | None = (
+        None  # e.g. out-of-area city awaiting the candidate's confirm
+    )
     reminders_sent: int = 0
     last_inbound_at: datetime | None = None
     last_outbound_at: datetime | None = None
     offtopic_strikes: int = 0
-    transcript_tail: list[TranscriptLine] = []        # last N lines (config), engine-maintained, for LLM context
-    summary: str | None = None                        # set when status leaves in_progress
-    preference_score: float = 0.0                     # v4: sum of matched `preferred` fields' weights (§7); ranking only
+    transcript_tail: list[
+        TranscriptLine
+    ] = []  # last N lines (config), engine-maintained, for LLM context
+    summary: str | None = None  # set when status leaves in_progress
+    preference_score: float = (
+        0.0  # v4: sum of matched `preferred` fields' weights (§7); ranking only
+    )
     schema_version: int = 2
 
+
 class InboundMessage(BaseModel):
-    id: str                     # app's Message primary key as a string; evals use their own IDs
+    id: str  # app's Message primary key as a string; evals use their own IDs
     text: str
-    received_at: datetime       # aware; the engine uses this as "now" for the turn
+    received_at: datetime  # aware; the engine uses this as "now" for the turn
     media: Literal["none", "audio", "image", "sticker", "other"] = "none"
+
 
 class OutboundMessage(BaseModel):
     text: str
-    kind: Literal["reply", "reminder", "close"]   # "close" is never dropped by the reply-to-latest rule
+    kind: Literal[
+        "reply", "reminder", "close"
+    ]  # "close" is never dropped by the reply-to-latest rule
+
 
 class Event(BaseModel):
-    type: str                   # see the event catalogue below
+    type: str  # see the event catalogue below
     at: datetime
     data: dict[str, Any] = {}
+
 
 class TurnResult(BaseModel):
     state: ConversationState
     outbound: list[OutboundMessage] = []
     events: list[Event] = []
-    changed: bool = True        # False when handle_tick had nothing to do
+    changed: bool = True  # False when handle_tick had nothing to do
 ```
 
 Event catalogue: `conversation_started`, `consent_given`, `stage_entered`, `field_accepted`, `field_flagged`, `field_corrected`, `knockout_failed`, `status_changed`, `reminder_sent`, `reminder_deferred`, `faq_answered`, `offtopic`, `opt_out`, `human_requested`, `media_received`, `llm_call` (data: purpose, model, input_tokens, output_tokens, latency_ms), `llm_error`.
@@ -166,28 +194,48 @@ A field missing or flagged is simply absent from `"fields"` (not `null` — ther
 ## 3. LLM client (`screening/llm/`, task E3)
 
 ```python
-ModelTier = Literal["fast", "smart"]     # env LLM_MODEL_FAST (default claude-haiku-5-5), LLM_MODEL_SMART (default claude-sonnet-5-5)
+ModelTier = Literal[
+    "fast", "smart"
+]  # env LLM_MODEL_FAST (default claude-haiku-5-5), LLM_MODEL_SMART (default claude-sonnet-5-5)
 M = TypeVar("M", bound=BaseModel)
+
 
 class LLMUsage(BaseModel):
     model: str
-    input_tokens: int          # total input, cached parts included
+    input_tokens: int  # total input, cached parts included
     output_tokens: int
-    cache_read_tokens: int = 0     # billed ~0.1x; v2, defaults keep old callers valid
-    cache_write_tokens: int = 0    # billed ~1.25x
+    cache_read_tokens: int = 0  # billed ~0.1x; v2, defaults keep old callers valid
+    cache_write_tokens: int = 0  # billed ~1.25x
     latency_ms: int
+
 
 class LLMResult(BaseModel, Generic[T]):
     value: T
     usage: LLMUsage
 
+
 class LLMError(Exception): ...
 
+
 class LLMClient(Protocol):
-    def structured(self, *, purpose: str, system: str, messages: list[dict[str, str]],
-                   schema: type[M], tier: ModelTier = "fast") -> LLMResult[M]: ...
-    def text(self, *, purpose: str, system: str, messages: list[dict[str, str]],
-             tier: ModelTier = "fast", max_tokens: int = 300) -> LLMResult[str]: ...
+    def structured(
+        self,
+        *,
+        purpose: str,
+        system: str,
+        messages: list[dict[str, str]],
+        schema: type[M],
+        tier: ModelTier = "fast",
+    ) -> LLMResult[M]: ...
+    def text(
+        self,
+        *,
+        purpose: str,
+        system: str,
+        messages: list[dict[str, str]],
+        tier: ModelTier = "fast",
+        max_tokens: int = 300,
+    ) -> LLMResult[str]: ...
 ```
 
 - Implementations: `AnthropicClient` (timeout, 3 retries with backoff, raises `LLMError`) and `FakeLLM` (scripted responses keyed by `purpose`, for tests).
@@ -275,18 +323,27 @@ FieldType = Literal["text", "boolean", "city", "enum_multi", "experience", "date
 Requirement = Literal["required", "preferred", "off"]
 NEVER_PREFERRED: set[FieldType] = {"text", "city"}
 
+
 class FieldSpec(BaseModel):
-    name: str                              # key in CandidateProfile.fields and final_record["fields"]
+    name: str  # key in CandidateProfile.fields and final_record["fields"]
     type: FieldType
     requirement: Requirement
     label: dict[Literal["es", "en"], str]  # the question, in the agent's own words, per language
-    weight: float = 0.0                    # preferred only: contribution to preference_score (see below)
-    options: list[str] | None = None       # required for enum_multi, and only for enum_multi
+    weight: float = 0.0  # preferred only: contribution to preference_score (see below)
+    options: list[str] | None = None  # required for enum_multi, and only for enum_multi
     # v4.1, additive, approved by Vlad 2026-10-14 (status/engine.md):
-    reason: str | None = None              # outcome-string name: no_<reason>, <reason>_unclear (falls back to `name`)
-    summary: dict[str, str] = {}           # read-back noun, "es"/"en" (+ optional "es_ES"/"es_MX"); falls back to `name`
-    option_labels: dict[str, dict[str, str]] = {}  # option -> locale -> display text; falls back to the option value
-    exclusive_options: list[str] = []      # enum_multi options that stand alone (e.g. schedule's "flexible")
+    reason: str | None = (
+        None  # outcome-string name: no_<reason>, <reason>_unclear (falls back to `name`)
+    )
+    summary: dict[
+        str, str
+    ] = {}  # read-back noun, "es"/"en" (+ optional "es_ES"/"es_MX"); falls back to `name`
+    option_labels: dict[
+        str, dict[str, str]
+    ] = {}  # option -> locale -> display text; falls back to the option value
+    exclusive_options: list[
+        str
+    ] = []  # enum_multi options that stand alone (e.g. schedule's "flexible")
 
     @model_validator(mode="after")
     def _check(self) -> "FieldSpec":
@@ -304,10 +361,11 @@ class FieldSpec(BaseModel):
     def outcome_name(self) -> str:
         return self.reason or self.name
 
+
 class VacancyConfig(BaseModel):
     id: str
     title: dict[Literal["es", "en"], str]
-    fields: list[FieldSpec]                # declared order; `.asked` below is the policy order
+    fields: list[FieldSpec]  # declared order; `.asked` below is the policy order
 
     @model_validator(mode="after")
     def _check(self) -> "VacancyConfig":
@@ -319,8 +377,9 @@ class VacancyConfig(BaseModel):
     @property
     def asked(self) -> list[FieldSpec]:
         """Required fields, in declared order, then preferred ones, in declared order."""
-        return [f for f in self.fields if f.requirement == "required"] + \
-               [f for f in self.fields if f.requirement == "preferred"]
+        return [f for f in self.fields if f.requirement == "required"] + [
+            f for f in self.fields if f.requirement == "preferred"
+        ]
 ```
 
 Loaded from `screening/config/vacancies/<id>.yaml`, one file per vacancy — same pattern as `service_areas.yaml`/`faq.yaml`, just one level deeper since there are multiple vacancies. Two ship with v4: `driver` (today's Grupo Sazón fields, migrated verbatim — `has_driver_license` stays `required`, `reason: license` so outcome strings are unchanged) and `kitchen_prep` (no driving involved: `has_driver_license` is `preferred, weight: 1.5` instead of `required`, plus a preferred food-handler-certificate field — this is the concrete case D25 is about, not a hypothetical).

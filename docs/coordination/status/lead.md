@@ -3,12 +3,8 @@
 Last updated: 2026-10-15
 
 ## Current task
-**Project done, except the actual Railway deploy.** Every other item on the original board —
-engine, app, evals, Phase 1 and Phase 2, L1/L3/L5/L6/L7, and the WhatsApp investigation (D35) —
-is complete, tested, and documented. L4 is written up as a ready-to-follow guide
-(`docs/deployment.md`) but the deploy itself needs Vlad's own Railway account; nothing left for
-a lane session to pick up unprompted. Evals has one cheap optional check queued (re-verify
-scenarios 04/13/18); otherwise idle by design, not stuck.
+**Demo readiness round (CP5, BOARD.md):** E18 → V9 → A13, routed to the lanes after the session
+restart. L4 (Railway deploy) still waits on Vlad's account.
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -78,6 +74,15 @@ One thing to pick up **once credits are back, before the live verification**: ev
 
 **Evals (V4, V5):** the provisional framing on V4 is exactly right — a real decision backed by real (if thin) evidence, clearly labeled as needing more repeats rather than dressed up as final. V5's choice to leave the two engine stumbles ("de NL", the lost renewal date) visible in the curated samples rather than cherry-picking clean ones is the right call for a live presentation — it shows you understand the system's actual failure modes, not just its happy path.
 
+## Review notes, 2026-10-15 (after the restart)
+- **E17 `dae92ef` (score always a float):** correct and minimal, with a test. Approved.
+- **E17 `7fbfb4b` (`screening/WALKTHROUGH.md`):** spot-checked 12 `file:line` references against
+  the current code; all point at the line described. Approved. `docs/code-tour.md` now points to it.
+- **V8 re-check `81a2b94`:** 04/13/18 at 6/6 live, $0.048. Approved. The only open finding left
+  in `status/evals.md` is "Genial, Simón." → E18.
+- Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
+  Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
+
 ## Phase 2: vacancies, dynamic fields, preference scoring (CONTRACTS v4, D25)
 
 Vlad's call: drop the 3-day framing, keep the quality bar, and generalize past Grupo Sazón's one
@@ -132,6 +137,9 @@ engine's notes, just not yet re-verified in context — cheap, 3 scenarios, not 
    cents) before trusting it closed.
 
 ## Announcements (contract changes, scope cuts, dependency additions)
+- **2026-10-15, after the restart: `LLM_MODEL_SMART` is back on `claude-sonnet-5-5`** in the
+  shared `.env`, ending the temporary Haiku override (D12/D26 stand). Smart is used only for
+  summaries, so the cost difference per run is small. New round: BOARD.md "Demo readiness".
 - **Pytest config fixed** (both engine and app hit this independently): dropped the global `DJANGO_SETTINGS_MODULE` from `pyproject.toml`. `tests/engine` and `tests/evals` now run with zero Django involvement, as the architecture requires. App tests need the env var explicitly: `DJANGO_SETTINGS_MODULE=config.settings uv run pytest tests/app` (documented in CLAUDE.md Commands). Also added `pythonpath = ["."]` so plain `uv run pytest` can import `screening` without `-m`.
 - **Ruff:** added `extend-exclude = ["**/migrations"]` globally, per app's request.
 - **`.gitignore`:** added `media/`, per app's request.

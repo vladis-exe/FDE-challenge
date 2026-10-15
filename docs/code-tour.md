@@ -4,8 +4,8 @@
 > (seven fixed `CandidateProfile` fields, a per-field `Stage` enum). The engine has since been
 > generalized to the vacancy system — `CandidateProfile.fields` is now a dict keyed by whatever
 > a vacancy's `FieldSpec` list defines, `Stage` collapsed to four generic phases, and there are two
-> live jobs (`driver`, `kitchen_prep`). **For the current architecture, read `screening/README.md`
-> instead** — it's engine's own guide, written for exactly this purpose and kept current by the
+> live jobs (`driver`, `kitchen_prep`). **For the current code, read `screening/WALKTHROUGH.md` (two real
+> messages traced line by line through the v4 engine) and `screening/README.md`** — it's engine's own guide, written for exactly this purpose and kept current by the
 > lane that owns the code. The *mechanics* traced below (extract → policy.decide → compose →
 > guard → persist, one lock per conversation, the LLM called exactly twice per turn) are still
 > accurate in shape; only the field model and a few function signatures changed. Worth a reread
@@ -124,7 +124,7 @@ understanding deeply is `FieldValue[T]`:
 ```python
 class FieldValue(BaseModel, Generic[T]):
     value: T | None = None
-    status: FieldStatus = FieldStatus.MISSING   # missing | accepted | flagged
+    status: FieldStatus = FieldStatus.MISSING  # missing | accepted | flagged
     source_message_id: str | None = None
     attempts: int = 0
     note: str | None = None

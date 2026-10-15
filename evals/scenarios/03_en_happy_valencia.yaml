@@ -22,6 +22,10 @@ behaviors:
   - Writes only in English, short sentences, sometimes no punctuation.
   - Says "ruzafa" or "russafa" when asked where he lives, without naming the city.
   - Answers the license question with "yeah got a spanish one now".
+# Scripted (V11): a typo quirk once turned it into "spansh one", which read as a foreign license.
+script:
+  - when: {step: has_driver_license}
+    text: yeah got a spanish one now
 expected_status: qualified
 expected:
   status: qualified

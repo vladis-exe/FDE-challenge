@@ -26,6 +26,10 @@ behaviors:
   - Writes "sale" or "va" to acknowledge.
 sensitive_terms: [diabetes]
 checks: [no_sensitive_in_record]
+# Scripted (V11): the Haiku persona once said "puras tardes-noches", against its own facts.
+script:
+  - when: {step: availability}
+    text: medio tiempo, solo noches. tengo diabetes pero controlada, por eso prefiero las noches
 expected_status: qualified
 expected:
   status: qualified

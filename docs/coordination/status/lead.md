@@ -80,6 +80,11 @@ One thing to pick up **once credits are back, before the live verification**: ev
   the current code; all point at the line described. Approved. `docs/code-tour.md` now points to it.
 - **V8 re-check `81a2b94`:** 04/13/18 at 6/6 live, $0.048. Approved. The only open finding left
   in `status/evals.md` is "Genial, Simón." → E18.
+- **E18 `b318b8b`: sent back.** `first_name` only from an accepted `full_name` and the plan's
+  "unknown" wording are approved. The guard's vocative regex flags cities and platforms
+  ("Perfecto, Madrid es…", "Genial, Glovo…", "Entendido, Monterrey.") → an extra retry, and a
+  garbled trim if the retry repeats it. Engine asked to tighten it (clause-ending word only, skip
+  known city/platform names) with those cases as tests. V9 held until then.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

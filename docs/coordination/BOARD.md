@@ -258,7 +258,7 @@ shows), so one more short loop before CP5. Order: E20 → V11 → A14.
   recruiter summary must see delivered messages only: suppressed burst replies made sample 03's
   summary say Alex "repitió dos veces" questions it never sent (V10, `status/evals.md`). Tests
   for each; run `tests/engine` and `tests/evals`; live check ≤ $0.05.
-- [ ] **V11 Scorer blind spot + final run.** (scorer check done, `1f157b0`.) The simulator's burst
+- [x] **V11 Scorer blind spot + final run.** (`1aa65b8`: 21/24, rules 100% under the stricter rule, run `20261015-072346-v11-final`) (scorer check done, `1f157b0`.) The simulator's burst
   handling calls `engine.forget_undelivered` (v4.2, D36) before the full run. The message-rules scorer must fail a reply that opens
   with a meta label (V9 scored 22 at 100% with "Corrected:" in it). Add that check, plus a test.
   After E20: one full 24-scenario run (this replaces V9 as the demo source), report it like V9,

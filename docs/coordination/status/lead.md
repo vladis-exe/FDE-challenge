@@ -39,10 +39,9 @@ None
 **Demo readiness round, last loop (BOARD.md, under "Found in A13").** CONTRACTS is now **v4.2**:
 `engine.forget_undelivered` (D36). Top-up spend so far: about $0.93 of 5 EUR.
 - **Engine:** nothing open (E20 final at `385aaab`).
-- **App → A14 (A13b done).** Worker: pass the turn's suppressed replies to
-  `engine.forget_undelivered` and persist the result in the same transaction (CONTRACTS §5 step 3),
-  with a burst test. Commit as `[A13b]`. A14 (re-seed) still waits for V11's run id.
-- **Evals → V11 (b) now.** Simulator burst handling calls `engine.forget_undelivered` (v4.2), then
+- **App → A14, start now.** Run id `20261015-072346-v11-final`. Re-seed, grep the whole fixture
+  for "Corrected:" and "(kitchen_prep)", check the tie-break and every page. Commit as `[A14]`.
+- **Evals:** V11 done; nothing open. (Was: V11 (b).) Simulator burst handling calls `engine.forget_undelivered` (v4.2), then
   the full 24-scenario run on the engine at `385aaab` (go given). Report like V9, run id in
   `status/evals.md` for app. Budget ≤ $0.25. Commit as `[V11]`.
 
@@ -141,6 +140,12 @@ One thing to pick up **once credits are back, before the live verification**: ev
 - **A13b `b2dd0d8`: approved.** One `dropped` list drives both `suppressed=True` and
   `forget_undelivered`, so they can't disagree; the test fails without the call. 110 app pass.
 - **V11 simulator `e349029`: approved.** Same rule as the worker; spy test fails on the old code.
+- **V11 full run `1aa65b8`: approved.** 21/24, but the 3 fails aren't engine regressions: 02 and
+  03 are simulator drift (I read 02: the persona said "tardes-noches" against its evenings-only
+  fact, and the engine stored what was said; both pass on a scripted rerun), and 10 is the known
+  compound-first-name limit. No "Corrected:" anywhere, no false "repeated" in summaries. 02's
+  volunteered "tengo diabetes" stays in the transcript only, never the record or the summary, as
+  the spec requires. Run `20261015-072346-v11-final` is the demo source. Top-up spend: about $1.10.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

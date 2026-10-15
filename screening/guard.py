@@ -64,10 +64,16 @@ def wrong_vocative(
 
 # A model answering the retry feedback may preface the message: "Corrected:",
 # "Mensaje corregido:", "Here is the corrected message:". Never meant for the candidate.
+# "Here is …" only counts when it introduces the message itself, not any "Here is X:".
 _LABEL = re.compile(
     r"""^\s*(?:corrected|revised|rewritten|fixed|updated|correction|corregido|corregida
     |corrección|revisado|versión\ corregida|mensaje(?:\ corregido)?|message|respuesta|reply
-    |here(?:'s|\ is)[^:\n]{0,40}|aquí\ (?:tienes|está)[^:\n]{0,40})\s*:\s*""",
+    |here(?:'s|\ is)\ (?:the\ |my\ |your\ |a\ )?
+        (?:corrected\ |revised\ |rewritten\ |new\ |updated\ |final\ )?
+        (?:message|reply|response|version|text|draft)
+    |aquí\ (?:tienes|está)\ (?:el\ |la\ |mi\ |tu\ )?(?:nuevo\ |nueva\ )?
+        (?:mensaje|respuesta|versión|texto)(?:\ corregid[ao]|\ revisad[ao])?
+    )\s*:\s*""",
     re.IGNORECASE | re.VERBOSE,
 )
 

@@ -164,3 +164,31 @@ def test_a_leading_meta_label_or_quotes_are_stripped(text):
 )
 def test_ordinary_text_is_untouched(text):
     assert strip_label(text) == text
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # Lead review of E20: "here is X:" is ordinary text unless X is the message itself.
+        "Here is what happens next: a recruiter calls you.",
+        "Aquí tienes lo que pasa después: un reclutador te llama.",
+        "Here's the deal: the recruiter confirms pay.",
+    ],
+)
+def test_here_is_something_else_is_not_a_label(text):
+    assert strip_label(text) == text
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Here's the corrected message:",
+        "Here is my reply:",
+        "Here is the revised version:",
+        "Aquí tienes la versión corregida:",
+        "Aquí está el mensaje:",
+        "Aquí tienes mi respuesta:",
+    ],
+)
+def test_here_is_the_message_is_a_label(label):
+    assert strip_label(f"{label} Anotado. ¿Tienes carnet?") == "Anotado. ¿Tienes carnet?"

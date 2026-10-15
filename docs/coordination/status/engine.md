@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-**E20, in progress** (lead, bdbe37f): meta label leak after a compose retry, FAQ re-answered unprompted, Mexican wording for the certificate question and the close, summary sees only delivered replies.
+None. E20 done; `forget_undelivered` needs app and evals to call it (see Requests).
 
 ## Done
 | Task | What changed | How to verify | Commit |
@@ -37,6 +37,7 @@ Last updated: 2026-10-12
 | E19 | V9's findings. **Relative days in code**: `validators.relative_day` reads exactly one of hoy/mañana/pasado mañana/today/tomorrow (not "por la mañana"); `fields.near_date` sets the exact day from the message's local date when the model's date is within 2 days (or asap), and never overrides a far date. **Platforms**: the known app is found anywhere in the answer ("uber eats en houston" → uber_eats). **FAQ per country**: answers take es_ES/es_MX variants; vehicle has an es_MX one | `uv run pytest tests/engine` (303 pass). Live (Haiku, $0.0004): scenario 16's line → 2026-10-24 3/3; platform → uber_eats; MX FAQ says "licencia de manejo vigente" | 5bd51ef |
 | E19 fix | Lead review: `relative_day` now returns the earliest day when several are offered ("mañana o pasado" and "mañana o pasado mañana" → 1), matching its docstring and tests. Process note taken: behavior changes are checked with `uv run pytest tests/engine tests/evals` before committing | engine + evals: 346 pass; the 1 failure is `test_compare_flags_failures_across_repeats`, routed to evals by the lead (it relied on fake scenario 16 failing before E19) | 404b95c |
 | E19 revert | Lead review: "earliest wins" (404b95c) stored the refused day in negations ("hoy no, mañana sí" → today). Back to "exactly one relative day, else None" so the model's reading stands; a bare "pasado" isn't a second day ("mañana o pasado" → tomorrow). Four negation tests + an engine test that the refused day is never stored | `uv run pytest tests/engine tests/evals` (352 pass) | 8b16b86 |
+| E20 | A13's findings. (1) **Meta label**: retry feedback asks for the message text only; `guard.strip_label` strips "Corrected:"/"Revised:"/"Mensaje corregido:"/"Here is…:"/"Aquí tienes…:" and wrapping quotes from every draft. (2) **Stale FAQ**: a question is answered only if ≥50% of its words are in this message (`policy.question_asked`). (3) **MX wording**: field questions carry `term` (the localized `summary` noun) as "Call it:"; MX close "agendar". (4) **`engine.forget_undelivered(state, dropped)`** removes dropped burst replies from the transcript | `uv run pytest tests/engine tests/evals` (375 pass). Live (Haiku, $0.0013): real questions 3/3 kept, the stale A13 one dropped (reproduced live); MX certificate question in MX words | ecbded2 |
 | Docs 2 | `screening/WALKTHROUGH.md`: two real messages traced through the v4 code with current `file:line` references (a driver answering two questions at once; a kitchen candidate saying no to the preferred license), plus how a screening ends and what happens when the LLM fails. Every event, plan and value in it is the output of an actual run. Tracing it found a bug: `preference_score` was the int 0 for vacancies with no preferred fields (fixed in dae92ef) | read `screening/WALKTHROUGH.md` | see git log |
 | E16b | The second half of "de NL": cities list their `regions` in `service_areas.yaml` (Nuevo León/NL, Jalisco, Andalucía, Cataluña, Euskadi, Comunidad de Madrid...). A region-only answer ("vivo en Jalisco") offers that region's served cities as options instead of starting the out-of-area confirmation, which could have disqualified a candidate near Guadalajara. A city plus its region is the city; a region with no served city (Aragón) is still `not_served` | `uv run pytest tests/engine` (264 pass) | see git log |
 
@@ -44,8 +45,7 @@ Last updated: 2026-10-12
 None. (The live Phase 2 check ran after the top-up.)
 
 ## Requests (to other lanes or the lead)
-- **Evals:** `screening/llm/pricing.py` is in (5952809), a copy of `evals/pricing.py`. Please switch `evals/scoring.py` and `tests/evals/test_harness.py` to it and delete `evals/pricing.py`, so there's one price table.
-- **App:** `apps/dashboard/analytics.py` can now `from screening.llm.pricing import call_cost` (your TODO).
+- **App and evals, please call `engine.forget_undelivered(state, dropped)`** (E20, ecbded2) when reply-to-latest drops a turn's `reply`/`reminder` messages, before persisting the state (app: in the worker where you mark `suppressed=True`; evals: in the simulator's burst handling). It returns a copy whose `transcript_tail` no longer holds those replies, so the model and the recruiter summary only see what was sent. Until then V10's "Alex repitió dos veces" can recur.
 
 ## Spec questions: answered (approved as proposed, D13). E5 builds against these
 1. **Consent declined:** which status? The spec says "close, nothing stored". *Proposal:* `opted_out`, empty profile, one close message.
@@ -58,6 +58,7 @@ None. (The live Phase 2 check ran after the top-up.)
 8. **License:** a vague answer ("bueno…") gets a yes/no re-ask. An explicit unclear case (expired, in progress, foreign) is flagged at once and screening continues. *Proposal:* as stated.
 
 ## Contract change requests
+- **Lead, CONTRACTS §2: add `forget_undelivered(state: ConversationState, dropped: list[OutboundMessage]) -> ConversationState`** (E20). Pure, no ctx. Called by the shell after reply-to-latest drops replies; §5 step 3 could say "and call `engine.forget_undelivered` with the dropped ones". Additive.
 - **Lead: four optional `FieldSpec` keys for CONTRACTS §7 (v4.1). Vlad approved all four directly, 2026-10-14.** All are additive with defaults, so a FieldSpec without them is still valid:
   1. `reason: str | None = None`: the name used in outcome strings. A boolean knockout gives `no_<reason or name>`, an unclear value gives `<reason or name>_unclear`. Driver sets `reason: license`, so it keeps `no_license` / `license_unclear` (unchanged behavior, and the evals/dashboard/seed strings stay valid).
   2. `summary: dict[str, str] = {}`: the noun used in the read-back (fixed text, D18), keys `es`/`en` with optional `es_ES`/`es_MX` overrides like `messages.yaml` (e.g. carnet de conducir vs licencia de manejo). Falls back to the field name.

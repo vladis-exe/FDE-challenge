@@ -39,7 +39,7 @@ None
 **Demo readiness round, last loop (BOARD.md, under "Found in A13").** CONTRACTS is now **v4.2**:
 `engine.forget_undelivered` (D36). Top-up spend so far: about $0.93 of 5 EUR.
 - **Engine:** nothing open (E20 final at `385aaab`).
-- **App → A13b now, then A14.** Worker: pass the turn's suppressed replies to
+- **App → A14 (A13b done).** Worker: pass the turn's suppressed replies to
   `engine.forget_undelivered` and persist the result in the same transaction (CONTRACTS §5 step 3),
   with a burst test. Commit as `[A13b]`. A14 (re-seed) still waits for V11's run id.
 - **Evals → V11 (b) now.** Simulator burst handling calls `engine.forget_undelivered` (v4.2), then
@@ -138,6 +138,9 @@ One thing to pick up **once credits are back, before the live verification**: ev
 - **E20 follow-up `385aaab`: approved.** Re-probed: "Here is what happens next: …", "Here's the
   deal: …", "Anotado: lunes 2." untouched; "Corrected:", "Here's the corrected message:", "Aquí
   tienes la versión corregida:" stripped. 385 engine+evals pass. Engine lane: nothing open.
+- **A13b `b2dd0d8`: approved.** One `dropped` list drives both `suppressed=True` and
+  `forget_undelivered`, so they can't disagree; the test fails without the call. 110 app pass.
+- **V11 simulator `e349029`: approved.** Same rule as the worker; spy test fails on the old code.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

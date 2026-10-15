@@ -264,7 +264,7 @@ shows), so one more short loop before CP5. Order: E20 → V11 → A14.
   After E20: one full 24-scenario run (this replaces V9 as the demo source), report it like V9,
   put the run id in `status/evals.md` for app, and regenerate sample 03 from it if V10 hasn't.
   Budget ≤ $0.25.
-- [ ] **A13b Worker calls `forget_undelivered`** (CONTRACTS v4.2 §5 step 3, D36): pass the turn's
+- [x] **A13b Worker calls `forget_undelivered`** (`b2dd0d8`) (CONTRACTS v4.2 §5 step 3, D36): pass the turn's
   suppressed replies to `engine.forget_undelivered` and persist what it returns, in the same
   transaction. Test: a burst of two messages leaves only the delivered reply in `transcript_tail`.
 - [ ] **A14 Final re-seed.** `seed_demo --reset --from-run <V11 run>`; check no "Corrected:" /

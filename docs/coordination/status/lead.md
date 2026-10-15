@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-**Demo readiness round (CP5, BOARD.md):** E18 done; V9 (evals) running next, then A13 (app).
+**Demo readiness round (CP5, BOARD.md):** E18 and V9 done; A13 (app) and E19 (engine) running, then V10 (evals).
 Instructions in "Notes for other lanes" below. L4 (Railway deploy) still waits on Vlad's account.
 
 ## Done
@@ -36,21 +36,19 @@ None
 None
 
 ## Notes for other lanes
-**Demo readiness round (BOARD.md "Demo readiness", CP5). E18 is done and approved; V9 can start.**
-- **Evals → V9, start now.** Engine is final at `7cbb9fb`. `LLM_MODEL_SMART` is
-  `claude-sonnet-5-5` in `.env` (check before running). Steps: (1) smoke suite, check its spend;
-  (2) one full 24-scenario run on the final config; (3) report it like V8 (pass rate, field
-  accuracy, regressions vs. V8, spend), and put the **run id** in `status/evals.md` under "Notes
-  for other lanes → App"; (4) refresh `docs/sample-conversations/` only where a sample's outcome
-  or wording visibly changed. Budget ≤ $0.60 for the whole task; stop and write it under Blocked
-  if the smoke run suggests the full run would exceed it. Commit as `[V9]`.
-- **App → A13, after V9's run id appears in `status/evals.md`.** (1) `uv run python manage.py
-  seed_demo --reset --from-run <run id>`; confirm the kitchen summaries no longer say
-  "(kitchen_prep)" and the D25 tie-break still shows on the queue; (2) open every dashboard page
-  (queue, filters, detail, analytics, CSV export); (3) one manual web-chat screening in a real
-  browser with `runserver` + `run_worker` and the live LLM (cents), through to its dashboard
-  detail page. Write what you saw, and anything off, in `status/app.md`. Commit as `[A13]`.
-- **Engine:** nothing open after E18. Fix anything V9 or A13 route to you.
+**Demo readiness round (BOARD.md "Demo readiness", CP5).** E18 and V9 done and approved.
+**Top-up spend so far: about $0.84 of 5 EUR.**
+- **App → A13, start now.** V9's run id is `20261015-070127-v9-final`. (1) `uv run python
+  manage.py seed_demo --reset --from-run 20261015-070127-v9-final`; confirm the kitchen summaries
+  no longer say "(kitchen_prep)" and the D25 tie-break still shows on the queue; (2) open every
+  dashboard page (queue, filters, detail, analytics, CSV export); (3) one manual web-chat
+  screening in a real browser with `runserver` + `run_worker` and the live LLM (cents), through to
+  its dashboard detail page. Write what you saw, and anything off, in `status/app.md`. Commit as
+  `[A13]`. Don't wait for E19: the fixture is a recording, and E19 doesn't change its records.
+- **Engine → E19, start now.** BOARD.md has the three findings (relative days in code, platform
+  abroad, FAQ per-country vocabulary). Tests for each, live check ≤ $0.05, commit as `[E19]`.
+- **Evals → V10, after E19 commits.** Scenario 16 ×3 and 04 ×2 live, then regenerate sample 03
+  and update its notes. Budget ≤ $0.10. Commit as `[V10]`.
 
 ## Review notes for lanes
 
@@ -102,6 +100,10 @@ One thing to pick up **once credits are back, before the live verification**: ev
 - **E18 `7cbb9fb`: approved.** Lookahead is clause-ending only, and `guard.not_names(config)`
   skips places, platforms and Alex. Re-probed: "Simón."/"Pedro," still caught; Madrid, Glovo,
   Barcelona, Monterrey not. 326 engine+evals, 108 app (2 skipped), ruff check + format clean.
+- **V9 `9f6b767`: approved.** 23/24 (V8 was 20/24: 04, 13, 18, 19 now pass), fields 100%,
+  rules/language 100%, $0.0065/conv, p50 2.3 s, total spend $0.36 of $0.60. The one fail (16) is a
+  real engine bug, not noise: routed as E19 with the other two findings. Samples regenerated with
+  the Sonnet candidate (the Haiku one leaks meta text): fine, same choice as V5.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

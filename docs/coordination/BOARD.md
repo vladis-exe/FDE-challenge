@@ -224,14 +224,24 @@ round should cost under $1.
   "(kitchen_prep)" leftovers); one live web-chat conversation completed in a real browser through
   the real worker; full suite green; ruff check and format clean tree-wide.
 
-Order: E18 → V9 → A13.
+Order: E18 → V9 → A13, with E19 → V10 in parallel to A13.
 - [x] **E18 Last compose polish.** (`b318b8b`, false positives fixed in `7cbb9fb`) "Genial, Simón." (evals' note, `status/evals.md`): compose
   must not address the candidate by a name that isn't an accepted `full_name`. Prefer a code fix
   (what the plan gives compose) over a prompt tweak. Live check ≤ $0.05.
-- [ ] **V9 Final run.** After E18 commits: smoke suite first, then one full 24-scenario run on the
+- [x] **V9 Final run.** (`9f6b767`: smoke 6/6, full 23/24, fields 100%, $0.36 total) After E18 commits: smoke suite first, then one full 24-scenario run on the
   final config (`LLM_MODEL_SMART` is back on Sonnet 5.5). Report it like V8, record spend, and
   write the run id in `status/evals.md` for app. Refresh `docs/sample-conversations/` only if a
   sample's outcome or wording visibly changed. Budget ≤ $0.60.
 - [ ] **A13 Re-seed and browser pass.** `seed_demo --from-run <V9 run>`; check every dashboard
   page. Then one manual web-chat screening in a browser with the real worker and a live LLM
   (cents), end to end to the dashboard detail page. Note anything off in `status/app.md`.
+- [ ] **E19 V9's engine findings** (`status/evals.md`, Notes → Engine (V9, new)). (1) Resolve
+  relative days ("hoy", "mañana", "mañana mismo", "pasado mañana", "today", "tomorrow") in code
+  from the message's local date, not by the model (D33's rule; scenario 16 stored Friday's
+  "mañana mismo" as Friday, 1 run in 4). (2) A platform answer that names a country or city
+  ("uber eats en houston") is still that platform, not `other`. (3) `faq.yaml` answers use
+  per-country vocabulary like `messages.yaml` does: Mexico gets "licencia de manejo", not
+  "permiso de conducir". Tests for each; live check ≤ $0.05.
+- [ ] **V10 Re-check E19.** After E19 commits: scenario 16 ×3 and 04 ×2 live; regenerate
+  sample 03 (`03-spanglish-and-message-bursts.md`), the one that shows bugs (2) and (3), and
+  update its notes. Budget ≤ $0.10.

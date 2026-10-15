@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-None. E21 done; nothing open for engine.
+**E22, in progress** (lead): both demo scripts must reach their outcome under `--fake`, with a test so it can't rot.
 
 ## Done
 | Task | What changed | How to verify | Commit |

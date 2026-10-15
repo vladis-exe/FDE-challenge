@@ -1,6 +1,6 @@
 # Spain: every answer in one message
 
-*Spain · outcome `qualified` · 2 candidate messages · eval scenario `05_all_in_one_sevilla`*
+*Spain · outcome `qualified` · 2 candidate messages · eval scenario `05_all_in_one_sevilla` · run `20261015-070636`*
 
 A Spanish happy path where the candidate answers all seven questions in her first reply. Rocío, in Sevilla, writes one long message with her name, license, neighborhood, availability, shifts, experience and a relative start date. A form-filling bot would ask all seven questions anyway.
 

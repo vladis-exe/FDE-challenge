@@ -1,6 +1,6 @@
 # Mexico: Spanglish, a side question and a burst of messages
 
-*Mexico · outcome `qualified` · 9 candidate messages · eval scenario `04_code_switch_monterrey`*
+*Mexico · outcome `qualified` · 9 candidate messages · eval scenario `04_code_switch_monterrey` · run `20261015-070636`*
 
 A Monterrey candidate who mixes Spanish and English and sends three messages in a row before Alex can answer. Brandon also asks mid-flow whether the job is by motorbike or car, and answers the license question with where it's from ("sí, de NL").
 

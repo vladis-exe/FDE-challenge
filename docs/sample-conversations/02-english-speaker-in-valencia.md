@@ -1,6 +1,6 @@
 # English: a British candidate in Valencia
 
-*Spain · outcome `qualified` · 9 candidate messages · eval scenario `03_en_happy_valencia`*
+*Spain · outcome `qualified` · 9 candidate messages · eval scenario `03_en_happy_valencia` · run `20261015-070636`*
 
 An English-speaking candidate, screened entirely in English. Tom answers the city question with only his neighborhood, in its Spanish spelling ("ruzafa"), and his experience is on Deliveroo, a platform that isn't on the list.
 

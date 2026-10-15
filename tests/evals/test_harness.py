@@ -193,8 +193,9 @@ def test_sample_renders_the_real_conversation_and_record(config) -> None:
         context="Hard case. More context.",
         notes=["Alex asks for text."],
     )
-    out = sample_md(sample, scenario, run, "America/Mexico_City")
+    out = sample_md(sample, scenario, run, "America/Mexico_City", "20261015-070636")
     assert out.startswith("# A voice note\n\n*Mexico · outcome `qualified`")
+    assert "· run `20261015-070636`*" in out
     assert "- Alex asks for text." in out and "[🎤 voice note]" in out
     assert '"status": "qualified"' in out and '"summary"' not in out
 

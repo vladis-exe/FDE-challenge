@@ -1,6 +1,6 @@
 # Needs review: an expired license
 
-*Spain · outcome `needs_review` · 10 candidate messages · eval scenario `13_expired_license_bilbao`*
+*Spain · outcome `needs_review` · 10 candidate messages · eval scenario `13_expired_license_bilbao` · run `20261015-070636`*
 
 A candidate whose license expired in August, with a renewal appointment in two weeks. Not a yes and not a no: the spec says code must not decide this alone.
 

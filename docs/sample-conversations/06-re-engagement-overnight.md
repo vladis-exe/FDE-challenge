@@ -1,6 +1,6 @@
 # Re-engagement: silent overnight, back in the morning
 
-*Spain · outcome `qualified` · 9 candidate messages · eval scenario `16_silence_late_reply_barcelona`*
+*Spain · outcome `qualified` · 9 candidate messages · eval scenario `16_silence_late_reply_barcelona` · run `20261015-070636`*
 
 A candidate who stops answering at 20:34 and comes back the next morning. Nuria starts in the evening, goes quiet at the experience question, and replies at 09:35.
 

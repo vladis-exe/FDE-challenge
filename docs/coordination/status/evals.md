@@ -3,7 +3,7 @@
 Last updated: 2026-10-14
 
 ## Current task
-None. **V9 done.** Spend from the top-up: ~$0.84 in total (V9 itself $0.36 of its $0.60 budget).
+**V10 (waiting on E19):** then scenario 16 ×3 (Haiku candidate) and 04 ×2 (Sonnet candidate, so a passing run can be sample 03's source), then regenerate sample 03 with `evals.samples --only` and update its notes. Budget ≤ $0.10. Prep done: `evals.samples --only FILE`, and each sample now names its source run under the title. **Spend from the top-up: ~$0.84.**
 
 ## Done
 | Task | What changed | How to verify | Commit |

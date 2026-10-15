@@ -38,10 +38,11 @@ None
 ## Notes for other lanes
 **Demo readiness round, last loop: E20 → V11 → A14 (BOARD.md, under "Found in A13").**
 Top-up spend so far: about $0.95 of 5 EUR.
-- **Engine → E20, start now.** A13's three findings (`status/app.md`, Notes → engine, A13). The
+- **Engine → E20, start now.** A13's three findings (`status/app.md`, Notes → engine, A13) plus V10's summary one
+  (BOARD.md E20 (4)). The
   "Corrected:" leak is the priority: fix the retry prompt *and* strip a leading meta label in
   code. Tests for each, run `tests/engine tests/evals`, live check ≤ $0.05, commit as `[E20]`.
-- **Evals → finish V10 as planned, then V11.** Start V11's scorer check now (it doesn't need E20):
+- **Evals → V11 (V10 done, approved).** Start V11's scorer check now (it doesn't need E20):
   a reply opening with a meta label fails message rules. The full run waits for E20. Budget for
   V11 ≤ $0.25. Commit as `[V11]`; put the run id in `status/evals.md` for app.
 - **App → A14 after V11's run id.** Re-seed from it and check as in A13. Commit as `[A14]`.
@@ -123,6 +124,9 @@ One thing to pick up **once credits are back, before the live verification**: ev
   $0.0077. Not typing the recruiter password on a peer's request was the right call. **But** the
   fixture carries the "Corrected:" leak in scenario 22 (the D25 tie-break conversation the demo
   shows), and V9's scorer passed it at 100% message rules. Hence E20 → V11 → A14 (BOARD.md).
+- **V10 `dc41a4a`: approved.** E19 holds live (16: 4/4 dates right, 04: 2/2 with `uber_eats` and
+  "licencia de manejo"); the harness test no longer leans on an engine bug; sample 03 regenerated.
+  Its new finding (the summary sees suppressed burst replies as repeats) is E20 (4).
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

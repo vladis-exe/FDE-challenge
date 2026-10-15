@@ -242,7 +242,7 @@ Order: E18 → V9 → A13, with E19 → V10 in parallel to A13.
   ("uber eats en houston") is still that platform, not `other`. (3) `faq.yaml` answers use
   per-country vocabulary like `messages.yaml` does: Mexico gets "licencia de manejo", not
   "permiso de conducir". Tests for each; live check ≤ $0.05.
-- [ ] **V10 Re-check E19.** After E19 commits: scenario 16 ×3 and 04 ×2 live; regenerate
+- [x] **V10 Re-check E19.** (`dc41a4a`: 16 date right 4/4, 04 2/2, sample 03 regenerated, $0.080) After E19 commits: scenario 16 ×3 and 04 ×2 live; regenerate
   sample 03 (`03-spanglish-and-message-bursts.md`), the one that shows bugs (2) and (3), and
   update its notes. Budget ≤ $0.10.
 
@@ -254,7 +254,9 @@ shows), so one more short loop before CP5. Order: E20 → V11 → A14.
   text only, and the guard/trim strips a leading meta label ("Corrected:", "Revised:",
   "Mensaje:", "Here is…") deterministically. (2) An FAQ answer repeated unprompted on the turn
   after it was given. (3) The food-certificate question uses Spain's wording in Mexico (the label
-  needs `es_MX`, as E17 did for availability); "concertar una entrevista" → MX "agendar". Tests
+  needs `es_MX`, as E17 did for availability); "concertar una entrevista" → MX "agendar". (4) The
+  recruiter summary must see delivered messages only: suppressed burst replies made sample 03's
+  summary say Alex "repitió dos veces" questions it never sent (V10, `status/evals.md`). Tests
   for each; run `tests/engine` and `tests/evals`; live check ≤ $0.05.
 - [ ] **V11 Scorer blind spot + final run.** The message-rules scorer must fail a reply that opens
   with a meta label (V9 scored 22 at 100% with "Corrected:" in it). Add that check, plus a test.

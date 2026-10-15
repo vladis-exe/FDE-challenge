@@ -38,13 +38,12 @@ None
 ## Notes for other lanes
 **Demo readiness round, last loop (BOARD.md, under "Found in A13").** CONTRACTS is now **v4.2**:
 `engine.forget_undelivered` (D36). Top-up spend so far: about $0.93 of 5 EUR.
-- **Engine:** E20 approved. One small follow-up: the `strip_label` "Here is …:" false positive
-  (Review notes). Commit as `[E20]`.
+- **Engine:** nothing open (E20 final at `385aaab`).
 - **App → A13b now, then A14.** Worker: pass the turn's suppressed replies to
   `engine.forget_undelivered` and persist the result in the same transaction (CONTRACTS §5 step 3),
   with a burst test. Commit as `[A13b]`. A14 (re-seed) still waits for V11's run id.
 - **Evals → V11 (b) now.** Simulator burst handling calls `engine.forget_undelivered` (v4.2), then
-  the full 24-scenario run on the engine as of E20 and its follow-up. Report like V9, run id in
+  the full 24-scenario run on the engine at `385aaab` (go given). Report like V9, run id in
   `status/evals.md` for app. Budget ≤ $0.25. Commit as `[V11]`.
 
 ## Review notes for lanes
@@ -136,6 +135,9 @@ One thing to pick up **once credits are back, before the live verification**: ev
   (2) `question_asked` (≥50% word overlap) is sound: the extract prompt says "in their words", and
   it was tested live on 3 real questions plus the A13 case. (3) MX wording in. (4)
   `forget_undelivered`: CONTRACTS → **v4.2**, D36; routed to app (A13b) and evals (V11).
+- **E20 follow-up `385aaab`: approved.** Re-probed: "Here is what happens next: …", "Here's the
+  deal: …", "Anotado: lunes 2." untouched; "Corrected:", "Here's the corrected message:", "Aquí
+  tienes la versión corregida:" stripped. 385 engine+evals pass. Engine lane: nothing open.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

@@ -341,3 +341,19 @@ def test_a_question_names_the_thing_in_the_candidates_vocabulary():
 )
 def test_display_name_capitalizes_word_by_word(typed, shown):
     assert display_name(typed) == shown
+
+
+@pytest.mark.parametrize(
+    "typed, shown",
+    [
+        ("LAURA PÉREZ", "Laura Pérez"),  # all caps, common on WhatsApp
+        ("LAURA DE LA FUENTE", "Laura de la Fuente"),
+        ("laura PÉREZ", "Laura Pérez"),
+        ("McDonald", "McDonald"),  # mixed case is still kept
+        ("ana J. lópez", "Ana J. López"),  # a single capital letter is kept
+        ("o'brien", "O'Brien"),
+        ("sean o'brien-smith", "Sean O'Brien-Smith"),
+    ],
+)
+def test_display_name_handles_all_caps_and_apostrophes(typed, shown):
+    assert display_name(typed) == shown

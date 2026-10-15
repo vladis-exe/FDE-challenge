@@ -3,6 +3,7 @@
 Everything here is deterministic: the same state always gives the same text.
 """
 
+import re
 from datetime import date
 from functools import cache
 from typing import Literal
@@ -124,18 +125,25 @@ PARTICLES = {"de", "del", "la", "las", "los", "y", "da", "dos", "van"}
 def display_name(name: str) -> str:
     """How a name is shown in fixed text and on the dashboard: "kevin Ramírez" → "Kevin Ramírez".
 
-    Word by word: a word with any capital is kept as typed ("McDonald"), a particle
-    stays lowercase except as the first word, and anything else gets a capital first
-    letter (each part of "jean-pierre"). Display only: the stored value stays as typed.
+    Word by word: a word in mixed case is kept as typed ("McDonald"), an all-caps word
+    is treated as lowercase ("LAURA" → "Laura"), a particle stays lowercase except as
+    the first word, and anything else gets a capital first letter, also after a hyphen
+    or apostrophe ("jean-pierre", "o'brien"). Display only: the stored value stays as typed.
     """
-    words = name.split()
     shown = []
-    for index, word in enumerate(words):
+    for index, word in enumerate(name.split()):
+        if word.isupper() and sum(char.isalpha() for char in word) >= 2:
+            word = word.lower()  # "LAURA" is shouting, not a deliberate spelling
         if word != word.lower() or (index > 0 and word in PARTICLES):
             shown.append(word)
         else:
-            shown.append("-".join(part[:1].upper() + part[1:] for part in word.split("-")))
+            shown.append(_capitalize_parts(word))
     return " ".join(shown)
+
+
+def _capitalize_parts(word: str) -> str:
+    """A capital after each hyphen and apostrophe: "o'brien-smith" → "O'Brien-Smith"."""
+    return re.sub(r"(^|[-'’])(\w)", lambda match: match.group(1) + match.group(2).upper(), word)
 
 
 def for_state(key: str, state: ConversationState, **values: str) -> str:

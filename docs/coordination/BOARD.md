@@ -232,7 +232,7 @@ Order: E18 → V9 → A13, with E19 → V10 in parallel to A13.
   final config (`LLM_MODEL_SMART` is back on Sonnet 5.5). Report it like V8, record spend, and
   write the run id in `status/evals.md` for app. Refresh `docs/sample-conversations/` only if a
   sample's outcome or wording visibly changed. Budget ≤ $0.60.
-- [ ] **A13 Re-seed and browser pass.** `seed_demo --from-run <V9 run>`; check every dashboard
+- [x] **A13 Re-seed and browser pass.** (`5664b68`; fixture rebuilt again in A14 below) `seed_demo --from-run <V9 run>`; check every dashboard
   page. Then one manual web-chat screening in a browser with the real worker and a live LLM
   (cents), end to end to the dashboard detail page. Note anything off in `status/app.md`.
 - [x] **E19 V9's engine findings** (`5bd51ef`) (`status/evals.md`, Notes → Engine (V9, new)). (1) Resolve
@@ -245,3 +245,21 @@ Order: E18 → V9 → A13, with E19 → V10 in parallel to A13.
 - [ ] **V10 Re-check E19.** After E19 commits: scenario 16 ×3 and 04 ×2 live; regenerate
   sample 03 (`03-spanglish-and-message-bursts.md`), the one that shows bugs (2) and (3), and
   update its notes. Budget ≤ $0.10.
+
+Found in A13 (and already in V9's fixture: scenario 22, the D25 tie-break conversation the demo
+shows), so one more short loop before CP5. Order: E20 → V11 → A14.
+- [ ] **E20 A13's engine findings** (`status/app.md`, Notes → engine, A13). (1) **Priority:** a
+  compose retry leaked a meta label to the candidate ("Corrected: Anotado, lunes 2 de
+  noviembre…"; also in V9 scenario 22). Fix both ends: the retry feedback asks for the message
+  text only, and the guard/trim strips a leading meta label ("Corrected:", "Revised:",
+  "Mensaje:", "Here is…") deterministically. (2) An FAQ answer repeated unprompted on the turn
+  after it was given. (3) The food-certificate question uses Spain's wording in Mexico (the label
+  needs `es_MX`, as E17 did for availability); "concertar una entrevista" → MX "agendar". Tests
+  for each; run `tests/engine` and `tests/evals`; live check ≤ $0.05.
+- [ ] **V11 Scorer blind spot + final run.** The message-rules scorer must fail a reply that opens
+  with a meta label (V9 scored 22 at 100% with "Corrected:" in it). Add that check, plus a test.
+  After E20: one full 24-scenario run (this replaces V9 as the demo source), report it like V9,
+  put the run id in `status/evals.md` for app, and regenerate sample 03 from it if V10 hasn't.
+  Budget ≤ $0.25.
+- [ ] **A14 Final re-seed.** `seed_demo --reset --from-run <V11 run>`; check no "Corrected:" /
+  "(kitchen_prep)" text and the tie-break still holds; pages via the test client as in A13.

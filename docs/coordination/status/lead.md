@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-**Demo readiness round (CP5, BOARD.md):** E18 and V9 done; A13 (app) and E19 (engine) running, then V10 (evals).
+**Demo readiness round (CP5, BOARD.md):** E18, V9, E19, A13 done; last loop E20 → V11 → A14 (A13 found a leak in the demo data).
 Instructions in "Notes for other lanes" below. L4 (Railway deploy) still waits on Vlad's account.
 
 ## Done
@@ -36,19 +36,15 @@ None
 None
 
 ## Notes for other lanes
-**Demo readiness round (BOARD.md "Demo readiness", CP5).** E18 and V9 done and approved.
-**Top-up spend so far: about $0.84 of 5 EUR.**
-- **App → A13, start now.** V9's run id is `20261015-070127-v9-final`. (1) `uv run python
-  manage.py seed_demo --reset --from-run 20261015-070127-v9-final`; confirm the kitchen summaries
-  no longer say "(kitchen_prep)" and the D25 tie-break still shows on the queue; (2) open every
-  dashboard page (queue, filters, detail, analytics, CSV export); (3) one manual web-chat
-  screening in a real browser with `runserver` + `run_worker` and the live LLM (cents), through to
-  its dashboard detail page. Write what you saw, and anything off, in `status/app.md`. Commit as
-  `[A13]`. Don't wait for E19: the fixture is a recording, and E19 doesn't change its records.
-- **Engine:** nothing open (E19 final at `8b16b86`).
-- **Evals → V10, start now (E19 is `5bd51ef`).** First fix the failing harness test (Review
-  notes, E19 (b)). Scenario 16 ×3 and 04 ×2 live, then regenerate sample 03
-  and update its notes. Budget ≤ $0.10. Commit as `[V10]`.
+**Demo readiness round, last loop: E20 → V11 → A14 (BOARD.md, under "Found in A13").**
+Top-up spend so far: about $0.95 of 5 EUR.
+- **Engine → E20, start now.** A13's three findings (`status/app.md`, Notes → engine, A13). The
+  "Corrected:" leak is the priority: fix the retry prompt *and* strip a leading meta label in
+  code. Tests for each, run `tests/engine tests/evals`, live check ≤ $0.05, commit as `[E20]`.
+- **Evals → finish V10 as planned, then V11.** Start V11's scorer check now (it doesn't need E20):
+  a reply opening with a meta label fails message rules. The full run waits for E20. Budget for
+  V11 ≤ $0.25. Commit as `[V11]`; put the run id in `status/evals.md` for app.
+- **App → A14 after V11's run id.** Re-seed from it and check as in A13. Commit as `[A14]`.
 
 ## Review notes for lanes
 
@@ -122,6 +118,11 @@ One thing to pick up **once credits are back, before the live verification**: ev
 - **E19 revert `8b16b86`: approved.** Re-probed: the four negations and "mañana o pasado mañana" →
   None; "mañana mismo", "mañana o pasado", "mañana por la mañana" → 1. Engine-level test pins the
   refused-day case. 352 engine+evals pass, ruff clean. Engine lane: nothing open.
+- **A13 `5664b68`: approved.** Fixture rebuilt from V9, the `--reset --from-run` trap fixed with a
+  test, every page 200 via the test client, live browser screening qualified with 0 errors for
+  $0.0077. Not typing the recruiter password on a peer's request was the right call. **But** the
+  fixture carries the "Corrected:" leak in scenario 22 (the D25 tie-break conversation the demo
+  shows), and V9's scorer passed it at 100% message rules. Hence E20 → V11 → A14 (BOARD.md).
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

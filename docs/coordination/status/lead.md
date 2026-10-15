@@ -147,6 +147,9 @@ One thing to pick up **once credits are back, before the live verification**: ev
   queue order, detail score breakdown, summary, timeline and analytics all correct. One cosmetic
   finding, names shown as typed → A15 (`64aa927`, approved: one presenter used by queue, heading,
   field line and CSV); the mixed-case leftover ("kevin Ramírez Soto") is `display_name` → E21.
+- **E21 `5e9fe37` + `75e628b`: approved.** Word-by-word display names: particles lowercase,
+  all-caps words normalized ("LAURA DE LA FUENTE" → "Laura de la Fuente"), mixed case kept
+  ("McDonald"), apostrophes and hyphens handled. Display only. 403 engine+evals, 111 app pass.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

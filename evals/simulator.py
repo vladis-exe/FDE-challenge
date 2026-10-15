@@ -7,7 +7,8 @@ seeded RNG picks typing delays and the occasional style quirk. No sampling seed 
 on current models, so this is what makes two runs comparable.
 
 Reply-to-latest (CONTRACTS §5) is the app's job; a burst here applies it the same way:
-every message updates state, and only the last one's replies are delivered.
+every message updates state, and only the last one's replies are delivered. Dropped
+replies are removed from the engine's transcript, as the worker does.
 """
 
 import random
@@ -266,13 +267,17 @@ class Simulation:
         self._apply(result, self.clock, deliver=last)
 
     def _apply(self, result: TurnResult, at: datetime, *, deliver: bool = True) -> None:
-        self.state = result.state
         self.events.extend(result.events)
+        dropped = []
         for out in result.outbound:
             suppressed = not deliver and out.kind != "close"  # closes are never dropped
+            if suppressed:
+                dropped.append(out)
             self.lines.append(
                 Line(role="agent", at=at, text=out.text, kind=out.kind, suppressed=suppressed)
             )
+        # As the worker does (CONTRACTS §5): what wasn't sent leaves the model's context too.
+        self.state = engine.forget_undelivered(result.state, dropped)
 
     def _tick_until(self, end: datetime) -> None:
         while True:

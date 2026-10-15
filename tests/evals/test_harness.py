@@ -66,6 +66,25 @@ def test_burst_delivers_only_the_last_reply(config) -> None:
     assert not any(line.suppressed for line in run.lines if line.kind == "close")
 
 
+def test_dropped_replies_leave_the_engine_transcript(config, monkeypatch) -> None:
+    from evals import simulator
+
+    calls: list[list[str]] = []
+    real = simulator.engine.forget_undelivered
+
+    def spy(state, dropped):
+        calls.append([out.text for out in dropped])
+        return real(state, dropped)
+
+    monkeypatch.setattr(simulator.engine, "forget_undelivered", spy)
+    run, _ = offline("04_code_switch_monterrey", config)
+    suppressed = [line.text for line in run.lines if line.suppressed]
+    assert suppressed and [t for texts in calls for t in texts] == suppressed
+    agent_tail = [line.text for line in run.state.transcript_tail if line.role == "agent"]
+    assert not set(suppressed) & set(agent_tail)
+    assert agent_tail[-1] == next(x.text for x in reversed(run.lines) if x.role == "agent")
+
+
 def test_scripted_media_turn_and_surname_reask(config) -> None:
     run, scored = offline("09_voice_note_emoji_cdmx", config)
     assert run.lines[1].media == "audio" and run.lines[1].scripted

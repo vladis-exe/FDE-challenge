@@ -17,7 +17,7 @@ facts:
   availability: Part time.
   schedule: Mornings.
   experience: None.
-  start_date: Tomorrow, meaning the day after she replies in the morning.
+  start_date: Tomorrow. She replies on Friday 23 October, so she means Saturday 24 October; a read-back saying "sábado 24 de octubre" is right.
 pauses:
   # ~20:33 + 13 h = ~09:33 Friday: the 15 min reminder lands before 21:00, the 2 h one
   # falls in quiet hours and must be deferred to 09:00.

@@ -39,20 +39,20 @@
     car, and answers the license question with where it's from ("sí, de NL").
   notes:
     - The side question is answered from the FAQ's `vehicle` entry, so Alex promises nothing
-      the client hasn't approved, then re-asks the pending question. One stumble, though. The answer
-      says "permiso de conducir", Spain's wording, in the middle of a Mexican conversation.
+      the client hasn't approved, then re-asks the pending question. The FAQ answer has a
+      Mexican variant, so it says "licencia de manejo", not Spain's "permiso de conducir".
     - '"sí, de NL" is a yes to the license question, not a location: Nuevo León is where the
       license was issued.'
     - '"full time bro" / "y el horario me da igual" / "flexible pues" arrive within a
       minute. Every message updates the record, but only the last one gets a reply. The two
       replies marked *not delivered* were dropped, so the next question Brandon actually
-      sees is the experience one, asked once. Because "whatever works" was the latest
-      message, that one question comes out in English.'
-    - A second stumble, left visible. "2 years on uber eats en houston" is stored as `other`
-      instead of `uber_eats` (the read-back says "otra plataforma"). The years are right
-      and the summary still names Uber Eats. In the V9 full run the same scenario stored
-      `uber_eats`.
-    - Otherwise Mexican vocabulary ("licencia de manejo", "colonia", "tiempo completo").
+      sees is the experience one, asked once.'
+    - '"2 años en uber eats en houston" is stored as `uber_eats`: the platform is the app,
+      wherever the candidate rode for it.'
+    - Mexican vocabulary throughout ("licencia de manejo", "colonia", "tiempo completo").
+    - One stumble, left visible in the summary. It says Alex asked the hours and experience
+      questions twice, but the second copies were the replies dropped above and never reached
+      Brandon. The summary seems to be written from every reply, delivered or not.
 
 - file: 04-disqualified-after-a-prompt-injection.md
   scenario: 14_prompt_injection_valencia

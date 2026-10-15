@@ -168,17 +168,31 @@ def test_cli_writes_a_named_report(tmp_path: Path, monkeypatch) -> None:
 
 def test_compare_flags_failures_across_repeats(tmp_path: Path, monkeypatch, capsys) -> None:
     from evals import compare
+    from evals.scenario import load_all
+
+    # A known fail that doesn't depend on an engine bug: ground truth with a wrong name.
+    def with_wrong_name():
+        out = []
+        for s in load_all():
+            if s.id == "10_no_license_puebla":
+                fields = {**s.expected.fields, "full_name": "Otro Nombre"}
+                s = s.model_copy(
+                    update={"expected": s.expected.model_copy(update={"fields": fields})}
+                )
+            out.append(s)
+        return out
 
     monkeypatch.setattr(run_module, "EVALS_DIR", tmp_path)
+    monkeypatch.setattr(run_module, "load_all", with_wrong_name)
     monkeypatch.delenv("DEMO_TIME_SCALE", raising=False)
-    ids = ["20_abandoned_monterrey", "16_silence_late_reply_barcelona"]  # fake: pass, fail
+    ids = ["20_abandoned_monterrey", "10_no_license_puebla"]  # pass, fail
     for repeat in ("a", "b"):
         run_module.main(["--fake", "--only", *ids, "--name", repeat])
     dirs = sorted((tmp_path / "runs").iterdir())
     assert compare.main(["--config", f"fake={dirs[0]},{dirs[1]}"]) == 0
     out = capsys.readouterr().out
     assert "| **fake** |" in out and "50% (50% / 50%)" in out
-    assert "| fake | none | 16_silence_late_reply_barcelona |" in out
+    assert "| fake | none | 10_no_license_puebla |" in out
 
 
 def test_sample_renders_the_real_conversation_and_record(config) -> None:

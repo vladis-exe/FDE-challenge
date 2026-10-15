@@ -24,14 +24,14 @@ A Spanish happy path where the candidate answers all seven questions in her firs
 ¡Gracias, Rocío! Repasemos: Rocío Fernández Vega, carnet de conducir: sí, Sevilla, media jornada y fines de semana, tardes, Just Eat 1 año, empiezas el lunes 26 de octubre. ¿Está todo bien?
 
 > **Candidate** · 09:31  
-> si todo bien!
+> vale, todo bien!
 
 **Alex** · 09:31 *(close)*  
 ¡Listo, Rocío! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!
 
 ## What the recruiter gets
 
-> Rocío Fernández Vega queda como cualificada para el puesto de repartidor, sin motivos de descarte ni de revisión. Tiene carnet de conducir, vive en Sevilla, está disponible a media jornada y fines de semana en turno de tarde, tiene 1 año de experiencia en Just Eat y puede empezar el 26 de octubre de 2026. No hay campos marcados ni preguntas sin respuesta, y la candidata confirmó sus datos sin correcciones en una conversación sin incidencias.
+> Rocío Fernández Vega queda como cualificada para el puesto de Repartidor, sin motivos de descarte ni de revisión y sin banderas en el registro. Tiene carnet de conducir, vive en Sevilla y busca media jornada y fines de semana, preferiblemente por las tardes. Cuenta con 1 año de experiencia en Just Eat y puede empezar el 26 de octubre de 2026. Como nota de la conversación, dio todos los datos en un solo mensaje y confirmó el resumen de Alex sin correcciones; no hizo preguntas pendientes.
 
 ```json
 {
@@ -64,6 +64,6 @@ A Spanish happy path where the candidate answers all seven questions in her firs
   "flags": [],
   "disqualify_reason": null,
   "review_reasons": [],
-  "preference_score": 0
+  "preference_score": 0.0
 }
 ```

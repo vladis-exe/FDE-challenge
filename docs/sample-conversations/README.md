@@ -2,7 +2,7 @@
 
 Real transcripts from the eval suite: a simulated candidate (Sonnet 5.5 playing a persona) against the production engine, unedited. Each opens with what makes the case hard and what to notice. Times are the candidate's local time on the eval's fake clock.
 
-Source run: `20261014-193937`. Regenerate with `uv run python -m evals.samples <run dir>`.
+Source run: `20261015-070636`. Regenerate with `uv run python -m evals.samples <run dir>`.
 
 | Sample | Shows |
 | --- | --- |

@@ -7,7 +7,8 @@ A candidate whose license expired in August, with a renewal appointment in two w
 **What to notice**
 
 - Alex doesn't judge the license. It says a recruiter will look at it and carries on, so the recruiter gets a complete profile, not a half-finished one.
-- The read-back says "lo revisará un reclutador" for the license instead of a yes or no.
+- The pay question is answered from the FAQ without a figure ("the recruiter will give you the exact amount"), since the client's FAQ doesn't commit to one.
+- The read-back shows the candidate's own words for the license ("caducó en agosto, cita para renovar en 2 semanas (lo revisará un reclutador)") instead of a yes or no, so he can see it was understood and confirms at once.
 - The record leaves `has_driver_license` empty and flags it with the candidate's detail ("caducó en agosto, cita para renovarlo en 2 semanas"), with the review reason `license_unclear`. The summary tells the recruiter what to confirm first.
 
 ## Conversation
@@ -21,65 +22,65 @@ A candidate whose license expired in August, with a renewal appointment in two w
 > aupa, vale, empezamos
 
 **Alex** · 16:00  
-Genial, vamos allá. ¿Me dices tu nombre y apellido completos?
+¡Genial, empezamos! ¿Me dices tu nombre y apellidos completos?
 
 > **Candidate** · 16:01  
 > iker etxeberria goñi
 
 **Alex** · 16:01  
-Gracias, Iker, apuntado. ¿Tienes carnet de conducir en vigor, sí o no?
+Gracias, Iker, anotado. ¿Tienes carnet de conducir en vigor, sí o no?
 
 > **Candidate** · 16:01  
 > tengo el carnet pero me caducó en agosto, tengo cita para renovarlo en 2 semanas
 
 **Alex** · 16:01  
-Vale, lo tengo anotado; un reclutador lo revisará. ¿En qué ciudad vives y en qué barrio?
+Anotado, Iker, lo revisará un reclutador. ¿En qué ciudad vives y en qué barrio?
 
 > **Candidate** · 16:02  
-> vale, una duda: el curro es con moto o con coche?
+> vale, y el sueldo cuanto es más o menos?
 
 **Alex** · 16:02  
-Lo que sí necesitas es el permiso de conducir en vigor; el reclutador te confirmará lo del vehículo. ¿En qué ciudad vives y en qué barrio?
+Sobre el sueldo, depende de la ciudad y de las horas, y el reclutador te dará la cifra exacta en la entrevista. ¿En qué ciudad vives y en qué barrio?
 
 > **Candidate** · 16:02  
-> bilbao, en deusto
+> en bilbao, en deusto
 
 **Alex** · 16:02  
-Perfecto, anotado: Bilbao. ¿Qué disponibilidad tienes, buscas jornada completa, media jornada, fines de semana o una combinación?
+Genial, Bilbao, anotado. ¿Buscas jornada completa, media jornada, fines de semana o una combinación?
 
 > **Candidate** · 16:03  
 > jornada completa
 
 **Alex** · 16:03  
-Anotado, jornada completa. ¿Qué turnos te van mejor, mañanas, tardes, noches o algo flexible?
+Vale, jornada completa anotada. ¿Qué turnos te van bien: mañanas, tardes, noches o horario flexible?
 
 > **Candidate** · 16:04  
-> flexible, cualquier horario me va bien
+> cualquier horario, soy flexible
 
 **Alex** · 16:04  
-¿Has trabajado antes en reparto, con Glovo, Uber Eats o Just Eat, y durante cuánto tiempo?
+Vale, horario flexible anotado. ¿Has trabajado antes en reparto, por ejemplo con Glovo, Uber Eats o Just Eat, y cuánto tiempo?
 
 > **Candidate** · 16:05  
 > 3 años en glovo
 
 **Alex** · 16:05  
-Vale, lo tengo anotado. ¿Cuándo podrías empezar?
+Vale, 3 años en Glovo anotados. ¿Cuándo podrías empezar si te damos el puesto?
 
 > **Candidate** · 16:05  
 > el 1 de diciembre
 
 **Alex** · 16:05  
-¡Gracias, Iker! Repasemos: Iker Etxeberria Goñi, carnet de conducir: lo revisará un reclutador, Bilbao, jornada completa, horario flexible, Glovo 3 años, empiezas el martes 1 de diciembre. ¿Está todo bien?
+¡Gracias, Iker! Repasemos: Iker Etxeberria Goñi, carnet de conducir: caducó en agosto, cita para renovar en 2 semanas (lo revisará un reclutador), Bilbao, jornada completa, horario flexible, Glovo 3 años, empiezas el martes 1 de diciembre. ¿Está todo bien?
 
 > **Candidate** · 16:05  
-> si, todo bien
+> sí, todo bien
 
 **Alex** · 16:05 *(close)*  
 ¡Listo, Iker! Un reclutador de Grupo Sazón te escribirá en los próximos días para concertar una entrevista. ¡Gracias por tu tiempo!
 
 ## What the recruiter gets
 
-> El caso queda en revisión porque el estado del carnet de conducir no está claro: según el registro, caducó en agosto y el candidato tiene cita para renovarlo en dos semanas. Iker Etxeberria Goñi, de Bilbao (Deusto), busca jornada completa con horario flexible, tiene 3 años de experiencia en Glovo y podría empezar el 1 de diciembre de 2026. Conviene confirmar con él si la renovación se hizo y la fecha de vigencia del nuevo carnet, ya que el puesto de conductor lo requiere. La conversación transcurrió sin incidencias y el candidato confirmó el resumen sin preguntas pendientes.
+> La candidatura de Iker Etxeberria Goñi para Repartidor queda en revisión porque el estado de su carnet de conducir no está claro: según el registro, caducó en agosto y tiene cita para renovarlo dentro de dos semanas. Vive en Bilbao (Deusto), busca jornada completa con horario flexible, tiene 3 años de experiencia en Glovo y puede empezar el 1 de diciembre de 2026. Conviene confirmar antes de llamar si la renovación se ha hecho y desde qué fecha el carnet estará vigente. En la conversación no hubo silencios ni correcciones, y el candidato confirmó que el resumen era correcto.
 
 ```json
 {
@@ -110,13 +111,13 @@ Vale, lo tengo anotado. ¿Cuándo podrías empezar?
   "flags": [
     {
       "field": "has_driver_license",
-      "note": "license expired: caducó en agosto, cita para renovarlo en 2 semanas"
+      "note": "license expired: caducó en agosto, cita para renovar en 2 semanas"
     }
   ],
   "disqualify_reason": null,
   "review_reasons": [
     "license_unclear"
   ],
-  "preference_score": 0
+  "preference_score": 0.0
 }
 ```

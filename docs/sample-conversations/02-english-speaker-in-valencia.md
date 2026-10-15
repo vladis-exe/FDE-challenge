@@ -18,46 +18,46 @@ An English-speaking candidate, screened entirely in English. Tom answers the cit
 Hi! I'm Alex, Grupo Sazón's virtual assistant (AI) 👋 It's 7 quick questions about the delivery driver job, about 3 minutes. Your details are only used for this application: https://gruposazon.example/privacidad. Shall we start?
 
 > **Candidate** · 10:16  
-> yeah sure go ahead
+> yeah sure go for it
 
 **Alex** · 10:16  
-Great, let's go! Could you tell me your full name, first name and surname?
+Great, let's start! What's your full name, first name and surname?
 
 > **Candidate** · 10:17  
 > Tom Whitaker
 
 **Alex** · 10:17  
-Noted, Tom, thanks! Do you have a valid driving license?
+Thanks, Tom Whitaker, noted! Do you have a valid driver's license (carnet de conducir) for driving a coche?
 
 > **Candidate** · 10:17  
 > yeah got a spanish one now
 
 **Alex** · 10:17  
-Thanks for that, Tom! Which city are you based in, and what's your neighborhood?
+Thanks, noted! Which city are you based in, and what neighborhood?
 
 > **Candidate** · 10:18  
 > ruzafa
 
 **Alex** · 10:18  
-Got it, Ruzafa in Valencia, noted! Are you looking for full-time, part-time, weekends, or a mix of those?
+Got it, Valencia, noted! Are you looking for full-time, part-time, weekends, or a mix of those?
 
 > **Candidate** · 10:19  
 > part time and weekends
 
 **Alex** · 10:19  
-Got it, part-time and weekends noted. Which shifts suit you best: mornings, afternoons, evenings, or flexible?
+Got it, part-time and weekends noted! Which shifts work best for you: mornings, afternoons, evenings, or flexible hours?
 
 > **Candidate** · 10:19  
-> afternoons and evenins
+> afternoons and evnings
 
 **Alex** · 10:19  
-Got it, afternoons and evenings noted. Have you done delivery work before, like Glovo, Uber Eats or Just Eat, and for how long?
+Got it, afternoons and evenings noted! Have you done delivery work before, with Glovo, Uber Eats or Just Eat, and for how long?
 
 > **Candidate** · 10:20  
-> yeah 3 years on deliveroo in bristol before i moved here
+> yeah 3 years on deliveroo in bristol before i moved
 
 **Alex** · 10:20  
-Got it, Tom, 3 years on Deliveroo in Bristol noted! When could you start?
+Got it, 3 years of Deliveroo in Bristol noted! When could you realistically start?
 
 > **Candidate** · 10:21  
 > monday 2 november
@@ -73,7 +73,7 @@ All done, Tom! A Grupo Sazón recruiter will message you in the next few days to
 
 ## What the recruiter gets
 
-> Tom Whitaker queda como calificado para la vacante de conductor, sin banderas ni motivos de revisión. Vive en Valencia (barrio de Ruzafa) y busca trabajo a tiempo parcial y fines de semana, en turnos de tarde y noche; puede empezar el 2 de noviembre de 2026. Tiene carnet de conducir y 3 años de experiencia en Deliveroo (Bristol), registrada como otra plataforma. No hubo preguntas sin respuesta ni incidencias en la conversación, y el candidato confirmó que sus datos eran correctos.
+> Tom Whitaker cumple los requisitos para el puesto de Repartidor y no tiene motivos de revisión ni banderas. Vive en Valencia (zona de Ruzafa), tiene carnet de conducir y busca trabajo a tiempo parcial y fines de semana, en turnos de tarde y noche, con disponibilidad para empezar el 2 de noviembre de 2026. Tiene 3 años de experiencia repartiendo con Deliveroo en Bristol, una plataforma distinta de las habituales en España. Confirmó todos sus datos al final de la conversación y no hizo preguntas pendientes.
 
 ```json
 {
@@ -107,6 +107,6 @@ All done, Tom! A Grupo Sazón recruiter will message you in the next few days to
   "flags": [],
   "disqualify_reason": null,
   "review_reasons": [],
-  "preference_score": 0
+  "preference_score": 0.0
 }
 ```

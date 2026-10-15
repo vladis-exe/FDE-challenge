@@ -35,18 +35,24 @@
   title: "Mexico: Spanglish, a side question and a burst of messages"
   context: >
     A Monterrey candidate who mixes Spanish and English and sends three messages in a row
-    before Alex can answer. Brandon also asks about the hours mid-flow, and answers the
-    license question with where it's from ("sí, de NL").
+    before Alex can answer. Brandon also asks mid-flow whether the job is by motorbike or
+    car, and answers the license question with where it's from ("sí, de NL").
   notes:
-    - The side question is answered from the FAQ's `hours` entry, so Alex says nothing the
-      client hasn't approved. Then it re-asks the pending question.
+    - The side question is answered from the FAQ's `vehicle` entry, so Alex promises nothing
+      the client hasn't approved, then re-asks the pending question. One stumble, though. The answer
+      says "permiso de conducir", Spain's wording, in the middle of a Mexican conversation.
     - '"sí, de NL" is a yes to the license question, not a location: Nuevo León is where the
       license was issued.'
     - '"full time bro" / "y el horario me da igual" / "flexible pues" arrive within a
       minute. Every message updates the record, but only the last one gets a reply. The two
       replies marked *not delivered* were dropped, so the next question Brandon actually
-      sees is the experience one, asked once.'
-    - Mexican vocabulary throughout ("licencia de manejo", "colonia", "tiempo completo").
+      sees is the experience one, asked once. Because "whatever works" was the latest
+      message, that one question comes out in English.'
+    - A second stumble, left visible. "2 years on uber eats en houston" is stored as `other`
+      instead of `uber_eats` (the read-back says "otra plataforma"). The years are right
+      and the summary still names Uber Eats. In the V9 full run the same scenario stored
+      `uber_eats`.
+    - Otherwise Mexican vocabulary ("licencia de manejo", "colonia", "tiempo completo").
 
 - file: 04-disqualified-after-a-prompt-injection.md
   scenario: 14_prompt_injection_valencia
@@ -72,7 +78,11 @@
   notes:
     - Alex doesn't judge the license. It says a recruiter will look at it and carries on,
       so the recruiter gets a complete profile, not a half-finished one.
-    - The read-back says "lo revisará un reclutador" for the license instead of a yes or no.
+    - The pay question is answered from the FAQ without a figure ("the recruiter will give
+      you the exact amount"), since the client's FAQ doesn't commit to one.
+    - The read-back shows the candidate's own words for the license ("caducó en agosto,
+      cita para renovar en 2 semanas (lo revisará un reclutador)") instead of a yes or no,
+      so he can see it was understood and confirms at once.
     - The record leaves `has_driver_license` empty and flags it with the candidate's detail
       ("caducó en agosto, cita para renovarlo en 2 semanas"), with the review reason
       `license_unclear`. The summary tells the recruiter what to confirm first.
@@ -88,4 +98,5 @@
       quiet hours (21:00–09:00 local), so it waits until 09:00.
     - She picks up where she left off; nothing is asked twice.
     - '"mañana mismo", said on Friday the 23rd, is stored as Saturday 24 October, resolved
-      against the timestamp of the reply, not of the first message.'
+      against the timestamp of the reply, not of the first message. Nuria checks the
+      weekday herself and confirms.'

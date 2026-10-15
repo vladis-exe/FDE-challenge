@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-None. E19 done; open for new findings.
+**E20, in progress** (lead, bdbe37f): meta label leak after a compose retry, FAQ re-answered unprompted, Mexican wording for the certificate question and the close, summary sees only delivered replies.
 
 ## Done
 | Task | What changed | How to verify | Commit |

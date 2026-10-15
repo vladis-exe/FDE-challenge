@@ -1,6 +1,8 @@
 # Approved answers to job questions. Alex answers ONLY from this file; anything
 # else gets "a recruiter will confirm". PLACEHOLDER VALUES: every answer marked
 # `placeholder: true` must be replaced with the client's real terms before launch.
+# An answer may add "es_ES"/"es_MX" variants where the vocabulary differs, like
+# prompts/messages.yaml.
 
 entries:
   - id: pay
@@ -36,7 +38,8 @@ entries:
       es: ["¿Necesito coche propio?", "¿Tengo que tener carro?", "¿Ponen ustedes el vehículo?"]
       en: ["Do I need my own car?", "Do you provide the vehicle?"]
     answer:
-      es: "Lo que sí necesitas es permiso de conducir en vigor; el reclutador te confirmará lo del vehículo."
+      es: "Lo que sí necesitas es carnet de conducir en vigor; el reclutador te confirmará lo del vehículo."
+      es_MX: "Lo que sí necesitas es licencia de manejo vigente; el reclutador te confirmará lo del vehículo."
       en: "What you do need is a valid driver's license; the recruiter will confirm the vehicle details."
 
   - id: process

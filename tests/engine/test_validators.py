@@ -9,6 +9,7 @@ from screening.validators import (
     StartDateAnswer,
     local_date,
     match_city,
+    relative_day,
     validate_boolean,
     validate_experience,
     validate_name,
@@ -324,3 +325,51 @@ def test_names_that_agree_on_one_city_pick_that_city(config, text):
     result = match_city(text, config)
     assert result.kind == "matched"
     assert result.location.city == "monterrey"
+
+
+# E19 (V9 findings): relative days in code, platforms named with a place
+
+
+@pytest.mark.parametrize(
+    "text, offset",
+    [
+        ("mañana mismo", 1),
+        ("mañana mismo si hace falta", 1),
+        ("pasado mañana", 2),
+        ("hoy", 0),
+        ("hoy mismo", 0),
+        ("tomorrow works", 1),
+        ("I can start today", 0),
+        ("the day after tomorrow", 2),
+        ("puedo empezar mañana por la mañana", 1),  # the second "mañana" is "morning"
+    ],
+)
+def test_relative_days_are_read_in_code(text, offset):
+    assert relative_day(text) == offset
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "por las mañanas",  # morning, not tomorrow
+        "en la mañana",
+        "el lunes",
+        "mañana o pasado mañana, no sé",  # two different days: ambiguous
+    ],
+)
+def test_no_single_relative_day_means_none(text):
+    assert relative_day(text) is None
+
+
+@pytest.mark.parametrize(
+    "raw, key",
+    [
+        ("uber eats en houston", "uber_eats"),
+        ("Glovo (en Italia)", "glovo"),
+        ("didi food mty", "didi_food"),
+        ("Deliveroo", "other"),
+    ],
+)
+def test_a_platform_named_with_a_place_is_still_that_platform(raw, key):
+    verdict = validate_experience(has_experience=True, items=[RawExperience(platform=raw, years=2)])
+    assert verdict.value[0].platform == key

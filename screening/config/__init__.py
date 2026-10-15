@@ -51,8 +51,14 @@ class CountryArea(BaseModel):
 class FaqEntry(BaseModel):
     id: str
     questions: dict[Language, list[str]]  # example phrasings, used as few-shot hints
-    answer: dict[Language, str]
+    answer: dict[str, str]  # "es", "en", and optional "es_ES"/"es_MX" vocabulary overrides
     placeholder: bool = True  # true until Grupo Sazón supplies the real answer
+
+    @model_validator(mode="after")
+    def _both_languages(self) -> "FaqEntry":
+        if not {"es", "en"} <= set(self.answer):
+            raise ValueError(f"{self.id}: an answer is needed in both es and en")
+        return self
 
 
 class QuietHours(BaseModel):

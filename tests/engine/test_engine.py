@@ -925,3 +925,41 @@ def test_an_accepted_name_is_offered_to_compose():
     convo.send(ext(full_name="laura pérez"))
     content = convo.llm.calls_for("compose")[-1].messages[0]["content"]
     assert "Candidate's first name: Laura" in content
+
+
+# E19: relative days from the message's local date; FAQ answers per country
+
+
+def at_start_date(phone="+34600000001") -> Convo:
+    convo = Convo(phone=phone)
+    convo.through_license()
+    convo.send(ext(location="Sants" if phone.startswith("+34") else "CDMX"))
+    convo.send(ext(availability=["part_time"]))
+    convo.send(ext(schedule=["morning"]))
+    convo.send(ext(experience={"has_experience": False}))
+    return convo
+
+
+def test_manana_mismo_is_tomorrow_even_if_the_model_says_today():
+    """V9 scenario 16: Friday's "mañana mismo" stored as that Friday, 1 run in 4."""
+    convo = at_start_date()
+    friday = datetime(2026, 10, 23, 7, 36, tzinfo=UTC)  # 09:36 in Madrid
+    wrong = ext(start_date={"kind": "date", "resolved": "2026-10-23"})
+    convo.send(wrong, text="mañana mismo", at=friday)
+    assert convo.value("start_date") == date(2026, 10, 24)
+
+
+def test_a_far_date_from_the_model_is_never_overridden():
+    convo = at_start_date()
+    friday = datetime(2026, 10, 23, 7, 36, tzinfo=UTC)
+    monday = ext(start_date={"kind": "date", "resolved": "2026-10-26"})
+    convo.send(monday, text="mañana no puedo, mejor el lunes", at=friday)
+    assert convo.value("start_date") == date(2026, 10, 26)
+
+
+def test_faq_answers_use_the_countrys_vocabulary():
+    """V9 sample 03: Mexico was told "permiso de conducir"."""
+    convo = Convo(phone="+525500000004")
+    convo.send(ext(intent="question", question="¿tengo que tener carro?", faq_id="vehicle"))
+    assert "licencia de manejo" in convo.said
+    assert "permiso de conducir" not in convo.said

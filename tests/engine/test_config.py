@@ -50,7 +50,7 @@ def test_every_faq_entry_has_both_languages():
     config = load_config()
     assert config.faq
     for entry in config.faq:
-        assert set(entry.answer) == {"es", "en"}, entry.id
+        assert {"es", "en"} <= set(entry.answer), entry.id  # plus optional es_ES/es_MX
         assert set(entry.questions) == {"es", "en"}, entry.id
 
 

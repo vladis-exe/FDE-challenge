@@ -327,6 +327,7 @@ class _Turn:
             today=local_date(self.message.received_at, timezone),
             max_days=self.config.start_date_max_days,
             surname_asked=False,
+            message_text=self.message.text,
         )
         knockout = verdict.outcome == "accept" and is_knockout(spec, verdict.value)
         if knockout and spec.requirement == "required":
@@ -508,7 +509,7 @@ class _Turn:
             self.faq_given = True
             entry = next((e for e in self.config.faq if e.id == self.x.faq_id), None)
             if entry:
-                plan.faq_answer = entry.answer[self.state.language]
+                plan.faq_answer = localized(entry.answer, self.locale, self.state.language)
             else:
                 plan.unanswered_question = self.x.question
             self.event("faq_answered", faq_id=entry.id if entry else None)

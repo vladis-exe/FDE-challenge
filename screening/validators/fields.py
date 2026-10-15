@@ -4,6 +4,7 @@ The LLM turns messy wording into these raw shapes; the rules applied here are
 the spec's ("Data fields and validation"), so they run in code, not in the prompt.
 """
 
+import re
 from datetime import date, datetime
 from typing import Literal
 from zoneinfo import ZoneInfo
@@ -102,11 +103,49 @@ def validate_experience(
             return Verdict.reask(f"how long on {item.platform}")
         if not 0 <= years <= MAX_EXPERIENCE_YEARS:
             return Verdict.reask(f"implausible duration on {item.platform}")
-        platform = _PLATFORMS.get(normalize(item.platform).replace(" ", ""), "other")
+        platform = _platform_key(item.platform)
         by_platform[platform] = max(round(years, 1), by_platform.get(platform, 0))
     return Verdict.accept(
         [ExperienceItem(platform=platform, years=years) for platform, years in by_platform.items()]
     )
+
+
+def _platform_key(raw: str) -> str:
+    """The known app named anywhere in the answer: "uber eats en houston" is Uber Eats.
+
+    The platform is the app, not where they used it. Longest names first, so
+    "ubereats" wins over "uber" and "didifood" over "didi".
+    """
+    squashed = normalize(raw).replace(" ", "")
+    for alias in sorted(_PLATFORMS, key=len, reverse=True):
+        if alias in squashed:
+            return _PLATFORMS[alias]
+    return "other"
+
+
+# Relative days, by how many days after the message's local date they mean.
+# "mañana" as "morning" ("por la mañana", "las mañanas") isn't matched.
+_RELATIVE_DAYS = [
+    (re.compile(r"\bpasado mañana\b|\bday after tomorrow\b"), 2),
+    (re.compile(r"(?<!\bla )(?<!\bpasado )\bmañana\b|\btomorrow\b"), 1),
+    (re.compile(r"\bhoy\b|\btoday\b"), 0),
+]
+
+
+def relative_day(text: str) -> int | None:
+    """Days after today that a message's relative day means, if it names exactly one.
+
+    Code does the arithmetic the model sometimes gets wrong (V9: Friday's "mañana
+    mismo" stored as Friday). Two different relative days ("mañana o pasado") are
+    ambiguous: None.
+    """
+    lowered = text.casefold()
+    found = set()
+    for pattern, offset in _RELATIVE_DAYS:
+        if pattern.search(lowered):
+            found.add(offset)
+            lowered = pattern.sub(" ", lowered)  # "pasado mañana" mustn't also count as "mañana"
+    return found.pop() if len(found) == 1 else None
 
 
 def local_date(moment: datetime, timezone: str) -> date:

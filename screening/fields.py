@@ -10,7 +10,7 @@ For each type:
 City answers are validated in the policy (match, ask, confirm), not here.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Literal
 
 from pydantic import BaseModel, TypeAdapter
@@ -22,6 +22,7 @@ from screening.validators import (
     RawExperience,
     StartDateAnswer,
     Verdict,
+    relative_day,
     validate_boolean,
     validate_experience,
     validate_name,
@@ -75,8 +76,32 @@ def is_knockout(spec: FieldSpec, value: Any) -> bool:
     return spec.type == "boolean" and value is False
 
 
+NEAR_DAYS = 2  # the model may judge "a near date"; code then picks the exact day
+
+
+def near_date(raw: StartDateAnswer, message_text: str, today: date) -> StartDateAnswer:
+    """Set "hoy", "mañana", "pasado mañana" from the message's local date, in code.
+
+    Only when the model also read a date within the next couple of days (or asap):
+    a far date it chose ("mañana no puedo, mejor el lunes") is never overridden.
+    """
+    offset = relative_day(message_text)
+    near = raw.kind == "asap" or (
+        raw.kind == "date" and raw.resolved and 0 <= (raw.resolved - today).days <= NEAR_DAYS
+    )
+    if offset is None or not near:
+        return raw
+    return StartDateAnswer(kind="date", resolved=today + timedelta(days=offset))
+
+
 def validate(
-    spec: FieldSpec, raw: Any, *, today: date, max_days: int, surname_asked: bool
+    spec: FieldSpec,
+    raw: Any,
+    *,
+    today: date,
+    max_days: int,
+    surname_asked: bool,
+    message_text: str = "",
 ) -> Verdict:
     """Check one raw answer against the rules of its field type."""
     if spec.type == "text":
@@ -89,5 +114,7 @@ def validate(
         has_experience = raw.has_experience if raw.has_experience is not None else bool(raw.items)
         return validate_experience(has_experience=has_experience, items=raw.items)
     if spec.type == "date":
-        return validate_start_date(raw, today=today, max_days=max_days)
+        return validate_start_date(
+            near_date(raw, message_text, today), today=today, max_days=max_days
+        )
     raise ValueError(f"{spec.name}: {spec.type} answers are validated by the policy")

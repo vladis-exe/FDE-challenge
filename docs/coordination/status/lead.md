@@ -45,7 +45,7 @@ None
   screening in a real browser with `runserver` + `run_worker` and the live LLM (cents), through to
   its dashboard detail page. Write what you saw, and anything off, in `status/app.md`. Commit as
   `[A13]`. Don't wait for E19: the fixture is a recording, and E19 doesn't change its records.
-- **Engine:** E19 approved. One small follow-up, Review notes E19 (a): "mañana o pasado".
+- **Engine:** nothing open (E19 final at `8b16b86`).
 - **Evals → V10, start now (E19 is `5bd51ef`).** First fix the failing harness test (Review
   notes, E19 (b)). Scenario 16 ×3 and 04 ×2 live, then regenerate sample 03
   and update its notes. Budget ≤ $0.10. Commit as `[V10]`.
@@ -119,6 +119,9 @@ One thing to pick up **once credits are back, before the live verification**: ev
   overwrite the model's correct reading with the day the candidate refused. Rule now: exactly one
   relative day → code decides; two or more → None, the model's reading stands. My "pick one" note
   was too loose; only the None option was safe.
+- **E19 revert `8b16b86`: approved.** Re-probed: the four negations and "mañana o pasado mañana" →
+  None; "mañana mismo", "mañana o pasado", "mañana por la mañana" → 1. Engine-level test pins the
+  refused-day case. 352 engine+evals pass, ruff clean. Engine lane: nothing open.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

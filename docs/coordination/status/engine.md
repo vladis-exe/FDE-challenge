@@ -3,7 +3,7 @@
 Last updated: 2026-10-12
 
 ## Current task
-None. E18 done; open for new findings.
+**E19, in progress** (lead, d327a9b): V9's findings: relative days resolved in code, "uber eats en houston" is still Uber Eats, FAQ answers per country.
 
 ## Done
 | Task | What changed | How to verify | Commit |

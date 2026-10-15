@@ -50,7 +50,7 @@ def v4_fixture(tmp_path_factory) -> Path:
         run = {"run": result.model_dump(mode="json"), "score": {}}
         (run_dir / f"{n:02d}_{scenario_id}.json").write_text(json.dumps(run))
     fixture = run_dir / "fixture.json"
-    call_command("seed_demo", "--from-run", str(run_dir), "--fixture", str(fixture))
+    call_command("seed_demo", "--from-run", str(run_dir), "--fixture", str(fixture), "--build-only")
     return fixture
 
 
@@ -149,8 +149,24 @@ def test_fixture_is_rebuilt_from_an_eval_run(tmp_path, v4_fixture):
     (run_dir / "scores.json").write_text("{}")
     fixture = tmp_path / "fixture.json"
 
-    seed("--from-run", str(run_dir), "--fixture", str(fixture))
+    seed("--from-run", str(run_dir), "--fixture", str(fixture), "--build-only")
 
     built = json.loads(fixture.read_text(encoding="utf-8"))
     assert [b["scenario_id"] for b in built] == [item["scenario_id"]]
     assert set(built[0]["lines"][0]) == {"role", "at", "text", "kind", "media", "suppressed"}
+
+
+def test_from_run_rebuilds_and_seeds_in_one_command(db, tmp_path, v4_fixture):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    for path in v4_fixture.parent.glob("0*.json"):  # the eval run v4_fixture was built from
+        (run_dir / path.name).write_text(path.read_text())
+    fixture = tmp_path / "fixture.json"
+    args = ("--from-run", str(run_dir), "--fixture", str(fixture), "--password", "pw-for-tests")
+    seed(*args)
+    assert Conversation.objects.count() == len(RUNS)
+
+    with pytest.raises(CommandError, match="--reset"):
+        seed(*args)
+    seed(*args, "--reset")
+    assert Conversation.objects.count() == len(RUNS)

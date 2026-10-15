@@ -36,7 +36,12 @@ class Command(BaseCommand):
     help = "Create a recruiter login and demo conversations (empty databases only, or --reset)."
 
     def add_arguments(self, parser):
-        parser.add_argument("--from-run", type=Path, help="Rebuild the fixture from an eval run.")
+        parser.add_argument(
+            "--from-run", type=Path, help="Rebuild the fixture from an eval run, then seed it."
+        )
+        parser.add_argument(
+            "--build-only", action="store_true", help="With --from-run: write the fixture, no seed."
+        )
         parser.add_argument("--fixture", type=Path, default=FIXTURE)
         parser.add_argument(
             "--reset", action="store_true", help="Delete ALL candidates first (demo DBs only)."
@@ -44,11 +49,12 @@ class Command(BaseCommand):
         parser.add_argument("--username", default="recruiter")
         parser.add_argument("--password", default=os.environ.get("DEMO_RECRUITER_PASSWORD"))
 
-    def handle(self, *args, from_run, fixture, reset, username, password, **options):
+    def handle(self, *args, from_run, build_only, fixture, reset, username, password, **options):
         if from_run:
             count = build_fixture(from_run, fixture)
             self.stdout.write(f"wrote {count} conversations to {fixture}")
-            return
+            if build_only:
+                return
 
         if Conversation.objects.exists() and not reset:
             raise CommandError("the database already has conversations; pass --reset to replace")

@@ -3,7 +3,7 @@
 Last updated: 2026-10-15
 
 ## Current task
-None: **every app task (A1–A12) is done, and nothing is routed to the app lane.** Re-checked 2026-10-15 after engine's E17: `tests/app` 108 pass, 2 skipped; ruff clean. The only open item is Vlad's `sudo docker rm -f sazon-pg-test` (see Requests).
+**A13 (re-seed + browser pass): waiting for V9's run id** (BOARD "Demo readiness", order E18 → V9 → A13). The lead will message when evals has written it into `status/evals.md`.
 
 ## Done
 | Task | What changed | How to verify | Commit |

@@ -2,7 +2,7 @@
 
 Owned by the lead. Lanes code against this file. To change it, add a request under "Contract change requests" in your status file; the lead updates this file and logs the change in `DECISIONS.md`.
 
-Version: 4.1
+Version: 4.2
 
 ## 1. Engine schemas (`screening/schemas.py`, engine lane, task E1)
 
@@ -165,10 +165,13 @@ def handle_tick(state: ConversationState, *, now: datetime, ctx: EngineContext) 
     # reminders, quiet-hours deferral, abandonment; changed=False when nothing is due
 def next_due_at(state: ConversationState, *, config: ScreeningConfig) -> datetime | None
     # when the app should next call handle_tick; already moved past quiet hours. None = nothing scheduled.
+def forget_undelivered(state: ConversationState, dropped: list[OutboundMessage]) -> ConversationState
+    # v4.2 (E20, D36): a copy whose transcript_tail no longer holds the replies the shell dropped
+    # under reply-to-latest (§5 step 3), so the model and the recruiter summary see only what was sent.
 ```
 
 Rules:
-- All three turn functions are pure with respect to storage: they never touch a DB or network except through `ctx.llm`. `next_due_at` is pure and needs no `ctx`.
+- All three turn functions are pure with respect to storage: they never touch a DB or network except through `ctx.llm`. `next_due_at` and `forget_undelivered` are pure and need no `ctx`.
 - They never raise on LLM failure. After retries they return a holding reply and an `llm_error` event. Bookkeeping updates as normal — `last_inbound_at`, `last_outbound_at` and `reminders_sent` (reset to 0: the holding reply counts as outbound contact, so reminder timing restarts from it) — because reminder timing depends on them and must not drift. Profile, stage, status, attempts and strikes are untouched; `transcript_tail` gains the inbound message and the holding reply.
 - When `status` leaves `in_progress`, the engine sets `state.summary`, or `None` plus an `llm_error` event if the summary call failed.
 - `screening.record.final_record(state) -> dict` builds the final JSON deterministically (no LLM). **v4: the fixed top-level keys (`full_name`, `has_driver_license`, ...) are gone — every profile field, required or preferred, is reported under `"fields"`, keyed by its name from the vacancy config:**
@@ -275,7 +278,7 @@ Processing pipeline (`apps/messaging/services.py` plus the `run_worker` command)
    - Claim a conversation that has unprocessed inbound messages, with `select_for_update(skip_locked=True)` on Postgres. SQLite runs a single worker.
    - Take its oldest unprocessed message and call `engine.handle_message`.
    - Persist the state, the mirrored columns, outbound `Message`s and `Event`s in one transaction.
-3. **Reply-to-latest:** if another unprocessed inbound exists for the same conversation after the turn, mark this turn's `reply` and `reminder` outbound as `suppressed=True` and don't send them. Always send `close` messages.
+3. **Reply-to-latest:** if another unprocessed inbound exists for the same conversation after the turn, mark this turn's `reply` and `reminder` outbound as `suppressed=True` and don't send them. Always send `close` messages. **v4.2:** pass the suppressed ones to `engine.forget_undelivered` and persist the state it returns (same transaction as step 2). The evals simulator does the same in its burst handling.
 4. Send through the channel adapter after commit, and record `provider_sid` or `send_error`.
 5. Reminders: the worker scans conversations with `status=in_progress` and `next_tick_at <= now`, calls `engine.handle_tick`, and recomputes `next_tick_at` from config.
 

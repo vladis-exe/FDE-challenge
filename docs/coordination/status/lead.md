@@ -36,16 +36,16 @@ None
 None
 
 ## Notes for other lanes
-**Demo readiness round, last loop: E20 → V11 → A14 (BOARD.md, under "Found in A13").**
-Top-up spend so far: about $0.95 of 5 EUR.
-- **Engine → E20, start now.** A13's three findings (`status/app.md`, Notes → engine, A13) plus V10's summary one
-  (BOARD.md E20 (4)). The
-  "Corrected:" leak is the priority: fix the retry prompt *and* strip a leading meta label in
-  code. Tests for each, run `tests/engine tests/evals`, live check ≤ $0.05, commit as `[E20]`.
-- **Evals → V11 (V10 done, approved).** Start V11's scorer check now (it doesn't need E20):
-  a reply opening with a meta label fails message rules. The full run waits for E20. Budget for
-  V11 ≤ $0.25. Commit as `[V11]`; put the run id in `status/evals.md` for app.
-- **App → A14 after V11's run id.** Re-seed from it and check as in A13. Commit as `[A14]`.
+**Demo readiness round, last loop (BOARD.md, under "Found in A13").** CONTRACTS is now **v4.2**:
+`engine.forget_undelivered` (D36). Top-up spend so far: about $0.93 of 5 EUR.
+- **Engine:** E20 approved. One small follow-up: the `strip_label` "Here is …:" false positive
+  (Review notes). Commit as `[E20]`.
+- **App → A13b now, then A14.** Worker: pass the turn's suppressed replies to
+  `engine.forget_undelivered` and persist the result in the same transaction (CONTRACTS §5 step 3),
+  with a burst test. Commit as `[A13b]`. A14 (re-seed) still waits for V11's run id.
+- **Evals → V11 (b) now.** Simulator burst handling calls `engine.forget_undelivered` (v4.2), then
+  the full 24-scenario run on the engine as of E20 and its follow-up. Report like V9, run id in
+  `status/evals.md` for app. Budget ≤ $0.25. Commit as `[V11]`.
 
 ## Review notes for lanes
 
@@ -127,6 +127,15 @@ One thing to pick up **once credits are back, before the live verification**: ev
 - **V10 `dc41a4a`: approved.** E19 holds live (16: 4/4 dates right, 04: 2/2 with `uber_eats` and
   "licencia de manejo"); the harness test no longer leans on an engine bug; sample 03 regenerated.
   Its new finding (the summary sees suppressed burst replies as repeats) is E20 (4).
+- **V11 scorer `1f157b0`: approved.** An explicit label list, not any "word:" opener, so "Repasemos:"
+  stays legal; across every local run it hits only V9's scenario 22.
+- **E20 `ecbded2`: approved, one follow-up.** (1) Retry prompt plus `strip_label` in code, both
+  ends as asked. Follow-up: `strip_label("Here is what happens next: a recruiter calls you.")`
+  → "a recruiter calls you." The "here is/aquí tienes" branch should only match when it
+  introduces the message itself ("Here's the corrected message:", "Aquí tienes la versión…:").
+  (2) `question_asked` (≥50% word overlap) is sound: the extract prompt says "in their words", and
+  it was tested live on 3 real questions plus the A13 case. (3) MX wording in. (4)
+  `forget_undelivered`: CONTRACTS → **v4.2**, D36; routed to app (A13b) and evals (V11).
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 

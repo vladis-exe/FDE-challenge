@@ -248,7 +248,7 @@ Order: E18 → V9 → A13, with E19 → V10 in parallel to A13.
 
 Found in A13 (and already in V9's fixture: scenario 22, the D25 tie-break conversation the demo
 shows), so one more short loop before CP5. Order: E20 → V11 → A14.
-- [ ] **E20 A13's engine findings** (`status/app.md`, Notes → engine, A13). (1) **Priority:** a
+- [x] **E20 A13's engine findings** (`ecbded2`; `strip_label` "Here is …:" false positive follow-up) (`status/app.md`, Notes → engine, A13). (1) **Priority:** a
   compose retry leaked a meta label to the candidate ("Corrected: Anotado, lunes 2 de
   noviembre…"; also in V9 scenario 22). Fix both ends: the retry feedback asks for the message
   text only, and the guard/trim strips a leading meta label ("Corrected:", "Revised:",
@@ -258,10 +258,14 @@ shows), so one more short loop before CP5. Order: E20 → V11 → A14.
   recruiter summary must see delivered messages only: suppressed burst replies made sample 03's
   summary say Alex "repitió dos veces" questions it never sent (V10, `status/evals.md`). Tests
   for each; run `tests/engine` and `tests/evals`; live check ≤ $0.05.
-- [ ] **V11 Scorer blind spot + final run.** The message-rules scorer must fail a reply that opens
+- [ ] **V11 Scorer blind spot + final run.** (scorer check done, `1f157b0`.) The simulator's burst
+  handling calls `engine.forget_undelivered` (v4.2, D36) before the full run. The message-rules scorer must fail a reply that opens
   with a meta label (V9 scored 22 at 100% with "Corrected:" in it). Add that check, plus a test.
   After E20: one full 24-scenario run (this replaces V9 as the demo source), report it like V9,
   put the run id in `status/evals.md` for app, and regenerate sample 03 from it if V10 hasn't.
   Budget ≤ $0.25.
+- [ ] **A13b Worker calls `forget_undelivered`** (CONTRACTS v4.2 §5 step 3, D36): pass the turn's
+  suppressed replies to `engine.forget_undelivered` and persist what it returns, in the same
+  transaction. Test: a burst of two messages leaves only the delivered reply in `transcript_tail`.
 - [ ] **A14 Final re-seed.** `seed_demo --reset --from-run <V11 run>`; check no "Corrected:" /
   "(kitchen_prep)" text and the tie-break still holds; pages via the test client as in A13.

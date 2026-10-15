@@ -360,9 +360,24 @@ def test_no_relative_day_means_none(text):
     assert relative_day(text) is None
 
 
-@pytest.mark.parametrize("text", ["mañana o pasado", "mañana o pasado mañana, no sé"])
-def test_several_days_offered_means_the_earliest(text):
-    assert relative_day(text) == 1  # available from tomorrow
+@pytest.mark.parametrize(
+    "text",
+    [
+        "mañana o pasado mañana, no sé",
+        # Lead review: a candidate often rules a day out. Picking either in code could
+        # store the refused day, so the model's reading must stand.
+        "hoy no, mañana sí",
+        "hoy no puedo, pasado mañana",
+        "mañana no, pasado mañana",
+        "tomorrow no, day after tomorrow",
+    ],
+)
+def test_two_different_days_leave_it_to_the_model(text):
+    assert relative_day(text) is None
+
+
+def test_a_bare_pasado_is_not_a_second_day():
+    assert relative_day("mañana o pasado") == 1  # only "mañana" is a relative day here
 
 
 @pytest.mark.parametrize(

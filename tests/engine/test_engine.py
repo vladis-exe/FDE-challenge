@@ -963,3 +963,12 @@ def test_faq_answers_use_the_countrys_vocabulary():
     convo.send(ext(intent="question", question="¿tengo que tener carro?", faq_id="vehicle"))
     assert "licencia de manejo" in convo.said
     assert "permiso de conducir" not in convo.said
+
+
+def test_a_refused_day_is_never_what_code_stores():
+    """Lead review of E19: "hoy no, mañana sí" names two days, so the model's reading stands."""
+    convo = at_start_date()
+    friday = datetime(2026, 10, 23, 7, 36, tzinfo=UTC)
+    tomorrow = ext(start_date={"kind": "date", "resolved": "2026-10-24"})
+    convo.send(tomorrow, text="hoy no, mañana sí", at=friday)
+    assert convo.value("start_date") == date(2026, 10, 24)

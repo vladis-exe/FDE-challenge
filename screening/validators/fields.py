@@ -133,12 +133,12 @@ _RELATIVE_DAYS = [
 
 
 def relative_day(text: str) -> int | None:
-    """Days after today that a message's relative day means, or None if it names none.
+    """Days after today that a message's relative day means, if it names exactly one.
 
     Code does the arithmetic the model sometimes gets wrong (V9: Friday's "mañana
-    mismo" stored as Friday). When several days are offered ("mañana o pasado",
-    "mañana o pasado mañana"), the earliest one counts: the candidate is available
-    from then.
+    mismo" stored as Friday). Two or more different days give None, so the model's
+    reading stands: candidates often rule one out ("hoy no, mañana sí"), and picking
+    either day in code could store the one they refused.
     """
     lowered = text.casefold()
     found = set()
@@ -146,7 +146,7 @@ def relative_day(text: str) -> int | None:
         if pattern.search(lowered):
             found.add(offset)
             lowered = pattern.sub(" ", lowered)  # "pasado mañana" mustn't also count as "mañana"
-    return min(found) if found else None
+    return found.pop() if len(found) == 1 else None
 
 
 def local_date(moment: datetime, timezone: str) -> date:

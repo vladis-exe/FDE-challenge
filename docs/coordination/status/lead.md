@@ -143,6 +143,10 @@ One thing to pick up **once credits are back, before the live verification**: ev
   the spec requires. Run `20261015-072346-v11-final` is the demo source. Top-up spend: about $1.10.
 - **E20 docs `107652f`: approved.** Expanded the existing known-limits line instead of duplicating it.
 - **A14 `7e85ebc`: approved, CP5 declared.** Verified the fixture, suite and tree myself (BOARD.md).
+- **Lead visual pass of the seeded dashboard (local, Vlad's go-ahead to use the recruiter login):**
+  queue order, detail score breakdown, summary, timeline and analytics all correct. One cosmetic
+  finding, names shown as typed → A15 (`64aa927`, approved: one presenter used by queue, heading,
+  field line and CSV); the mixed-case leftover ("kevin Ramírez Soto") is `display_name` → E21.
 - Full suite: 313 engine+evals, 108 app (2 skipped), ruff check clean. `ruff format` flagged
   Python blocks in two lead docs (`code-tour.md`, `CONTRACTS.md`); formatted, now clean tree-wide.
 
